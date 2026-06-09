@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Card, Button, Select, InputNumber, Radio, Upload, message, List, Tag, Divider, Modal, Result } from 'antd';
-import { CameraOutlined, CheckCircleOutlined, CloseCircleOutlined, ScanOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Button, Select, InputNumber, Upload, message, List, Tag, Divider, Result, Spin } from 'antd';
+import { CameraOutlined, ScanOutlined, OrderedListOutlined, EyeOutlined } from '@ant-design/icons';
+import PageCard from '../components/PageCard';
 import api from '../services/api';
+import { Colors } from '../styles/theme';
 
 interface InspectionItem {
   id: string;
@@ -21,6 +24,7 @@ const presetItems: InspectionItem[] = [
 ];
 
 export default function InspectionPage() {
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<any[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [items, setItems] = useState<InspectionItem[]>(presetItems);
@@ -36,8 +40,7 @@ export default function InspectionPage() {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id !== id) return item;
-        const newResult = value ? 'pass' : 'fail'; // simplified check
-        return { ...item, value, result: newResult };
+        return { ...item, value, result: value ? 'pass' : 'fail' };
       })
     );
   };
@@ -79,17 +82,17 @@ export default function InspectionPage() {
   };
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
       {step === 'select' && (
-        <Card title="📋 选择设备" style={{ borderRadius: 12 }}>
+        <PageCard icon={<OrderedListOutlined />} title="选择设备" bodyStyle={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <Button icon={<ScanOutlined />} size="large" block style={{ height: 48, marginBottom: 12 }}>
-              点击模拟扫码
+            <Button icon={<ScanOutlined />} size="large" block style={{ height: 48, marginBottom: 12, borderRadius: 8 }}>
+              扫描设备二维码
             </Button>
           </div>
           <Select
             showSearch
-            placeholder="选择设备"
+            placeholder="搜索并选择设备"
             value={selectedDevice || undefined}
             onChange={setSelectedDevice}
             style={{ width: '100%' }}
@@ -106,16 +109,17 @@ export default function InspectionPage() {
             block
             disabled={!selectedDevice}
             onClick={() => setStep('inspect')}
+            style={{ borderRadius: 8, height: 44 }}
           >
             开始点检
           </Button>
-        </Card>
+        </PageCard>
       )}
 
       {step === 'inspect' && (
-        <Card title="🔍 点检执行" style={{ borderRadius: 12 }}>
-          <div style={{ marginBottom: 12, color: '#666' }}>
-            设备: {devices.find(d => d.id === selectedDevice)?.name}
+        <PageCard icon={<EyeOutlined />} title="点检执行" bodyStyle={{ padding: 24 }}>
+          <div style={{ marginBottom: 16, color: Colors.gray600, fontSize: 13 }}>
+            设备：{devices.find(d => d.id === selectedDevice)?.name}
           </div>
           <List
             dataSource={items}
@@ -123,44 +127,51 @@ export default function InspectionPage() {
               <List.Item>
                 <div style={{ width: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <strong>{item.name}</strong>
-                    <Tag>{item.method}</Tag>
+                    <strong style={{ fontSize: 14, color: Colors.gray700 }}>{item.name}</strong>
+                    <Tag style={{ borderRadius: 4, fontSize: 12 }}>{item.method}</Tag>
                   </div>
-                  <div style={{ fontSize: 12, color: '#999', marginBottom: 8 }}>正常范围: {item.normalRange}</div>
+                  <div style={{ fontSize: 12, color: Colors.gray400, marginBottom: 8 }}>正常范围：{item.normalRange}</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <InputNumber
-                      style={{ flex: 1 }}
-                      placeholder="输入数值或留空"
+                      style={{ flex: 1, borderRadius: 6 }}
+                      placeholder="输入检测数值"
                       value={item.value ? parseFloat(item.value) : undefined}
                       onChange={(v) => handleValueChange(item.id, v ? String(v) : '')}
                     />
                     <Upload beforeUpload={() => false} showUploadList={false}>
-                      <Button icon={<CameraOutlined />} />
+                      <Button icon={<CameraOutlined />} style={{ borderRadius: 6 }} />
                     </Upload>
                   </div>
                 </div>
               </List.Item>
             )}
           />
-          <Button type="primary" size="large" block onClick={handleSubmit} loading={submitting} style={{ marginTop: 16 }}>
+          <Button
+            type="primary"
+            size="large"
+            block
+            onClick={handleSubmit}
+            loading={submitting}
+            style={{ marginTop: 16, borderRadius: 8, height: 44 }}
+          >
             提交点检结果
           </Button>
-          <Button block onClick={handleReset} style={{ marginTop: 8 }}>取消</Button>
-        </Card>
+          <Button block onClick={handleReset} style={{ marginTop: 8, borderRadius: 8 }}>取消</Button>
+        </PageCard>
       )}
 
       {step === 'result' && (
-        <Card style={{ borderRadius: 12 }}>
+        <PageCard>
           <Result
             status={result?.triggeredWorkOrderId ? 'warning' : 'success'}
             title={result?.triggeredWorkOrderId ? '发现异常，已自动创建工单' : '点检完成，一切正常'}
-            subTitle={result?.triggeredWorkOrderId ? `异常项目已自动生成维修工单 (${result.triggeredWorkOrderId.slice(0, 8)}...)` : '所有点检项目均在正常范围内'}
+            subTitle={result?.triggeredWorkOrderId ? `异常项目已自动生成维修工单` : '所有点检项目均在正常范围内'}
             extra={[
-              <Button type="primary" key="back" onClick={handleReset}>继续点检</Button>,
-              <Button key="list" onClick={() => window.location.hash = '#/work-orders'}>查看工单</Button>,
+              <Button type="primary" key="back" onClick={handleReset} style={{ borderRadius: 6 }}>继续点检</Button>,
+              <Button key="list" onClick={() => navigate('/work-orders')} style={{ borderRadius: 6 }}>查看工单</Button>,
             ]}
           />
-        </Card>
+        </PageCard>
       )}
     </div>
   );

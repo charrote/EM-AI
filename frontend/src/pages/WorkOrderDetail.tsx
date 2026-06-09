@@ -1,19 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Descriptions, Tag, Button, Steps, Timeline, List, Spin, message,
-  Modal, Input, Rate, Space, Collapse, Divider, Badge,
+  Descriptions, Tag, Button, Steps, Timeline, List, Spin, message,
+  Modal, Input, Rate, Space, Divider,
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ToolOutlined,
-  RobotOutlined, BookOutlined, ThunderboltOutlined,
+  RobotOutlined, BookOutlined, FileTextOutlined,
 } from '@ant-design/icons';
+import PageCard from '../components/PageCard';
 import api from '../services/api';
-
-const statusLabels: Record<string, string> = {
-  pending: '待接单', accepted: '已接单', diagnosing: '诊断中',
-  repairing: '维修中', verifying: '验证中', completed: '已完成', cancelled: '已取消',
-};
+import { Colors, WorkOrderStatusLabels, PriorityColors } from '../styles/theme';
 
 export default function WorkOrderDetail() {
   const { id } = useParams();
@@ -38,7 +35,7 @@ export default function WorkOrderDetail() {
   const handleStatus = async (status: string) => {
     try {
       await api.put(`/work-orders/${id}/status`, { status });
-      message.success(`状态已更新: ${statusLabels[status]}`);
+      message.success(`状态已更新：${WorkOrderStatusLabels[status]}`);
       fetchDetail();
     } catch (err: any) {
       message.error(err.response?.data?.error || '操作失败');
@@ -58,7 +55,7 @@ export default function WorkOrderDetail() {
   const handleComplete = async () => {
     try {
       await api.post(`/work-orders/${id}/complete`, completeData);
-      message.success('工单已完成！知识条目已自动生成');
+      message.success('工单已完成，知识条目已自动生成');
       setCompleteModal(false);
       fetchDetail();
     } catch {
@@ -67,7 +64,7 @@ export default function WorkOrderDetail() {
   };
 
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
-  if (!wo) return <div>工单未找到</div>;
+  if (!wo) return <div style={{ textAlign: 'center', padding: 40, color: Colors.gray500 }}>工单未找到</div>;
 
   const statusSteps = ['pending', 'accepted', 'diagnosing', 'repairing', 'verifying', 'completed'];
   const currentStep = statusSteps.indexOf(wo.status);
@@ -85,30 +82,43 @@ export default function WorkOrderDetail() {
 
   return (
     <div>
-      <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/work-orders')} style={{ marginBottom: 16 }}>
+      <Button
+        icon={<ArrowLeftOutlined />}
+        onClick={() => navigate('/work-orders')}
+        type="text"
+        style={{ marginBottom: 16, color: Colors.gray600 }}
+      >
         返回工单列表
       </Button>
 
-      <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <PageCard>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <h2 style={{ margin: 0 }}>{wo.code}</h2>
-            <span style={{ color: '#999' }}>{wo.device?.name} · {wo.deviceId}</span>
+            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: Colors.gray800 }}>{wo.code}</h2>
+            <span style={{ color: Colors.gray500, fontSize: 13 }}>{wo.device?.name} · {wo.deviceId}</span>
           </div>
           <Space>
-            <Tag color={wo.priority === 'P0' ? 'red' : wo.priority === 'P1' ? 'orange' : wo.priority === 'P2' ? 'gold' : 'default'}>
+            <Tag
+              color={PriorityColors[wo.priority]}
+              style={{ borderRadius: 4, border: 'none', padding: '2px 12px' }}
+            >
               {wo.priority}
             </Tag>
-            <Tag>{statusLabels[wo.status]}</Tag>
+            <Tag style={{ borderRadius: 4, padding: '2px 12px' }}>
+              {WorkOrderStatusLabels[wo.status]}
+            </Tag>
           </Space>
         </div>
 
-        <Steps current={currentStep} size="small" style={{ marginBottom: 16 }}>
-          {statusSteps.map(s => ({ title: statusLabels[s] })).map((s, i) => (
-            <Steps.Step key={i} {...s} />
+        {/* Steps */}
+        <Steps current={currentStep} size="small" style={{ marginBottom: 20 }}>
+          {statusSteps.map((s) => (
+            <Steps.Step key={s} title={WorkOrderStatusLabels[s]} />
           ))}
         </Steps>
 
+        {/* Details */}
         <Descriptions column={2} bordered size="small">
           <Descriptions.Item label="故障类型">{wo.faultType || '-'}</Descriptions.Item>
           <Descriptions.Item label="来源">{wo.source}</Descriptions.Item>
@@ -117,29 +127,34 @@ export default function WorkOrderDetail() {
           {wo.resolution && <Descriptions.Item label="解决方案" span={2}>{wo.resolution}</Descriptions.Item>}
           {wo.slaDeadline && (
             <Descriptions.Item label="SLA 截止" span={2}>
-              <Tag color={new Date(wo.slaDeadline) > new Date() ? 'green' : 'red'}>
+              <Tag color={new Date(wo.slaDeadline) > new Date() ? Colors.successLight : Colors.dangerLight} style={{ borderRadius: 4, border: 'none' }}>
                 {new Date(wo.slaDeadline).toLocaleString()}
               </Tag>
             </Descriptions.Item>
           )}
         </Descriptions>
 
+        {/* Actions */}
         <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
           {action && (
-            <Button type="primary" icon={action.icon} size="large" onClick={action.action}>
+            <Button type="primary" icon={action.icon} size="large" onClick={action.action} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
               {action.label}
             </Button>
           )}
-          <Button icon={<RobotOutlined />} onClick={loadDiagnosis}>AI 诊断</Button>
+          <Button icon={<RobotOutlined />} onClick={loadDiagnosis} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
+            AI 诊断
+          </Button>
           {wo.status === 'completed' && (
-            <Button icon={<BookOutlined />} onClick={() => navigate('/knowledge')}>查看知识库</Button>
+            <Button icon={<BookOutlined />} onClick={() => navigate('/knowledge')} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
+              查看知识库
+            </Button>
           )}
         </div>
-      </Card>
+      </PageCard>
 
       {/* AI Diagnosis Modal */}
       <Modal
-        title={<><RobotOutlined /> AI 辅助诊断</>}
+        title={<Space><RobotOutlined style={{ color: Colors.primary }} /><span>AI 辅助诊断</span></Space>}
         open={showDiagnosis}
         onCancel={() => setShowDiagnosis(false)}
         width={700}
@@ -147,7 +162,7 @@ export default function WorkOrderDetail() {
       >
         {diagnosis ? (
           <>
-            <Divider>相似案例</Divider>
+            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>相似案例</Divider>
             <List
               dataSource={diagnosis.similarCases}
               renderItem={(item: any) => (
@@ -155,12 +170,12 @@ export default function WorkOrderDetail() {
                   <List.Item.Meta
                     title={
                       <Space>
-                        <Tag color="blue">{item.id}</Tag>
-                        <span>相似度: {Math.round(item.similarity * 100)}%</span>
+                        <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none' }}>{item.id}</Tag>
+                        <span>相似度：{Math.round(item.similarity * 100)}%</span>
                       </Space>
                     }
                     description={
-                      <div>
+                      <div style={{ fontSize: 13, color: Colors.gray600 }}>
                         <div><strong>现象：</strong>{item.symptom}</div>
                         <div><strong>原因：</strong>{item.cause}</div>
                         <div><strong>方案：</strong>{item.solution}</div>
@@ -171,20 +186,31 @@ export default function WorkOrderDetail() {
               )}
             />
 
-            <Divider>推荐诊断方案</Divider>
+            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>推荐诊断方案</Divider>
             <Timeline
               items={diagnosis.recommendedDiagnosis.map((d: any) => ({
-                children: <><strong>{d.step}</strong> — 概率: {Math.round(d.probability * 100)}% <Tag>{d.priority}</Tag></>,
-                color: d.priority === 'high' ? 'red' : 'blue',
+                children: (
+                  <Space>
+                    <strong>{d.step}</strong>
+                    <span style={{ color: Colors.gray500 }}>概率 {Math.round(d.probability * 100)}%</span>
+                    <Tag color={d.priority === 'high' ? Colors.dangerLight : Colors.info} style={{ borderRadius: 4, border: 'none' }}>
+                      {d.priority}
+                    </Tag>
+                  </Space>
+                ),
+                color: d.priority === 'high' ? Colors.dangerLight : Colors.info,
               }))}
             />
 
-            <Divider>推荐备件</Divider>
+            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>推荐备件</Divider>
             <List
               dataSource={diagnosis.recommendedParts}
               renderItem={(item: any) => (
                 <List.Item>
-                  <List.Item.Meta title={`${item.name} (${item.code})`} description={`需 ${item.quantity} 件 · 库存 ${item.stock} 件`} />
+                  <List.Item.Meta
+                    title={`${item.name} (${item.code})`}
+                    description={`需 ${item.quantity} 件 · 库存 ${item.stock} 件`}
+                  />
                 </List.Item>
               )}
             />
@@ -199,41 +225,51 @@ export default function WorkOrderDetail() {
         onOk={handleComplete}
         onCancel={() => setCompleteModal(false)}
         okText="确认完成"
+        okButtonProps={{ style: { borderRadius: 6 } }}
+        cancelButtonProps={{ style: { borderRadius: 6 } }}
       >
         <div style={{ marginBottom: 12 }}>
-          <div>根本原因</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>根本原因</div>
           <Input.TextArea
             rows={2}
             value={completeData.rootCause}
             onChange={(e) => setCompleteData({ ...completeData, rootCause: e.target.value })}
             placeholder="输入故障的根本原因"
+            style={{ borderRadius: 6 }}
           />
         </div>
         <div style={{ marginBottom: 12 }}>
-          <div>解决方案</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>解决方案</div>
           <Input.TextArea
             rows={2}
             value={completeData.resolution}
             onChange={(e) => setCompleteData({ ...completeData, resolution: e.target.value })}
             placeholder="输入解决方法和维修步骤"
+            style={{ borderRadius: 6 }}
           />
         </div>
         <div>
-          <div>满意度评分</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>满意度评分</div>
           <Rate value={completeData.satisfactionScore} onChange={(v) => setCompleteData({ ...completeData, satisfactionScore: v })} />
         </div>
       </Modal>
 
       {/* Work Logs */}
       {wo.workLogs?.length > 0 && (
-        <Card title="维修记录" style={{ marginTop: 16 }}>
+        <PageCard icon={<FileTextOutlined />} title="维修记录" style={{ marginTop: 16 }}>
           <Timeline
             items={wo.workLogs.map((log: any) => ({
-              children: <><strong>步骤 {log.step}:</strong> {log.content} {log.duration && <Tag>{log.duration}min</Tag>}</>,
-              color: 'blue',
+              children: (
+                <Space>
+                  <strong>步骤 {log.step}：</strong>
+                  <span>{log.content}</span>
+                  {log.duration && <Tag style={{ borderRadius: 4 }}>{log.duration}min</Tag>}
+                </Space>
+              ),
+              color: Colors.info,
             }))}
           />
-        </Card>
+        </PageCard>
       )}
     </div>
   );

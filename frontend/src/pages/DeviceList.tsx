@@ -1,25 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Row, Col, Tag, Statistic, Spin, Empty, Progress } from 'antd';
-import {
-  ThunderboltOutlined,
-  PauseCircleOutlined,
-  SwapOutlined,
-  CloseCircleOutlined,
-  ToolOutlined,
-  WarningOutlined,
-} from '@ant-design/icons';
+import { Row, Col, Tag, Spin, Empty, Progress } from 'antd';
+import { DashboardOutlined } from '@ant-design/icons';
+import PageCard from '../components/PageCard';
 import api from '../services/api';
-
-const statusConfig: Record<string, { color: string; label: string; icon: React.ReactNode }> = {
-  running: { color: '#22C55E', label: '运行中', icon: <ThunderboltOutlined /> },
-  idle: { color: '#9CA3AF', label: '待机', icon: <PauseCircleOutlined /> },
-  changeover: { color: '#F59E0B', label: '换型中', icon: <SwapOutlined /> },
-  fault: { color: '#EF4444', label: '故障', icon: <CloseCircleOutlined /> },
-  maintenance: { color: '#3B82F6', label: '保养中', icon: <ToolOutlined /> },
-  repair: { color: '#F97316', label: '检修中', icon: <WarningOutlined /> },
-  retired: { color: '#6B7280', label: '已报废', icon: <CloseCircleOutlined /> },
-};
+import { Colors, DeviceStatusConfig } from '../styles/theme';
 
 export default function DeviceList() {
   const [devices, setDevices] = useState<any[]>([]);
@@ -38,63 +23,90 @@ export default function DeviceList() {
 
   return (
     <div>
-      <Row gutter={[16, 16]}>
-        {/* Status summary */}
-        <Col span={24}>
-          <Row gutter={[12, 12]}>
-            {Object.entries(statusConfig).map(([key, cfg]) => {
-              const count = devices.filter(d => d.status === key).length;
-              if (!count) return null;
-              return (
-                <Col key={key}>
-                  <Tag color={cfg.color} style={{ padding: '4px 16px', fontSize: 14 }}>
-                    {cfg.icon} {cfg.label}: {count}
-                  </Tag>
-                </Col>
-              );
-            })}
-          </Row>
-        </Col>
+      {/* 状态汇总条 */}
+      <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+        {Object.entries(DeviceStatusConfig).map(([key, cfg]) => {
+          const count = devices.filter(d => d.status === key).length;
+          if (!count) return null;
+          const Icon = cfg.icon;
+          return (
+            <Col key={key}>
+              <Tag
+                color={cfg.color}
+                style={{
+                  padding: '4px 14px',
+                  fontSize: 13,
+                  borderRadius: 6,
+                  border: 'none',
+                  margin: 0,
+                }}
+              >
+                <Icon style={{ marginRight: 4 }} />
+                {cfg.label} {count}
+              </Tag>
+            </Col>
+          );
+        })}
+      </Row>
 
-        {/* Device cards */}
+      {/* 设备卡片网格 */}
+      <Row gutter={[16, 16]}>
         {devices.map((device) => {
-          const cfg = statusConfig[device.status] || statusConfig.idle;
-          const oeeColor = (device.oee || 0) >= 85 ? '#22C55E' : (device.oee || 0) >= 75 ? '#F59E0B' : '#EF4444';
+          const StatusIcon = DeviceStatusConfig[device.status]?.icon || DashboardOutlined;
+          const statusCfg = DeviceStatusConfig[device.status];
+          const oeeColor = (device.oee || 0) >= 85 ? Colors.successLight : (device.oee || 0) >= 75 ? Colors.warningLight : Colors.dangerLight;
+
           return (
             <Col key={device.id} xs={24} sm={12} md={8} lg={6}>
-              <Card
+              <PageCard
                 hoverable
                 onClick={() => navigate(`/devices/${device.id}`)}
-                style={{ borderLeft: `4px solid ${cfg.color}` }}
+                style={{
+                  cursor: 'pointer',
+                  borderLeft: `3px solid ${statusCfg?.color || Colors.gray400}`,
+                }}
+                bodyStyle={{ padding: 16 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div>
-                    <div style={{ fontSize: 16, fontWeight: 600 }}>{device.name}</div>
-                    <div style={{ fontSize: 12, color: '#999' }}>{device.code}</div>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: Colors.gray800 }}>{device.name}</div>
+                    <div style={{ fontSize: 12, color: Colors.gray500, marginTop: 2 }}>{device.code}</div>
                   </div>
-                  <Tag color={cfg.color}>{cfg.label}</Tag>
+                  <Tag
+                    color={statusCfg?.color}
+                    style={{
+                      borderRadius: 4, border: 'none', margin: 0, fontSize: 12,
+                      display: 'flex', alignItems: 'center', gap: 4, padding: '2px 10px',
+                    }}
+                  >
+                    <StatusIcon style={{ fontSize: 12 }} />
+                    {statusCfg?.label || device.status}
+                  </Tag>
                 </div>
-                <div style={{ display: 'flex', gap: 24, marginTop: 12 }}>
+
+                <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: 12, color: '#999' }}>OEE</div>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: oeeColor }}>
+                    <div style={{ fontSize: 11, color: Colors.gray500, marginBottom: 2 }}>OEE</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: oeeColor }}>
                       {device.oee || '-'}%
                     </div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: '#999' }}>健康度</div>
+                    <div style={{ fontSize: 11, color: Colors.gray500, marginBottom: 2 }}>健康度</div>
                     <Progress
                       type="circle"
                       percent={device.healthScore || 0}
-                      size={50}
-                      strokeColor={device.healthScore >= 80 ? '#22C55E' : device.healthScore >= 60 ? '#F59E0B' : '#EF4444'}
+                      size={44}
+                      strokeColor={device.healthScore >= 80 ? Colors.successLight : device.healthScore >= 60 ? Colors.warningLight : Colors.dangerLight}
+                      trailColor={Colors.gray100}
                     />
                   </div>
                 </div>
-                <div style={{ fontSize: 12, color: '#999', marginTop: 8 }}>
+
+                <div style={{ fontSize: 12, color: Colors.gray400, marginTop: 10 }}>
                   {device.area} / {device.line} · {device.type}
                 </div>
-              </Card>
+              </PageCard>
             </Col>
           );
         })}

@@ -13,6 +13,7 @@ import ImprovementProjects from './pages/ImprovementProjects';
 import KnowledgeBase from './pages/KnowledgeBase';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import ReportFault from './pages/ReportFault';
+import { Colors } from './styles/theme';
 
 function App() {
   return (
@@ -21,9 +22,37 @@ function App() {
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#2563EB',
-          borderRadius: 8,
-          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+          colorPrimary: Colors.primary,
+          borderRadius: 6,
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          colorBgLayout: Colors.bodyBg,
+          colorBorder: Colors.gray200,
+          colorBgContainer: '#FFFFFF',
+        },
+        components: {
+          Menu: {
+            itemBg: 'transparent',
+            itemSelectedBg: Colors.sidebarActive,
+            itemSelectedColor: Colors.primary,
+            itemColor: Colors.gray600,
+            itemHoverBg: Colors.gray100,
+            itemBorderRadius: 6,
+          },
+          Tag: {
+            borderRadius: 4,
+          },
+          Button: {
+            borderRadius: 6,
+          },
+          Input: {
+            borderRadius: 6,
+          },
+          Select: {
+            borderRadius: 6,
+          },
+          Card: {
+            borderRadius: 8,
+          },
         },
       }}
     >
