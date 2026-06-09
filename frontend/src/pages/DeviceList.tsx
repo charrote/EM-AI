@@ -1,9 +1,8 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Tag, Spin, Empty, Segmented, Select, Space, Progress, Collapse, Badge, Tooltip } from 'antd';
-import type { CollapseProps } from 'antd';
+import { Row, Col, Tag, Spin, Empty, Segmented, Select, Space, Progress, Tooltip, Switch } from 'antd';
 import {
-  ThunderboltOutlined, UserOutlined, ToolOutlined,
+  ThunderboltOutlined, UserOutlined, ToolOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../services/api';
@@ -98,47 +97,87 @@ export default function DeviceList() {
   const [areas, setAreas] = useState<any[]>([]);
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // 筛选条件
-  const [filterArea, setFilterArea] = useState<string>('');
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterType, setFilterType] = useState<string>('');
+  // 多选筛选条件（数组）
+  const [filterAreas, setFilterAreas] = useState<string[]>([]);
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
+
+  // Simulator 状态
+  const [simulatorStatus, setSimulatorStatus] = useState<'running' | 'stopped'>('stopped');
+  const [simulatorTick, setSimulatorTick] = useState(0);
 
   const navigate = useNavigate();
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 加载场景配置
   useEffect(() => {
     api.get('/devices/scenarios').then((res) => {
       setScenarios(res.data.data);
     });
+    // 获取模拟器状态
+    api.get('/demo/simulator').then((res) => {
+      setSimulatorStatus(res.data.status);
+      setSimulatorTick(res.data.tickCount);
+    }).catch(() => {});
   }, []);
 
-  // 加载设备数据
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      api.get(`/devices/areas?scenario=${scenario}`),
-      api.get(`/devices?scenario=${scenario}`),
-    ]).then(([areasRes, devicesRes]) => {
+  // ── 加载数据函数（可复用） ───────────────────
+  const loadData = useCallback(async () => {
+    try {
+      const params = new URLSearchParams();
+      params.set('scenario', scenario);
+      if (filterAreas.length) filterAreas.forEach((a) => params.append('area', a));
+      if (filterStatuses.length) filterStatuses.forEach((s) => params.append('status', s));
+      if (filterTypes.length) filterTypes.forEach((t) => params.append('type', t));
+
+      const [areasRes, devicesRes] = await Promise.all([
+        api.get(`/devices/areas?scenario=${scenario}`),
+        api.get(`/devices?${params.toString()}`),
+      ]);
       setAreas(areasRes.data.data);
       setDevices(devicesRes.data.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [scenario]);
+    } catch (err) {
+      console.error('Failed to load device data', err);
+    }
+  }, [scenario, filterAreas, filterStatuses, filterTypes]);
+
+  // 首次 + 筛选变化时加载
+  useEffect(() => {
+    setLoading(true);
+    loadData().finally(() => setLoading(false));
+  }, [loadData]);
+
+  // ── 自动刷新轮询 ────────────────────────────
+  useEffect(() => {
+    if (!autoRefresh) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      loadData();
+      // 顺便刷新模拟器计数
+      api.get('/demo/simulator').then((res) => {
+        setSimulatorStatus(res.data.status);
+        setSimulatorTick(res.data.tickCount);
+      }).catch(() => {});
+    }, 30_000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [autoRefresh, loadData]);
 
   // 当前场景类型列表
   const currentTypes = scenarios[scenario]?.types || [];
 
-  // 当前场景下的区域列表
+  // 区域选项
   const areaOptions = useMemo(() => {
     return areas.map((a: any) => ({ value: a.area, label: `${a.area} (${a.total}台)` }));
   }, [areas]);
 
-  // 当前场景下的类型列表（去重，从设备数据中提取）
+  // 类型选项（从当前场景的设备类型中）
   const typeOptions = useMemo(() => {
-    const types = new Set(devices.map((d: any) => d.type));
-    return Array.from(types).map((t) => ({ value: t as string, label: t as string }));
-  }, [devices]);
+    return currentTypes.map((t) => ({ value: t, label: t }));
+  }, [currentTypes]);
 
   // 状态选项
   const statusOptions = Object.entries(DeviceStatusConfig).map(([key, cfg]) => ({
@@ -146,15 +185,13 @@ export default function DeviceList() {
     label: cfg.label,
   }));
 
-  // 筛选后的分组设备数据
+  // 筛选后结果（分组）
   const filteredAreas = useMemo(() => {
-    // First filter devices
     let filtered = [...devices];
-    if (filterArea) filtered = filtered.filter((d: any) => d.area === filterArea);
-    if (filterStatus) filtered = filtered.filter((d: any) => d.status === filterStatus);
-    if (filterType) filtered = filtered.filter((d: any) => d.type === filterType);
+    if (filterAreas.length) filtered = filtered.filter((d: any) => filterAreas.includes(d.area));
+    if (filterStatuses.length) filtered = filtered.filter((d: any) => filterStatuses.includes(d.status));
+    if (filterTypes.length) filtered = filtered.filter((d: any) => filterTypes.includes(d.type));
 
-    // Then group by area
     const areaMap = new Map<string, any[]>();
     for (const d of filtered) {
       const area = d.area || '未分配';
@@ -173,24 +210,46 @@ export default function DeviceList() {
         }, {} as Record<string, number>),
       }))
       .sort((a, b) => a.area.localeCompare(b.area));
-  }, [devices, filterArea, filterStatus, filterType]);
+  }, [devices, filterAreas, filterStatuses, filterTypes]);
 
   // ── 渲染 ────────────────────────────────────
   return (
     <div>
-      {/* ─── 场景切换 + 统计 ─── */}
+      {/* ─── 顶部栏：场景切换 + 实时指示器 + 统计 ─── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <Segmented
           value={scenario}
-          onChange={(v) => { setScenario(v as ScenarioKey); setFilterArea(''); setFilterStatus(''); setFilterType(''); }}
+          onChange={(v) => { setScenario(v as ScenarioKey); setFilterAreas([]); setFilterStatuses([]); setFilterTypes([]); }}
           options={[
-            { value: 'metal', label: `金属加工 (${scenarios.metal.label})` },
-            { value: 'capacitor', label: `电解电容 (${scenarios.capacitor.label})` },
+            { value: 'metal', label: `金属加工` },
+            { value: 'capacitor', label: `电解电容` },
           ]}
           style={{ borderRadius: 6 }}
           size="large"
         />
-        <Space size={4}>
+        <Space size={12} align="center">
+          {/* 实时指示器 */}
+          <Tooltip title={`模拟器已运行 ${simulatorStatus === 'running' ? `${simulatorTick} 次 tick` : '已停止'}`}>
+            <Tag
+              color={simulatorStatus === 'running' ? 'green' : 'default'}
+              style={{ borderRadius: 4, border: 'none', margin: 0, padding: '2px 12px', fontSize: 12, lineHeight: '22px' }}
+            >
+              <span style={{
+                display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
+                background: simulatorStatus === 'running' ? '#52c41a' : Colors.gray400,
+                marginRight: 5, verticalAlign: 'middle',
+                animation: simulatorStatus === 'running' ? 'pulse 2s infinite' : 'none',
+              }} />
+              {simulatorStatus === 'running' ? `LIVE #${simulatorTick}` : 'OFF'}
+            </Tag>
+          </Tooltip>
+          {/* 自动刷新开关 */}
+          <Space size={4}>
+            <ClockCircleOutlined style={{ fontSize: 12, color: Colors.gray400 }} />
+            <span style={{ fontSize: 12, color: Colors.gray500 }}>30s刷新</span>
+            <Switch size="small" checked={autoRefresh} onChange={setAutoRefresh} />
+          </Space>
+          {/* 状态统计 */}
           {Object.entries(DeviceStatusConfig).map(([key, cfg]) => {
             const count = devices.filter((d: any) => d.status === key).length;
             if (!count) return null;
@@ -209,46 +268,52 @@ export default function DeviceList() {
         </Space>
       </div>
 
-      {/* ─── 筛选栏 ─── */}
+      {/* ─── 多选筛选栏 ─── */}
       <PageCard bodyStyle={{ padding: '10px 16px' }} style={{ marginBottom: 16 }}>
         <Row gutter={[12, 8]} align="middle">
-          <Col flex="180px">
+          <Col flex="220px">
             <Select
-              placeholder="全部区域"
-              value={filterArea || undefined}
-              onChange={(v) => setFilterArea(v || '')}
+              mode="multiple"
+              placeholder="全部区域（可多选）"
+              value={filterAreas.length ? filterAreas : undefined}
+              onChange={(v) => setFilterAreas(v as string[])}
               options={areaOptions}
               allowClear
+              maxTagCount={2}
               style={{ width: '100%', borderRadius: 6 }}
               size="small"
             />
           </Col>
-          <Col flex="140px">
+          <Col flex="180px">
             <Select
-              placeholder="全部状态"
-              value={filterStatus || undefined}
-              onChange={(v) => setFilterStatus(v || '')}
+              mode="multiple"
+              placeholder="全部状态（可多选）"
+              value={filterStatuses.length ? filterStatuses : undefined}
+              onChange={(v) => setFilterStatuses(v as string[])}
               options={statusOptions}
               allowClear
+              maxTagCount={2}
               style={{ width: '100%', borderRadius: 6 }}
               size="small"
             />
           </Col>
-          <Col flex="160px">
+          <Col flex="200px">
             <Select
-              placeholder="全部类型"
-              value={filterType || undefined}
-              onChange={(v) => setFilterType(v || '')}
+              mode="multiple"
+              placeholder="全部类型（可多选）"
+              value={filterTypes.length ? filterTypes : undefined}
+              onChange={(v) => setFilterTypes(v as string[])}
               options={typeOptions}
               allowClear
+              maxTagCount={2}
               style={{ width: '100%', borderRadius: 6 }}
               size="small"
             />
           </Col>
           <Col flex="auto">
             <div style={{ textAlign: 'right', fontSize: 13, color: Colors.gray500 }}>
-              {(filterArea || filterStatus || filterType)
-                ? <span>筛选出 <strong style={{ color: Colors.primary }}>{filteredAreas.reduce((s, a) => s + a.total, 0)}</strong> 台设备</span>
+              {(filterAreas.length || filterStatuses.length || filterTypes.length)
+                ? <span>筛选出 <strong style={{ color: Colors.primary }}>{filteredAreas.reduce((s, a) => s + a.total, 0)}</strong> / {devices.length} 台</span>
                 : <span>共 <strong style={{ color: Colors.primary }}>{devices.length}</strong> 台设备</span>
               }
             </div>
@@ -308,6 +373,14 @@ export default function DeviceList() {
           </div>
         ))
       )}
+
+      {/* LIVE 指示灯脉冲动画 */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   );
 }

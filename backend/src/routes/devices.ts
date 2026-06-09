@@ -66,13 +66,22 @@ router.get('/areas', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/devices — 设备列表（支持过滤）
+// ── 辅助：解析多选查询参数 ────────────────────
+function parseArrayParam(val: unknown): string[] | undefined {
+  if (!val) return undefined;
+  if (Array.isArray(val)) return val as string[];
+  const str = val as string;
+  if (str.includes(',')) return str.split(',').map(s => s.trim()).filter(Boolean);
+  return [str];
+}
+
+// GET /api/devices — 设备列表（支持多选过滤）
 router.get('/', async (req: Request, res: Response) => {
   try {
     const scenario = req.query.scenario as string | undefined;
-    const area = req.query.area as string | undefined;
-    const deviceType = req.query.type as string | undefined;
-    const status = req.query.status as string | undefined;
+    const areas = parseArrayParam(req.query.area);
+    const deviceTypes = parseArrayParam(req.query.type);
+    const statuses = parseArrayParam(req.query.status);
 
     const where: any = {};
 
@@ -83,10 +92,10 @@ router.get('/', async (req: Request, res: Response) => {
       where.type = { in: SCENARIO_CAPACITOR_DEVICE_TYPES };
     }
 
-    // Additional filters
-    if (area) where.area = area;
-    if (deviceType) where.type = deviceType;
-    if (status) where.status = status;
+    // Additional multi-select filters
+    if (areas) where.area = { in: areas };
+    if (deviceTypes) where.type = { in: deviceTypes };
+    if (statuses) where.status = { in: statuses };
 
     const devices = await prisma.device.findMany({
       where,
