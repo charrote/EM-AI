@@ -119,18 +119,71 @@ router.get('/devices/:id/oee', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/dashboard/devices/:id/trend — device trend
+// GET /api/dashboard/devices/:id/trend — device trend (realistic smooth curve)
 router.get('/devices/:id/trend', async (req: Request, res: Response) => {
+  try {
+    const device = await prisma.device.findUnique({ where: { id: req.params.id as string } });
+    const currentOEE = device?.oee ?? 75;
+
     const range = parseInt(String(req.query.range || '30')) || 30;
-  const points = Math.min(range, 30);
-  const trend = Array.from({ length: points }, (_, i) => ({
-    date: new Date(Date.now() - (points - 1 - i) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    oee: Math.round((70 + Math.random() * 20) * 100) / 100,
-    availability: Math.round((75 + Math.random() * 18) * 100) / 100,
-    performance: Math.round((78 + Math.random() * 18) * 100) / 100,
-    quality: Math.round((85 + Math.random() * 12) * 100) / 100,
-  }));
-  res.json({ data: trend });
+    const points = Math.min(range, 30);
+
+    // Walk backwards from current OEE, applying small incremental changes
+    // to create a smooth, realistic 30-day trajectory.
+    const trend: { date: string; oee: number; availability: number; performance: number; quality: number }[] = [];
+    let dayOee = currentOEE;
+    let dayAvail = Math.min(100, currentOEE + 5);
+    let dayPerf = Math.min(100, currentOEE + 8);
+    let dayQual = Math.min(100, currentOEE + 10);
+
+    // Pre-generate a few "fault days" with recovery patterns
+    const faultDays = new Set<number>();
+    for (let i = 0; i < 3; i++) {
+      const day = Math.floor(Math.random() * points);
+      faultDays.add(day);
+      // Also add recovery days after each fault
+      if (day + 1 < points) faultDays.add(day + 1);
+      if (day + 2 < points) faultDays.add(day + 2);
+    }
+
+    for (let i = points - 1; i >= 0; i--) {
+      // Determine daily change — small and incremental
+      let oeeChange: number;
+
+      if (faultDays.has(i)) {
+        // Fault event: sharp drop then gradual recovery
+        if (i === Math.max(...Array.from(faultDays).filter(d => faultDays.has(d)))) {
+          oeeChange = -(8 + Math.random() * 5); // -8 to -13 on first fault day
+        } else {
+          oeeChange = 0.5 + Math.random() * 1.5; // +0.5 to +2 recovery
+        }
+      } else {
+        // Normal day: tiny drift ±0.3%
+        oeeChange = (Math.random() - 0.5) * 0.6;
+        // Add a very gentle weekly pattern (slightly higher mid-week)
+        const dayOfWeek = new Date(Date.now() - i * 86400000).getDay();
+        if (dayOfWeek >= 2 && dayOfWeek <= 4) oeeChange += 0.1;
+      }
+
+      dayOee = Math.max(40, Math.min(100, dayOee + oeeChange));
+      dayAvail = Math.min(100, Math.max(dayOee + 3, dayAvail + (Math.random() - 0.5) * 0.4));
+      dayPerf = Math.min(100, Math.max(dayOee + 5, dayPerf + (Math.random() - 0.5) * 0.4));
+      dayQual = Math.min(100, Math.max(dayOee + 7, dayQual + (Math.random() - 0.5) * 0.3));
+
+      // Record from oldest to newest
+      trend.unshift({
+        date: new Date(Date.now() - (points - 1 - i) * 86400000).toISOString().slice(0, 10),
+        oee: Math.round(dayOee * 100) / 100,
+        availability: Math.round(dayAvail * 100) / 100,
+        performance: Math.round(dayPerf * 100) / 100,
+        quality: Math.round(dayQual * 100) / 100,
+      });
+    }
+
+    res.json({ data: trend });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch device trend' });
+  }
 });
 
 // GET /api/dashboard/executive — executive dashboard
