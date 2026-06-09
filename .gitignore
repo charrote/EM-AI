@@ -1,10 +1,56 @@
+# ── EM-AI .gitignore ─────────────────────────
+
+# Dependencies
 node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs
 dist/
 build/
+*.tsbuildinfo
+
+# Database
 *.db
 *.db-journal
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Environment
 .env
 .env.local
-.tmp/
-*.log
+.env.production
+.env.*.local
+
+# Demo data snapshots (generated daily by simulator)
+backend/demo-data/*.json
+!backend/demo-data/.gitkeep
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.sublime-*
+
+# OS
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+/tmp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Misc
+.tmp/
+*.pem
+*.cert
