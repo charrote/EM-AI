@@ -6,7 +6,11 @@ const router = Router();
 // GET /api/work-orders
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { status, assignee, priority, deviceId, limit } = req.query;
+    const status = req.query.status as string | undefined;
+    const assignee = req.query.assignee as string | undefined;
+    const priority = req.query.priority as string | undefined;
+    const deviceId = req.query.deviceId as string | undefined;
+    const limit = req.query.limit as string | undefined;
     const where: any = {};
     if (status) where.status = status;
     if (assignee) where.assigneeId = assignee;
@@ -32,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const wo = await prisma.workOrder.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         device: true,
         workLogs: { orderBy: { step: 'asc' } },
@@ -85,7 +89,7 @@ router.post('/', async (req: Request, res: Response) => {
 // PUT /api/work-orders/:id/status — update status
 router.put('/:id/status', async (req: Request, res: Response) => {
   try {
-    const { status } = req.body;
+    const status: string = req.body.status;
     const validTransitions: Record<string, string[]> = {
       pending: ['accepted', 'cancelled'],
       accepted: ['diagnosing', 'cancelled'],
@@ -96,7 +100,7 @@ router.put('/:id/status', async (req: Request, res: Response) => {
       cancelled: [],
     };
 
-    const current = await prisma.workOrder.findUnique({ where: { id: req.params.id } });
+    const current = await prisma.workOrder.findUnique({ where: { id: req.params.id as string } });
     if (!current) return res.status(404).json({ error: 'Work order not found' });
 
     const allowed = validTransitions[current.status] || [];
@@ -113,7 +117,7 @@ router.put('/:id/status', async (req: Request, res: Response) => {
     if (status === 'completed') updateData.actualEndAt = new Date();
 
     const wo = await prisma.workOrder.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: updateData,
     });
     res.json({ data: wo });
@@ -126,7 +130,7 @@ router.put('/:id/status', async (req: Request, res: Response) => {
 router.post('/:id/accept', async (req: Request, res: Response) => {
   try {
     const wo = await prisma.workOrder.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'accepted', respondedAt: new Date(), assigneeId: req.body.assigneeId || 'demo-repair' },
     });
     res.json({ data: wo });
@@ -140,7 +144,7 @@ router.post('/:id/complete', async (req: Request, res: Response) => {
   try {
     const { rootCause, resolution, partsUsed, cost, satisfactionScore } = req.body;
     const wo = await prisma.workOrder.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: {
         status: 'completed',
         actualEndAt: new Date(),
@@ -175,7 +179,7 @@ router.post('/:id/complete', async (req: Request, res: Response) => {
 router.post('/:id/work-logs', async (req: Request, res: Response) => {
   try {
     const { logs } = req.body; // array of { step, content, duration, images }
-    const workOrderId = req.params.id;
+    const workOrderId = String(req.params.id) as string;
 
     // Delete existing logs and replace
     await prisma.workLog.deleteMany({ where: { workOrderId } });

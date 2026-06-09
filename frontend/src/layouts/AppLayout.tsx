@@ -12,6 +12,7 @@ import {
   ProjectOutlined,
   BookOutlined,
   RobotOutlined,
+  BugOutlined,
 } from '@ant-design/icons';
 import { useStore, UserRole } from '../store/useStore';
 
@@ -19,13 +20,14 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
 const roleMenuMap: Record<UserRole, string[]> = {
-  operator: ['devices', 'work-orders', 'inspections', 'knowledge'],
+  operator: ['report-fault', 'devices', 'work-orders', 'inspections', 'knowledge'],
   repair: ['work-orders', 'knowledge', 'devices'],
   supervisor: ['devices', 'oee', 'loss-analysis', 'improvements', 'work-orders'],
   executive: ['executive', 'oee', 'improvements'],
 };
 
 const menuItems = [
+  { key: 'report-fault', icon: <BugOutlined />, label: '扫码报修' },
   { key: 'devices', icon: <DashboardOutlined />, label: '设备总览' },
   { key: 'work-orders', icon: <WarningOutlined />, label: '工单管理' },
   { key: 'inspections', icon: <CheckCircleOutlined />, label: '点检执行' },

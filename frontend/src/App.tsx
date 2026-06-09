@@ -12,6 +12,7 @@ import LossAnalysis from './pages/LossAnalysis';
 import ImprovementProjects from './pages/ImprovementProjects';
 import KnowledgeBase from './pages/KnowledgeBase';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
+import ReportFault from './pages/ReportFault';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
             <Route path="improvements" element={<ImprovementProjects />} />
             <Route path="knowledge" element={<KnowledgeBase />} />
             <Route path="executive" element={<ExecutiveDashboard />} />
+            <Route path="report-fault" element={<ReportFault />} />
           </Route>
         </Routes>
       </BrowserRouter>

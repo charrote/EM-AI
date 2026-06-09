@@ -64,7 +64,7 @@ router.get('/losses', async (_req: Request, res: Response) => {
 
 // GET /api/dashboard/pareto — pareto analysis
 router.get('/pareto', async (req: Request, res: Response) => {
-  const scope = req.query.scope || 'plant';
+  const scope = (req.query.scope as string) || 'plant';
   const mockPareto = [
     { cause: '换型时间过长', count: 24, duration: 3240, percentage: 28.5, cumulative: 28.5 },
     { cause: '设备突发故障', count: 18, duration: 2520, percentage: 22.1, cumulative: 50.6 },
@@ -92,7 +92,7 @@ router.get('/pareto', async (req: Request, res: Response) => {
 // GET /api/dashboard/devices/:id/oee — single device OEE
 router.get('/devices/:id/oee', async (req: Request, res: Response) => {
   try {
-    const device = await prisma.device.findUnique({ where: { id: req.params.id } });
+    const device = await prisma.device.findUnique({ where: { id: req.params.id as string } });
     if (!device) return res.status(404).json({ error: 'Device not found' });
 
     const baseOEE = device.status === 'running' ? 0.82 : device.status === 'idle' ? 0.58 : 0.35;
@@ -121,7 +121,7 @@ router.get('/devices/:id/oee', async (req: Request, res: Response) => {
 
 // GET /api/dashboard/devices/:id/trend — device trend
 router.get('/devices/:id/trend', async (req: Request, res: Response) => {
-  const range = parseInt(req.query.range as string) || 30;
+    const range = parseInt(String(req.query.range || '30')) || 30;
   const points = Math.min(range, 30);
   const trend = Array.from({ length: points }, (_, i) => ({
     date: new Date(Date.now() - (points - 1 - i) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),

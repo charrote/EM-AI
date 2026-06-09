@@ -6,7 +6,9 @@ const router = Router();
 // GET /api/inspections — list inspections
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { deviceId, status, level } = req.query;
+    const deviceId = req.query.deviceId as string | undefined;
+    const status = req.query.status as string | undefined;
+    const level = req.query.level as string | undefined;
     const where: any = {};
     if (deviceId) where.deviceId = deviceId;
     if (status) where.status = status;

@@ -5,7 +5,7 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { status } = req.query;
+    const status = req.query.status as string | undefined;
     const where: any = {};
     if (status) where.status = status;
 
@@ -31,7 +31,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const project = await prisma.improvementProject.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: req.body,
     });
     res.json({ data: project });
@@ -43,7 +43,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.get('/:id/effect', async (req: Request, res: Response) => {
   try {
     const project = await prisma.improvementProject.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (!project) return res.status(404).json({ error: 'Project not found' });
 

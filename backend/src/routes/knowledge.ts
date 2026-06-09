@@ -5,7 +5,9 @@ const router = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const { status, faultType, search } = req.query;
+    const status = req.query.status as string | undefined;
+    const faultType = req.query.faultType as string | undefined;
+    const search = req.query.search as string | undefined;
     const where: any = {};
     if (status) where.status = status;
     if (faultType) where.faultType = faultType;
@@ -39,7 +41,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id/approve', async (req: Request, res: Response) => {
   try {
     const entry = await prisma.knowledgeEntry.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: 'approved' },
     });
     res.json({ data: entry });

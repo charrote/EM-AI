@@ -19,7 +19,7 @@ router.get('/', async (_req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const device = await prisma.device.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       include: {
         workOrders: {
           orderBy: { createdAt: 'desc' },
@@ -39,13 +39,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 // GET /api/devices/:id/work-orders — device work orders
 router.get('/:id/work-orders', async (req: Request, res: Response) => {
   try {
-    const days = parseInt(req.query.days as string) || 30;
+    const days = parseInt(String(req.query.days || '30')) || 30;
     const since = new Date();
     since.setDate(since.getDate() - days);
 
     const workOrders = await prisma.workOrder.findMany({
       where: {
-        deviceId: req.params.id,
+        deviceId: req.params.id as string,
         createdAt: { gte: since },
       },
       orderBy: { createdAt: 'desc' },
@@ -61,7 +61,7 @@ router.put('/:id/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
     const device = await prisma.device.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status },
     });
     res.json({ data: device });
