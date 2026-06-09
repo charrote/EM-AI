@@ -7,12 +7,15 @@ import { PlusOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/ico
 import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
+import { StatCol } from '../styles/responsive';
 
 export default function ImprovementProjects() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const { isMobile } = useResponsive();
 
   const fetchProjects = () => {
     api.get('/improvements').then((res) => {
@@ -60,76 +63,94 @@ export default function ImprovementProjects() {
 
   return (
     <div>
-      {/* Stats Row */}
-      <Row gutter={[16, 16]}>
-        <Col span={6}>
-          <PageCard bodyStyle={{ padding: '20px 24px' }}>
+      {/* Stats Row — 响应式：桌面4列，平板2列，移动2列 */}
+      <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}>
+        <StatCol>
+          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
             <Statistic
-              title={<span style={{ fontSize: 13, color: Colors.gray500 }}>进行中</span>}
+              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>进行中</span>}
               value={projectGroups.active.length}
-              valueStyle={{ color: Colors.warningLight, fontSize: 28, fontWeight: 700 }}
+              valueStyle={{ color: Colors.warningLight, fontSize: isMobile ? 24 : 28, fontWeight: 700 }}
             />
           </PageCard>
-        </Col>
-        <Col span={6}>
-          <PageCard bodyStyle={{ padding: '20px 24px' }}>
+        </StatCol>
+        <StatCol>
+          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
             <Statistic
-              title={<span style={{ fontSize: 13, color: Colors.gray500 }}>已完成</span>}
+              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>已完成</span>}
               value={projectGroups.completed.length}
-              valueStyle={{ color: Colors.successLight, fontSize: 28, fontWeight: 700 }}
+              valueStyle={{ color: Colors.successLight, fontSize: isMobile ? 24 : 28, fontWeight: 700 }}
             />
           </PageCard>
-        </Col>
-        <Col span={6}>
-          <PageCard bodyStyle={{ padding: '20px 24px' }}>
+        </StatCol>
+        <StatCol>
+          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
             <Statistic
-              title={<span style={{ fontSize: 13, color: Colors.gray500 }}>完成率</span>}
+              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>完成率</span>}
               value={completionRate}
               suffix="%"
-              valueStyle={{ color: Colors.primary, fontSize: 28, fontWeight: 700 }}
+              valueStyle={{ color: Colors.primary, fontSize: isMobile ? 24 : 28, fontWeight: 700 }}
             />
           </PageCard>
-        </Col>
-        <Col span={6} style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+        </StatCol>
+        <StatCol style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'stretch' : 'flex-end' }}>
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            size="large"
+            size={isMobile ? 'middle' : 'large'}
             onClick={() => setModalOpen(true)}
-            style={{ borderRadius: 8, height: 44, display: 'flex', alignItems: 'center' }}
+            style={{
+              borderRadius: 8,
+              height: isMobile ? 40 : 44,
+              display: 'flex',
+              alignItems: 'center',
+              width: isMobile ? '100%' : undefined,
+            }}
           >
             创建改善项目
           </Button>
-        </Col>
+        </StatCol>
       </Row>
 
       {/* Active Projects */}
-      <PageCard icon={<BulbOutlined />} title="进行中" style={{ marginTop: 16 }}>
+      <PageCard icon={<BulbOutlined />} title="进行中" style={{ marginTop: isMobile ? 8 : 16 }}>
         <List
           dataSource={projectGroups.active}
           renderItem={(project: any) => (
             <PageCard
               size="small"
-              style={{ marginBottom: 8 }}
-              bodyStyle={{ padding: '12px 16px' }}
+              style={{ marginBottom: isMobile ? 6 : 8 }}
+              bodyStyle={{ padding: isMobile ? '10px 12px' : '12px 16px' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <Space>
-                    <BulbOutlined style={{ color: Colors.warningLight, fontSize: 16 }} />
-                    <strong style={{ fontSize: 14, color: Colors.gray800 }}>{project.title}</strong>
-                    <Tag style={{ borderRadius: 4, fontSize: 12 }}>{project.lossType}</Tag>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: isMobile ? 8 : 0,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Space size={isMobile ? 4 : 8} wrap>
+                    <BulbOutlined style={{ color: Colors.warningLight, fontSize: isMobile ? 14 : 16 }} />
+                    <strong style={{ fontSize: isMobile ? 13 : 14, color: Colors.gray800 }}>{project.title}</strong>
+                    <Tag style={{ borderRadius: 4, fontSize: isMobile ? 11 : 12 }}>{project.lossType}</Tag>
                   </Space>
-                  <div style={{ marginTop: 4, color: Colors.gray500, fontSize: 13 }}>
-                    目标：{project.currentValue}{project.unit} → {project.targetValue}{project.unit}
-                    · 负责人：{project.assignee}
-                    · 截止：{project.deadline ? new Date(project.deadline).toLocaleDateString() : '-'}
+                  <div style={{
+                    marginTop: isMobile ? 2 : 4,
+                    color: Colors.gray500,
+                    fontSize: isMobile ? 12 : 13,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: isMobile ? 'nowrap' : undefined,
+                  }}>
+                    {project.currentValue}{project.unit} → {project.targetValue}{project.unit}
+                    {!isMobile && ` · 负责人：${project.assignee}`}
+                    {!isMobile && project.deadline && ` · 截止：${new Date(project.deadline).toLocaleDateString()}`}
                   </div>
                 </div>
                 <Progress
                   type="circle"
                   percent={project.progress || 0}
-                  size={52}
+                  size={isMobile ? 40 : 52}
                   strokeColor={Colors.warningLight}
                   trailColor={Colors.gray100}
                 />
@@ -140,39 +161,48 @@ export default function ImprovementProjects() {
       </PageCard>
 
       {/* Completed Projects */}
-      <PageCard icon={<CheckCircleOutlined />} title="已完成" style={{ marginTop: 16 }}>
+      <PageCard icon={<CheckCircleOutlined />} title="已完成" style={{ marginTop: isMobile ? 8 : 16 }}>
         <List
           dataSource={projectGroups.completed}
           renderItem={(project: any) => (
             <PageCard
               size="small"
-              style={{ marginBottom: 8 }}
-              bodyStyle={{ padding: '12px 16px' }}
+              style={{ marginBottom: isMobile ? 6 : 8 }}
+              bodyStyle={{ padding: isMobile ? '10px 12px' : '12px 16px' }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <Space>
-                    <CheckCircleOutlined style={{ color: Colors.successLight, fontSize: 16 }} />
-                    <strong style={{ fontSize: 14, color: Colors.gray800 }}>{project.title}</strong>
-                    <Tag color={Colors.successLight} style={{ borderRadius: 4, border: 'none' }}>已完成</Tag>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: isMobile ? 8 : 0,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Space size={isMobile ? 4 : 8} wrap>
+                    <CheckCircleOutlined style={{ color: Colors.successLight, fontSize: isMobile ? 14 : 16 }} />
+                    <strong style={{ fontSize: isMobile ? 13 : 14, color: Colors.gray800 }}>{project.title}</strong>
+                    <Tag color={Colors.successLight} style={{ borderRadius: 4, border: 'none', fontSize: isMobile ? 11 : 12 }}>已完成</Tag>
                   </Space>
-                  <div style={{ marginTop: 4, color: Colors.gray500, fontSize: 13 }}>
-                    改善效果：{project.currentValue}{project.unit} → {project.targetValue}{project.unit}
+                  <div style={{
+                    marginTop: isMobile ? 2 : 4,
+                    color: Colors.gray500,
+                    fontSize: isMobile ? 12 : 13,
+                  }}>
+                    {project.currentValue}{project.unit} → {project.targetValue}{project.unit}
                     {project.currentValue && project.targetValue && (
-                      <Tag color={Colors.successLight} style={{ marginLeft: 8, borderRadius: 4, border: 'none' }}>
+                      <Tag color={Colors.successLight} style={{ marginLeft: 8, borderRadius: 4, border: 'none', fontSize: isMobile ? 11 : 12 }}>
                         改善 {Math.round(((project.currentValue - project.targetValue) / project.currentValue) * 100)}%
                       </Tag>
                     )}
                   </div>
                 </div>
-                <Progress type="circle" percent={100} size={52} strokeColor={Colors.successLight} trailColor={Colors.gray100} />
+                <Progress type="circle" percent={100} size={isMobile ? 40 : 52} strokeColor={Colors.successLight} trailColor={Colors.gray100} />
               </div>
             </PageCard>
           )}
         />
       </PageCard>
 
-      {/* Create Modal */}
+      {/* Create Modal — 移动端全宽 */}
       <Modal
         title={<Space><BulbOutlined style={{ color: Colors.primary }} /><span>创建改善项目</span></Space>}
         open={modalOpen}
@@ -181,6 +211,8 @@ export default function ImprovementProjects() {
         okText="创建"
         okButtonProps={{ style: { borderRadius: 6 } }}
         cancelButtonProps={{ style: { borderRadius: 6 } }}
+        width={isMobile ? '100%' : undefined}
+        style={isMobile ? { top: 0, maxWidth: '100%' } : {}}
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="title" label="项目名称" rules={[{ required: true }]}>

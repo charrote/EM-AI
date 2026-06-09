@@ -11,6 +11,7 @@ import {
 import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, WorkOrderStatusLabels, PriorityColors } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function WorkOrderDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ export default function WorkOrderDetail() {
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
   const [completeData, setCompleteData] = useState({ rootCause: '', resolution: '', satisfactionScore: 5 });
+  const { isMobile } = useResponsive();
 
   const fetchDetail = () => {
     if (!id) return;
@@ -86,47 +88,59 @@ export default function WorkOrderDetail() {
         icon={<ArrowLeftOutlined />}
         onClick={() => navigate('/work-orders')}
         type="text"
-        style={{ marginBottom: 16, color: Colors.gray600 }}
+        style={{ marginBottom: isMobile ? 8 : 16, color: Colors.gray600, padding: isMobile ? '0 4px' : undefined }}
       >
         返回工单列表
       </Button>
 
       <PageCard>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          justifyContent: 'space-between',
+          alignItems: isMobile ? 'flex-start' : 'center',
+          marginBottom: isMobile ? 12 : 20,
+          gap: isMobile ? 6 : 0,
+        }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: Colors.gray800 }}>{wo.code}</h2>
-            <span style={{ color: Colors.gray500, fontSize: 13 }}>{wo.device?.name} · {wo.deviceId}</span>
+            <h2 style={{ margin: 0, fontSize: isMobile ? 17 : 20, fontWeight: 600, color: Colors.gray800 }}>{wo.code}</h2>
+            <span style={{ color: Colors.gray500, fontSize: isMobile ? 12 : 13 }}>{wo.device?.name} · {wo.deviceId}</span>
           </div>
-          <Space>
+          <Space size={isMobile ? 4 : 8}>
             <Tag
               color={PriorityColors[wo.priority]}
-              style={{ borderRadius: 4, border: 'none', padding: '2px 12px' }}
+              style={{ borderRadius: 4, border: 'none', padding: '2px 12px', fontSize: isMobile ? 12 : 13 }}
             >
               {wo.priority}
             </Tag>
-            <Tag style={{ borderRadius: 4, padding: '2px 12px' }}>
+            <Tag style={{ borderRadius: 4, padding: '2px 12px', fontSize: isMobile ? 12 : 13 }}>
               {WorkOrderStatusLabels[wo.status]}
             </Tag>
           </Space>
         </div>
 
-        {/* Steps */}
-        <Steps current={currentStep} size="small" style={{ marginBottom: 20 }}>
+        {/* Steps — 移动端用简化的 Steps */}
+        <Steps
+          current={currentStep}
+          size={isMobile ? 'small' : 'small'}
+          style={{ marginBottom: isMobile ? 12 : 20 }}
+          labelPlacement={isMobile ? 'vertical' : 'horizontal'}
+        >
           {statusSteps.map((s) => (
             <Steps.Step key={s} title={WorkOrderStatusLabels[s]} />
           ))}
         </Steps>
 
-        {/* Details */}
-        <Descriptions column={2} bordered size="small">
+        {/* Details — 移动端1列 */}
+        <Descriptions column={isMobile ? 1 : 2} bordered size="small">
           <Descriptions.Item label="故障类型">{wo.faultType || '-'}</Descriptions.Item>
           <Descriptions.Item label="来源">{wo.source}</Descriptions.Item>
-          <Descriptions.Item label="故障描述" span={2}>{wo.description || '-'}</Descriptions.Item>
-          {wo.rootCause && <Descriptions.Item label="根本原因" span={2}>{wo.rootCause}</Descriptions.Item>}
-          {wo.resolution && <Descriptions.Item label="解决方案" span={2}>{wo.resolution}</Descriptions.Item>}
+          <Descriptions.Item label="故障描述" span={isMobile ? 1 : 2}>{wo.description || '-'}</Descriptions.Item>
+          {wo.rootCause && <Descriptions.Item label="根本原因" span={isMobile ? 1 : 2}>{wo.rootCause}</Descriptions.Item>}
+          {wo.resolution && <Descriptions.Item label="解决方案" span={isMobile ? 1 : 2}>{wo.resolution}</Descriptions.Item>}
           {wo.slaDeadline && (
-            <Descriptions.Item label="SLA 截止" span={2}>
+            <Descriptions.Item label="SLA 截止" span={isMobile ? 1 : 2}>
               <Tag color={new Date(wo.slaDeadline) > new Date() ? Colors.successLight : Colors.dangerLight} style={{ borderRadius: 4, border: 'none' }}>
                 {new Date(wo.slaDeadline).toLocaleString()}
               </Tag>
@@ -135,30 +149,41 @@ export default function WorkOrderDetail() {
         </Descriptions>
 
         {/* Actions */}
-        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+        <div style={{
+          marginTop: isMobile ? 12 : 16,
+          display: 'flex',
+          gap: isMobile ? 6 : 8,
+          flexWrap: 'wrap',
+        }}>
           {action && (
-            <Button type="primary" icon={action.icon} size="large" onClick={action.action} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
+            <Button type="primary" icon={action.icon} size={isMobile ? 'middle' : 'large'} onClick={action.action}
+              style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
               {action.label}
             </Button>
           )}
-          <Button icon={<RobotOutlined />} onClick={loadDiagnosis} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
-            AI 诊断
+          <Button icon={<RobotOutlined />} onClick={loadDiagnosis}
+            style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}
+            size={isMobile ? 'middle' : 'middle'}>
+            {isMobile ? 'AI诊断' : 'AI 诊断'}
           </Button>
           {wo.status === 'completed' && (
-            <Button icon={<BookOutlined />} onClick={() => navigate('/knowledge')} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
-              查看知识库
+            <Button icon={<BookOutlined />} onClick={() => navigate('/knowledge')}
+              style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}
+              size={isMobile ? 'middle' : 'middle'}>
+              {isMobile ? '知识库' : '查看知识库'}
             </Button>
           )}
         </div>
       </PageCard>
 
-      {/* AI Diagnosis Modal */}
+      {/* AI Diagnosis Modal — 移动端全宽 */}
       <Modal
         title={<Space><RobotOutlined style={{ color: Colors.primary }} /><span>AI 辅助诊断</span></Space>}
         open={showDiagnosis}
         onCancel={() => setShowDiagnosis(false)}
-        width={700}
+        width={isMobile ? '100%' : 700}
         footer={null}
+        style={isMobile ? { top: 0, maxWidth: '100%' } : {}}
       >
         {diagnosis ? (
           <>
@@ -169,13 +194,13 @@ export default function WorkOrderDetail() {
                 <List.Item>
                   <List.Item.Meta
                     title={
-                      <Space>
-                        <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none' }}>{item.id}</Tag>
+                      <Space size={isMobile ? 4 : 8}>
+                        <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none', fontSize: isMobile ? 11 : 12 }}>{item.id}</Tag>
                         <span>相似度：{Math.round(item.similarity * 100)}%</span>
                       </Space>
                     }
                     description={
-                      <div style={{ fontSize: 13, color: Colors.gray600 }}>
+                      <div style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray600 }}>
                         <div><strong>现象：</strong>{item.symptom}</div>
                         <div><strong>原因：</strong>{item.cause}</div>
                         <div><strong>方案：</strong>{item.solution}</div>
@@ -190,10 +215,10 @@ export default function WorkOrderDetail() {
             <Timeline
               items={diagnosis.recommendedDiagnosis.map((d: any) => ({
                 children: (
-                  <Space>
+                  <Space size={isMobile ? 4 : 8}>
                     <strong>{d.step}</strong>
-                    <span style={{ color: Colors.gray500 }}>概率 {Math.round(d.probability * 100)}%</span>
-                    <Tag color={d.priority === 'high' ? Colors.dangerLight : Colors.info} style={{ borderRadius: 4, border: 'none' }}>
+                    <span style={{ color: Colors.gray500, fontSize: isMobile ? 12 : 13 }}>概率 {Math.round(d.probability * 100)}%</span>
+                    <Tag color={d.priority === 'high' ? Colors.dangerLight : Colors.info} style={{ borderRadius: 4, border: 'none', fontSize: isMobile ? 10 : 12 }}>
                       {d.priority}
                     </Tag>
                   </Space>
@@ -218,7 +243,7 @@ export default function WorkOrderDetail() {
         ) : <Spin />}
       </Modal>
 
-      {/* Complete Modal */}
+      {/* Complete Modal — 移动端全宽 */}
       <Modal
         title="维修完成确认"
         open={completeModal}
@@ -227,9 +252,11 @@ export default function WorkOrderDetail() {
         okText="确认完成"
         okButtonProps={{ style: { borderRadius: 6 } }}
         cancelButtonProps={{ style: { borderRadius: 6 } }}
+        width={isMobile ? '100%' : undefined}
+        style={isMobile ? { top: 0, maxWidth: '100%' } : {}}
       >
         <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>根本原因</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>根本原因</div>
           <Input.TextArea
             rows={2}
             value={completeData.rootCause}
@@ -239,7 +266,7 @@ export default function WorkOrderDetail() {
           />
         </div>
         <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>解决方案</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>解决方案</div>
           <Input.TextArea
             rows={2}
             value={completeData.resolution}
@@ -249,21 +276,21 @@ export default function WorkOrderDetail() {
           />
         </div>
         <div>
-          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: 13 }}>满意度评分</div>
+          <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>满意度评分</div>
           <Rate value={completeData.satisfactionScore} onChange={(v) => setCompleteData({ ...completeData, satisfactionScore: v })} />
         </div>
       </Modal>
 
       {/* Work Logs */}
       {wo.workLogs?.length > 0 && (
-        <PageCard icon={<FileTextOutlined />} title="维修记录" style={{ marginTop: 16 }}>
+        <PageCard icon={<FileTextOutlined />} title="维修记录" style={{ marginTop: isMobile ? 8 : 16 }}>
           <Timeline
             items={wo.workLogs.map((log: any) => ({
               children: (
-                <Space>
-                  <strong>步骤 {log.step}：</strong>
-                  <span>{log.content}</span>
-                  {log.duration && <Tag style={{ borderRadius: 4 }}>{log.duration}min</Tag>}
+                <Space size={isMobile ? 4 : 8}>
+                  <strong style={{ fontSize: isMobile ? 12 : 13 }}>步骤 {log.step}：</strong>
+                  <span style={{ fontSize: isMobile ? 12 : 13 }}>{log.content}</span>
+                  {log.duration && <Tag style={{ borderRadius: 4, fontSize: isMobile ? 10 : 12 }}>{log.duration}min</Tag>}
                 </Space>
               ),
               color: Colors.info,

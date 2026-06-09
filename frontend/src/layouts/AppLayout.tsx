@@ -1,18 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Avatar, Tag, Typography, Space } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Tag, Typography, Space, Drawer } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   DashboardOutlined, ToolOutlined, CheckCircleOutlined,
   BarChartOutlined, BulbOutlined, BugOutlined,
-  WarningOutlined, BookOutlined, PieChartOutlined,
+  WarningOutlined, BookOutlined,
   UserOutlined, SettingOutlined, LogoutOutlined,
   RobotOutlined, NodeIndexOutlined, CalendarOutlined,
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
+  MenuFoldOutlined, MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
+import MobileBottomNav from '../components/MobileBottomNav';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -140,7 +143,16 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, setRole } = useStore();
-  const [collapsed, setCollapsed] = useState(false);
+  const { isMobile, isTablet, isDesktop } = useResponsive();
+
+  // 移动端：侧栏默认收起；平板：侧栏默认收起；桌面：侧栏默认展开
+  const [collapsed, setCollapsed] = useState(!isDesktop);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // 当设备类型变化时自动调整 collapsed
+  useEffect(() => {
+    setCollapsed(!isDesktop);
+  }, [isDesktop]);
 
   // 当前角色可见的菜单
   const menuItems = useMemo(() => filterMenuByRole(scenarioGroups, user.role), [user.role]);
@@ -190,72 +202,138 @@ export default function AppLayout() {
   // 菜单点击处理
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     navigate('/' + key);
+    if (isMobile) {
+      setDrawerOpen(false);
+    }
   };
 
-  return (
-    <Layout style={{ minHeight: '100vh', background: Colors.bodyBg }}>
-      {/* ─── 侧栏 ─── */}
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        width={240}
+  const contentPadding = isMobile ? 12 : isTablet ? 16 : 20;
+  const headerHeight = isMobile ? 48 : 56;
+
+  // ── 渲染侧栏菜单（桌面用 Sider，移动端用 Drawer）──
+  const renderSideMenu = (inDrawer: boolean) => (
+    <>
+      {/* 品牌标识 */}
+      <div
         style={{
-          background: Colors.sidebarBg,
-          borderRight: `1px solid ${Colors.sidebarBorder}`,
+          height: inDrawer ? 56 : 60,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: inDrawer || collapsed ? 'center' : 'center',
+          borderBottom: `1px solid ${Colors.sidebarBorder}`,
+          gap: 8,
         }}
-        theme="light"
       >
-        {/* 品牌标识 */}
-        <div
+        <ToolOutlined style={{ fontSize: inDrawer ? 24 : 22, color: Colors.primary }} />
+        {(!collapsed || inDrawer) && (
+          <span style={{ fontSize: inDrawer ? 18 : 17, fontWeight: 700, color: Colors.gray800, letterSpacing: 1 }}>
+            EM-AI
+          </span>
+        )}
+      </div>
+
+      {/* 导航菜单 */}
+      <Menu
+        key={user.role + (inDrawer ? '-drawer' : '-sider')}
+        mode="inline"
+        selectedKeys={[selectedKey]}
+        defaultOpenKeys={defaultOpenKeys}
+        items={menuItems}
+        onClick={handleMenuClick}
+        style={{
+          borderRight: 0,
+          padding: '4px 0',
+          fontSize: inDrawer ? 15 : 14,
+        }}
+      />
+    </>
+  );
+
+  return (
+    <Layout style={{ height: '100vh', overflow: 'hidden', background: Colors.bodyBg }}>
+      {/* ─── 桌面/平板：侧栏 ─── */}
+      {!isMobile && (
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          width={240}
           style={{
-            height: 60,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderBottom: `1px solid ${Colors.sidebarBorder}`,
-            gap: 8,
+            background: Colors.sidebarBg,
+            borderRight: `1px solid ${Colors.sidebarBorder}`,
+            overflow: 'auto',
           }}
+          theme="light"
+          trigger={isTablet ? undefined : undefined}
         >
-          <ToolOutlined style={{ fontSize: 22, color: Colors.primary }} />
-          {!collapsed && (
-            <span style={{ fontSize: 17, fontWeight: 700, color: Colors.gray800, letterSpacing: 1 }}>
-              EM-AI
-            </span>
-          )}
-        </div>
+          {renderSideMenu(false)}
+        </Sider>
+      )}
 
-        {/* 导航菜单 */}
-        <Menu
-          key={user.role}
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          defaultOpenKeys={defaultOpenKeys}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{
-            borderRight: 0,
-            padding: '4px 0',
-            fontSize: 14,
-          }}
-        />
-      </Sider>
+      {/* ─── 移动端：抽屉菜单 ─── */}
+      {isMobile && (
+        <Drawer
+          title={null}
+          placement="left"
+          closable={false}
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={280}
+          styles={{ body: { padding: 0, overflow: 'auto' } }}
+        >
+          {renderSideMenu(true)}
+        </Drawer>
+      )}
 
-      <Layout>
+      <Layout style={{ overflow: 'hidden' }}>
         {/* ─── 顶栏 ─── */}
         <Header
           style={{
             background: '#FFFFFF',
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: `1px solid ${Colors.headerBorder}`,
-            height: 56,
-            lineHeight: '56px',
+            height: headerHeight,
+            lineHeight: `${headerHeight}px`,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12 }}>
+            {/* 移动端：汉堡菜单按钮 */}
+            {isMobile && (
+              <div
+                onClick={() => setDrawerOpen(true)}
+                style={{
+                  padding: '4px 4px 4px 0',
+                  cursor: 'pointer',
+                  fontSize: 18,
+                  color: Colors.gray600,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <MenuFoldOutlined />
+              </div>
+            )}
+
+            {/* 平板/桌面：侧栏折叠按钮 */}
+            {!isMobile && (
+              <div
+                onClick={() => setCollapsed(!collapsed)}
+                style={{
+                  padding: 4,
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  color: Colors.gray600,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              </div>
+            )}
+
             <Tag
               color="default"
               style={{
@@ -264,13 +342,15 @@ export default function AppLayout() {
                 border: `1px solid ${Colors.gray200}`,
                 borderRadius: 4,
                 color: Colors.gray600,
-                fontSize: 12,
-                lineHeight: '22px',
+                fontSize: isMobile ? 11 : 12,
+                lineHeight: isMobile ? '20px' : '22px',
               }}
             >
               DEMO
             </Tag>
-            <Text type="secondary" style={{ fontSize: 13 }}>数据仅供演示</Text>
+            {!isMobile && (
+              <Text type="secondary" style={{ fontSize: 13 }}>数据仅供演示</Text>
+            )}
           </div>
 
           {/* 用户面板 */}
@@ -279,35 +359,67 @@ export default function AppLayout() {
             trigger={['click']}
             placement="bottomRight"
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                cursor: 'pointer',
-                padding: '4px 8px',
-                borderRadius: 6,
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = Colors.gray100)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-            >
-              <Avatar size={32} style={{ background: Colors.primary, color: '#FFFFFF', fontWeight: 600 }}>
+            {isMobile ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: Colors.primary,
+                  color: '#FFFFFF',
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
                 {getInitials(user.name)}
-              </Avatar>
-              <div style={{ lineHeight: 1.3 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: Colors.gray800 }}>{user.name}</div>
-                <div style={{ fontSize: 11, color: Colors.gray500 }}>{RoleConfig[user.role].label}</div>
               </div>
-            </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = Colors.gray100)}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <Avatar size={32} style={{ background: Colors.primary, color: '#FFFFFF', fontWeight: 600 }}>
+                  {getInitials(user.name)}
+                </Avatar>
+                <div style={{ lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: Colors.gray800 }}>{user.name}</div>
+                  <div style={{ fontSize: 11, color: Colors.gray500 }}>{RoleConfig[user.role].label}</div>
+                </div>
+              </div>
+            )}
           </Dropdown>
         </Header>
 
         {/* ─── 内容区 ─── */}
-        <Content style={{ padding: 20 }}>
-          <Outlet />
+        <Content
+          style={{
+            padding: contentPadding,
+            overflow: 'auto',
+            height: '100%',
+            paddingBottom: isMobile ? contentPadding + 56 : contentPadding, // 为底部导航留空间
+          }}
+        >
+          <div className="fade-in" style={{ maxWidth: 1440, margin: '0 auto' }}>
+            <Outlet />
+          </div>
         </Content>
       </Layout>
+
+      {/* ─── 移动端：底部导航 ─── */}
+      {isMobile && <MobileBottomNav />}
     </Layout>
   );
 }

@@ -5,12 +5,14 @@ import { ClockCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, WorkOrderStatusLabels, WorkOrderStatusColors, PriorityColors } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
 
 export default function WorkOrderList() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('pending');
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
 
   useEffect(() => {
     setLoading(true);
@@ -29,7 +31,11 @@ export default function WorkOrderList() {
     return { color: Colors.successLight, text: `${Math.floor(minutes / 60)}h${minutes % 60}min` };
   };
 
-  const pendingCount = orders.filter(o => o.status === 'pending').length;
+  const counts = {
+    pending: orders.filter(o => o.status === 'pending').length,
+    accepted: orders.filter(o => ['accepted', 'diagnosing', 'repairing', 'verifying'].includes(o.status)).length,
+    completed: orders.filter(o => o.status === 'completed').length,
+  };
 
   return (
     <div>
@@ -37,11 +43,12 @@ export default function WorkOrderList() {
         value={tab}
         onChange={(v) => setTab(v as string)}
         options={[
-          { value: 'pending', label: `待接单 (${pendingCount})` },
-          { value: 'accepted', label: '处理中' },
-          { value: 'completed', label: '已完成' },
+          { value: 'pending', label: `待接单 (${counts.pending})` },
+          { value: 'accepted', label: `处理中 (${counts.accepted})` },
+          { value: 'completed', label: `已完成 (${counts.completed})` },
         ]}
-        style={{ marginBottom: 16, borderRadius: 6 }}
+        style={{ marginBottom: isMobile ? 12 : 16, borderRadius: 6 }}
+        size={isMobile ? 'middle' : 'middle'}
       />
 
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> :
@@ -55,20 +62,25 @@ export default function WorkOrderList() {
                 hoverable
                 size="small"
                 style={{
-                  marginBottom: 8,
+                  marginBottom: isMobile ? 6 : 8,
                   cursor: 'pointer',
                   borderLeft: `3px solid ${PriorityColors[wo.priority] || Colors.gray300}`,
                 }}
-                bodyStyle={{ padding: '12px 16px' }}
+                bodyStyle={{ padding: isMobile ? '10px 12px' : '12px 16px' }}
                 onClick={() => navigate(`/work-orders/${wo.id}`)}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <Space>
-                      <strong style={{ fontSize: 14, color: Colors.gray800 }}>{wo.code}</strong>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: isMobile ? 8 : 0,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Space size={isMobile ? 4 : 8} wrap>
+                      <strong style={{ fontSize: isMobile ? 13 : 14, color: Colors.gray800 }}>{wo.code}</strong>
                       <Tag
                         color={PriorityColors[wo.priority]}
-                        style={{ borderRadius: 4, border: 'none', margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 8px' }}
+                        style={{ borderRadius: 4, border: 'none', margin: 0, fontSize: isMobile ? 10 : 11, lineHeight: '18px', padding: '0 8px' }}
                       >
                         {wo.priority}
                       </Tag>
@@ -76,7 +88,7 @@ export default function WorkOrderList() {
                         style={{
                           borderRadius: 4,
                           margin: 0,
-                          fontSize: 11,
+                          fontSize: isMobile ? 10 : 11,
                           lineHeight: '18px',
                           padding: '0 8px',
                           background: `${WorkOrderStatusColors[wo.status]}15`,
@@ -87,8 +99,16 @@ export default function WorkOrderList() {
                         {WorkOrderStatusLabels[wo.status] || wo.status}
                       </Tag>
                     </Space>
-                    <div style={{ marginTop: 4, color: Colors.gray500, fontSize: 13 }}>
-                      {wo.device?.name || wo.deviceId} · {wo.faultType || '未分类'} · {wo.description?.slice(0, 30)}...
+                    <div style={{
+                      marginTop: isMobile ? 2 : 4,
+                      color: Colors.gray500,
+                      fontSize: isMobile ? 12 : 13,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {wo.device?.name || wo.deviceId} · {wo.faultType || '未分类'}
+                      {!isMobile && ` · ${wo.description?.slice(0, 30)}...`}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -96,9 +116,9 @@ export default function WorkOrderList() {
                       <Tag
                         color={sla.color}
                         icon={<ClockCircleOutlined />}
-                        style={{ borderRadius: 4, margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 8px' }}
+                        style={{ borderRadius: 4, margin: 0, fontSize: isMobile ? 10 : 11, lineHeight: '18px', padding: '0 8px' }}
                       >
-                        {sla.text}
+                        {isMobile ? sla.text.replace(/^(剩余|超时)/, '') : sla.text}
                       </Tag>
                     )}
                   </div>

@@ -7,6 +7,7 @@ import {
 import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, DeviceStatusConfig } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
 
 // ── 场景配置 ──────────────────────────────────
 interface ScenarioInfo {
@@ -97,6 +98,7 @@ export default function DeviceList() {
   const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const { isMobile } = useResponsive();
 
   // 多选筛选条件（数组）
   const [filterAreas, setFilterAreas] = useState<string[]>([]);
@@ -211,11 +213,20 @@ export default function DeviceList() {
       .sort((a, b) => a.area.localeCompare(b.area));
   }, [devices, filterAreas, filterStatuses, filterTypes]);
 
+  const totalFiltered = filteredAreas.reduce((s, a) => s + a.total, 0);
+
   // ── 渲染 ────────────────────────────────────
   return (
     <div>
       {/* ─── 顶部栏：场景切换 + 实时指示器 + 统计 ─── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between',
+        alignItems: isMobile ? 'stretch' : 'center',
+        marginBottom: isMobile ? 12 : 16,
+        gap: isMobile ? 8 : 12,
+      }}>
         <Segmented
           value={scenario}
           onChange={(v) => { setScenario(v as ScenarioKey); setFilterAreas([]); setFilterStatuses([]); setFilterTypes([]); }}
@@ -224,14 +235,19 @@ export default function DeviceList() {
             { value: 'capacitor', label: `电解电容` },
           ]}
           style={{ borderRadius: 6 }}
-          size="large"
+          size={isMobile ? 'middle' : 'large'}
         />
-        <Space size={12} align="center">
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: isMobile ? 6 : 12,
+          alignItems: 'center',
+        }}>
           {/* 实时指示器 */}
           <Tooltip title={`模拟器已运行 ${simulatorStatus === 'running' ? `${simulatorTick} 次 tick` : '已停止'}`}>
             <Tag
               color={simulatorStatus === 'running' ? 'green' : 'default'}
-              style={{ borderRadius: 4, border: 'none', margin: 0, padding: '2px 12px', fontSize: 12, lineHeight: '22px' }}
+              style={{ borderRadius: 4, border: 'none', margin: 0, padding: '2px 12px', fontSize: isMobile ? 11 : 12, lineHeight: '22px' }}
             >
               <span style={{
                 display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
@@ -244,80 +260,83 @@ export default function DeviceList() {
           </Tooltip>
           {/* 自动刷新开关 */}
           <Space size={4}>
-            <ClockCircleOutlined style={{ fontSize: 12, color: Colors.gray400 }} />
-            <span style={{ fontSize: 12, color: Colors.gray500 }}>30s刷新</span>
+            <ClockCircleOutlined style={{ fontSize: isMobile ? 11 : 12, color: Colors.gray400 }} />
+            <span style={{ fontSize: isMobile ? 11 : 12, color: Colors.gray500 }}>30s刷新</span>
             <Switch size="small" checked={autoRefresh} onChange={setAutoRefresh} />
           </Space>
-          {/* 状态统计 */}
+          {/* 状态统计（移动端只显示有数量的） */}
           {Object.entries(DeviceStatusConfig).map(([key, cfg]) => {
             const count = devices.filter((d: any) => d.status === key).length;
             if (!count) return null;
+            if (isMobile && count === 0) return null;
             const Icon = cfg.icon;
             return (
               <Tag
                 key={key}
                 color={cfg.color}
-                style={{ borderRadius: 4, border: 'none', margin: 0, padding: '2px 10px', fontSize: 12 }}
+                style={{ borderRadius: 4, border: 'none', margin: 0, padding: '2px 10px', fontSize: isMobile ? 10 : 12 }}
               >
-                <Icon style={{ marginRight: 3, fontSize: 11 }} />
-                {cfg.label} {count}
+                <Icon style={{ marginRight: 3, fontSize: isMobile ? 10 : 11 }} />
+                {isMobile ? count : `${cfg.label} ${count}`}
               </Tag>
             );
           })}
-        </Space>
+        </div>
       </div>
 
-      {/* ─── 多选筛选栏 ─── */}
-      <PageCard bodyStyle={{ padding: '10px 16px' }} style={{ marginBottom: 16 }}>
-        <Row gutter={[12, 8]} align="middle">
-          <Col flex="220px">
-            <Select
-              mode="multiple"
-              placeholder="全部区域（可多选）"
-              value={filterAreas.length ? filterAreas : undefined}
-              onChange={(v) => setFilterAreas(v as string[])}
-              options={areaOptions}
-              allowClear
-              maxTagCount={2}
-              style={{ width: '100%', borderRadius: 6 }}
-              size="small"
-            />
-          </Col>
-          <Col flex="180px">
-            <Select
-              mode="multiple"
-              placeholder="全部状态（可多选）"
-              value={filterStatuses.length ? filterStatuses : undefined}
-              onChange={(v) => setFilterStatuses(v as string[])}
-              options={statusOptions}
-              allowClear
-              maxTagCount={2}
-              style={{ width: '100%', borderRadius: 6 }}
-              size="small"
-            />
-          </Col>
-          <Col flex="200px">
-            <Select
-              mode="multiple"
-              placeholder="全部类型（可多选）"
-              value={filterTypes.length ? filterTypes : undefined}
-              onChange={(v) => setFilterTypes(v as string[])}
-              options={typeOptions}
-              allowClear
-              maxTagCount={2}
-              style={{ width: '100%', borderRadius: 6 }}
-              size="small"
-            />
-          </Col>
-          <Col flex="auto">
-            <div style={{ textAlign: 'right', fontSize: 13, color: Colors.gray500 }}>
-              {(filterAreas.length || filterStatuses.length || filterTypes.length)
-                ? <span>筛选出 <strong style={{ color: Colors.primary }}>{filteredAreas.reduce((s, a) => s + a.total, 0)}</strong> / {devices.length} 台</span>
-                : <span>共 <strong style={{ color: Colors.primary }}>{devices.length}</strong> 台设备</span>
-              }
-            </div>
-          </Col>
-        </Row>
+      {/* ─── 多选筛选栏（移动端纵向排列） ─── */}
+      <PageCard bodyStyle={{ padding: isMobile ? '8px 12px' : '10px 16px' }} style={{ marginBottom: isMobile ? 12 : 16 }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? 8 : 12,
+          alignItems: isMobile ? 'stretch' : 'center',
+        }}>
+          <Select
+            mode="multiple"
+            placeholder="全部区域"
+            value={filterAreas.length ? filterAreas : undefined}
+            onChange={(v) => setFilterAreas(v as string[])}
+            options={areaOptions}
+            allowClear
+            maxTagCount={isMobile ? 1 : 2}
+            style={{ flex: isMobile ? '1 1 auto' : '0 0 220px', borderRadius: 6 }}
+            size={isMobile ? 'small' : 'small'}
+          />
+          <Select
+            mode="multiple"
+            placeholder="全部状态"
+            value={filterStatuses.length ? filterStatuses : undefined}
+            onChange={(v) => setFilterStatuses(v as string[])}
+            options={statusOptions}
+            allowClear
+            maxTagCount={isMobile ? 1 : 2}
+            style={{ flex: isMobile ? '1 1 auto' : '0 0 180px', borderRadius: 6 }}
+            size="small"
+          />
+          <Select
+            mode="multiple"
+            placeholder="全部类型"
+            value={filterTypes.length ? filterTypes : undefined}
+            onChange={(v) => setFilterTypes(v as string[])}
+            options={typeOptions}
+            allowClear
+            maxTagCount={isMobile ? 1 : 2}
+            style={{ flex: isMobile ? '1 1 auto' : '0 0 200px', borderRadius: 6 }}
+            size="small"
+          />
+          <div style={{
+            textAlign: isMobile ? 'left' : 'right',
+            fontSize: 13,
+            color: Colors.gray500,
+            flex: isMobile ? '0 0 auto' : '1 1 auto',
+          }}>
+            {(filterAreas.length || filterStatuses.length || filterTypes.length)
+              ? <span>筛选 <strong style={{ color: Colors.primary }}>{totalFiltered}</strong> / {devices.length} 台</span>
+              : <span>共 <strong style={{ color: Colors.primary }}>{devices.length}</strong> 台设备</span>
+            }
+          </div>
+        </div>
       </PageCard>
 
       {/* ─── 区域分组设备列表 ─── */}
@@ -327,21 +346,22 @@ export default function DeviceList() {
         <Empty description="没有匹配的设备" />
       ) : (
         filteredAreas.map((areaGroup) => (
-          <div key={areaGroup.area} style={{ marginBottom: 16 }}>
+          <div key={areaGroup.area} style={{ marginBottom: isMobile ? 12 : 16 }}>
             {/* 区域标题栏 */}
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginBottom: 10, paddingLeft: 4,
+              marginBottom: isMobile ? 8 : 10, paddingLeft: 4,
+              flexWrap: 'wrap', gap: 4,
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: Colors.gray800 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h3 style={{ margin: 0, fontSize: isMobile ? 15 : 16, fontWeight: 600, color: Colors.gray800 }}>
                   {areaGroup.area}
                 </h3>
-                <Tag style={{ borderRadius: 10, background: Colors.gray100, border: 'none', color: Colors.gray500, fontSize: 12 }}>
+                <Tag style={{ borderRadius: 10, background: Colors.gray100, border: 'none', color: Colors.gray500, fontSize: isMobile ? 11 : 12 }}>
                   {areaGroup.total} 台
                 </Tag>
               </div>
-              <Space size={4}>
+              <Space size={isMobile ? 2 : 4} wrap>
                 {Object.entries(areaGroup.statusCounts).map(([status, count]) => {
                   const cfg = DeviceStatusConfig[status];
                   if (!cfg) return null;
@@ -349,9 +369,9 @@ export default function DeviceList() {
                     <Tag
                       key={status}
                       color={cfg.color}
-                      style={{ borderRadius: 3, border: 'none', margin: 0, fontSize: 11, lineHeight: '18px', padding: '0 8px' }}
+                      style={{ borderRadius: 3, border: 'none', margin: 0, fontSize: isMobile ? 10 : 11, lineHeight: '18px', padding: '0 8px' }}
                     >
-                      {cfg.label} {count}
+                      {isMobile ? `${count}` : `${cfg.label} ${count}`}
                     </Tag>
                   );
                 })}
@@ -359,7 +379,7 @@ export default function DeviceList() {
             </div>
 
             {/* 设备卡片网格 */}
-            <Row gutter={[12, 12]}>
+            <Row gutter={[isMobile ? 8 : 12, isMobile ? 8 : 12]}>
               {areaGroup.devices.map((device: any) => (
                 <Col key={device.id} xs={24} sm={12} md={8} lg={6} xl={4}>
                   <DeviceMiniCard
