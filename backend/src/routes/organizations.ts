@@ -103,7 +103,7 @@ router.get('/:id/devices', async (req: Request, res: Response) => {
 // POST /api/organizations — 创建节点
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { code, name, level, parentId, sortOrder, location, contact } = req.body;
+    const { code, name, level, parentId, sortOrder, location, contact, oeeTarget } = req.body;
     if (!code || !name || !level) {
       return res.status(400).json({ error: 'code, name, level are required' });
     }
@@ -127,7 +127,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     const org = await prisma.organization.create({
-      data: { code, name, level, parentId: parentId || null, sortOrder, location, contact },
+      data: { code, name, level, parentId: parentId || null, sortOrder, location, contact, oeeTarget },
     });
     res.status(201).json({ data: org });
   } catch (err: any) {
@@ -140,10 +140,10 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { code, name, sortOrder, isActive, location, contact } = req.body;
+    const { code, name, sortOrder, isActive, location, contact, oeeTarget } = req.body;
     const org = await prisma.organization.update({
       where: { id },
-      data: { code, name, sortOrder, isActive, location, contact },
+      data: { code, name, sortOrder, isActive, location, contact, oeeTarget },
     });
     res.json({ data: org });
   } catch (err: any) {

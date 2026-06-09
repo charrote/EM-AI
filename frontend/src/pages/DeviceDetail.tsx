@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Tag, Table, Button } from 'antd';
 import { ArrowLeftOutlined, UserOutlined, ThunderboltOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import * as echarts from 'echarts';
+import { SpinnerIcon } from '../components/Icons';
 
 const STATUS_CFG: Record<string, { color: string; label: string }> = {
   running: { color: '#22C55E', label: '运行中' },
@@ -135,7 +136,7 @@ export default function DeviceDetail() {
     });
   }, [trend]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '100px 0', color: '#999', fontSize: 16 }}>⏳ 加载中...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '100px 0', color: '#999', fontSize: 16 }}><SpinnerIcon size={20} style={{ marginRight: 6 }} />加载中...</div>;
   if (!device) return <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>设备未找到</div>;
 
   const statusCfg = STATUS_CFG[device.status];

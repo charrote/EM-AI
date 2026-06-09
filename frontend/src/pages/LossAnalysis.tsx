@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Table, Tag, Select, Space } from 'antd';
 import * as echarts from 'echarts';
+import { SpinnerIcon } from '../components/Icons';
 
 const SCOPE_LABELS: Record<string, string> = {
   plant: '全厂',
@@ -280,7 +281,7 @@ export default function LossAnalysis() {
         <div style={{ position: 'relative' }}>
           {loading && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.85)', zIndex: 10, borderRadius: 8, color: '#999', fontSize: 14 }}>
-              ⏳ 加载中...
+              <SpinnerIcon size={16} style={{ marginRight: 4 }} />加载中...
             </div>
           )}
           {!loading && pareto.length === 0 && (

@@ -266,18 +266,18 @@ export async function seedDemoData() {
   // 企业层级 Demo 数据
   // ═══════════════════════════════════════════════
   const group = await prisma.organization.create({
-    data: { code: 'GRP-01', name: 'Uantek 集团', level: 'group', sortOrder: 1, location: '浙江省温州市' },
+    data: { code: 'GRP-01', name: 'Uantek 集团', level: 'group', sortOrder: 1, location: '广东省东莞市' },
   });
 
   const company = await prisma.organization.create({
-    data: { code: 'CMP-01', name: 'Uantek 精密制造有限公司', level: 'company', parentId: group.id, sortOrder: 1, location: '温州市经济技术开发区' },
+    data: { code: 'CMP-01', name: 'Uantek 精密制造有限公司', level: 'company', parentId: group.id, sortOrder: 1, location: '东莞市寮步镇东涛大厦', oeeTarget: 85 },
   });
 
   const workshopMetal = await prisma.organization.create({
-    data: { code: 'WS-METAL', name: '金属加工车间', level: 'workshop', parentId: company.id, sortOrder: 1, location: 'A 栋 1F' },
+    data: { code: 'WS-METAL', name: '金属加工车间', level: 'workshop', parentId: company.id, sortOrder: 1, location: 'A 栋 1F', oeeTarget: 85 },
   });
   const workshopCapacitor = await prisma.organization.create({
-    data: { code: 'WS-CAP', name: '电解电容车间', level: 'workshop', parentId: company.id, sortOrder: 2, location: 'A 栋 2F' },
+    data: { code: 'WS-CAP', name: '电解电容车间', level: 'workshop', parentId: company.id, sortOrder: 2, location: 'A 栋 2F', oeeTarget: 82 },
   });
 
   const linesMetal = [

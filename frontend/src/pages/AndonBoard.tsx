@@ -305,7 +305,7 @@ export default function AndonBoard() {
                   />
                 ) : (
                   <div style={{ padding: 24, textAlign: 'center', color: Colors.gray400 }}>
-                    暂无活跃告警 ✓
+                    <CheckIcon size={14} color="#22C55E" style={{ marginRight: 4 }} />暂无活跃告警
                   </div>
                 )}
               </Card>

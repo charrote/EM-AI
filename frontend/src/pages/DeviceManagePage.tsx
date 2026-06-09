@@ -178,7 +178,14 @@ export default function DeviceManagePage() {
       installDate: record.installDate ? record.installDate.split('T')[0] : undefined,
       warrantyUntil: record.warrantyUntil ? record.warrantyUntil.split('T')[0] : undefined,
       specifications: record.specifications ? JSON.stringify(record.specifications, null, 2) : '',
-      onlineParams: record.onlineParams || [],
+      onlineParams: (() => {
+        // 兼容旧格式: 数组 → 转换为新结构
+        const raw = record.onlineParams;
+        if (Array.isArray(raw)) {
+          return { ip: '', port: undefined, protocol: '', driverName: '', driverVersion: '', driverFile: '', customParams: raw };
+        }
+        return raw || { ip: '', port: undefined, protocol: '', driverName: '', driverVersion: '', driverFile: '', customParams: [] };
+      })(),
       programList: record.programList || [],
       theoreticalCapacity: record.theoreticalCapacity ?? undefined,
     });
@@ -308,9 +315,22 @@ export default function DeviceManagePage() {
         },
       },
       {
-        title: '健康度', dataIndex: 'healthScore', key: 'healthScore', width: 60,
+        title: (
+          <Space size={4}>
+            <span>健康度</span>
+            <Tooltip title={
+              <div style={{ fontSize: 12, lineHeight: 1.8 }}>
+                <b>健康度</b> 是设备综合健康评分（0-100），综合评估 OEE、MTBF、MTTR、故障频率等维度：<br />
+                <span style={{ color: Colors.success }}>≥ 75</span> 优秀 · <span style={{ color: Colors.warning }}>≥ 60</span> 一般 · <span style={{ color: Colors.danger }}>&lt; 60</span> 较差
+              </div>
+            }>
+              <span style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', color: Colors.gray400, fontSize: 14 }}>?</span>
+            </Tooltip>
+          </Space>
+        ),
+        dataIndex: 'healthScore', key: 'healthScore', width: 70,
         render: (v: number) => v != null
-          ? <Text strong style={{ color: v > 70 ? Colors.success : v > 40 ? Colors.warning : Colors.danger }}>{v}</Text>
+          ? <Text strong style={{ color: v >= 75 ? Colors.success : v >= 60 ? Colors.warning : Colors.danger }}>{v}</Text>
           : '-',
       },
     ] as ColumnsType<any>),
@@ -520,8 +540,73 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>联机参数</Divider>
-        <Form.List name="onlineParams">
+        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>联机要素</Divider>
+        <Row gutter={12}>
+          <Col xs={12} sm={8}>
+            <Form.Item label="IP 地址" name={['onlineParams', 'ip']}>
+              <Input placeholder="如: 192.168.1.100" />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={4}>
+            <Form.Item label="端口号" name={['onlineParams', 'port']}>
+              <InputNumber min={1} max={65535} style={{ width: '100%' }} placeholder="如: 502" />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item label="通讯协议" name={['onlineParams', 'protocol']}>
+              <Select placeholder="选择协议" allowClear
+                options={[
+                  { value: 'Modbus TCP', label: 'Modbus TCP' },
+                  { value: 'Modbus RTU', label: 'Modbus RTU' },
+                  { value: 'OPC UA', label: 'OPC UA' },
+                  { value: 'Siemens S7', label: 'Siemens S7' },
+                  { value: 'Mitsubishi MC', label: 'Mitsubishi MC' },
+                  { value: 'EtherNet/IP', label: 'EtherNet/IP' },
+                  { value: 'PROFINET', label: 'PROFINET' },
+                  { value: 'BACnet', label: 'BACnet' },
+                  { value: '自定义', label: '自定义' },
+                ]}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>驱动程序</Divider>
+        <Row gutter={12}>
+          <Col xs={24} sm={8}>
+            <Form.Item label="驱动名称" name={['onlineParams', 'driverName']}>
+              <Input placeholder="如: Siemens S7 Driver" />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={4}>
+            <Form.Item label="版本" name={['onlineParams', 'driverVersion']}>
+              <Input placeholder="如: 2.1.0" />
+            </Form.Item>
+          </Col>
+          <Col xs={12} sm={8}>
+            <Form.Item label="驱动文件" name={['onlineParams', 'driverFile']}>
+              <Input placeholder="选择文件或输入URL" addonAfter={
+                <span style={{ cursor: 'pointer' }} onClick={() => {
+                  // Trigger file input
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.zip,.exe,.msi,.dll,.tar.gz';
+                  input.onchange = (e: any) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      form.setFieldValue(['onlineParams', 'driverFile'], file.name);
+                      message.info(`已选择: ${file.name}`);
+                    }
+                  };
+                  input.click();
+                }}>浏览</span>
+              } />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>自定义参数</Divider>
+        <Form.List name={['onlineParams', 'customParams']}>
           {(fields, { add, remove }) => (
             <div>
               {fields.map(({ key, name, ...restField }, index) => (
@@ -531,12 +616,12 @@ export default function DeviceManagePage() {
                       <Input placeholder="参数名" size="small" />
                     </Form.Item>
                   </Col>
-                  <Col span={7}>
+                  <Col span={8}>
                     <Form.Item {...restField} name={[name, 'value']} rules={[{ required: true, message: '值' }]} noStyle>
                       <Input placeholder="值" size="small" />
                     </Form.Item>
                   </Col>
-                  <Col span={6}>
+                  <Col span={5}>
                     <Form.Item {...restField} name={[name, 'unit']} noStyle>
                       <Input placeholder="单位" size="small" />
                     </Form.Item>
@@ -547,10 +632,10 @@ export default function DeviceManagePage() {
                 </Row>
               ))}
               {fields.length === 0 && (
-                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>暂无联机参数</Text>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>暂无自定义参数</Text>
               )}
               <Button type="dashed" onClick={() => add({ name: '', value: '', unit: '' })} size="small" icon={<PlusOutlined />} style={{ width: '100%' }}>
-                添加参数
+                添加自定义参数
               </Button>
             </div>
           )}

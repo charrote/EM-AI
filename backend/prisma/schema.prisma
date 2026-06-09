@@ -34,6 +34,7 @@ model Organization {
   isActive  Boolean  @default(true) @map("is_active")
   location  String?
   contact   Json?
+  oeeTarget Float?   @map("oee_target")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -123,6 +124,7 @@ model WorkOrder {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   device Device @relation(fields: [deviceId], references: [id])
+  team   Team?  @relation(fields: [teamId], references: [id])
   workLogs WorkLog[]
 
   @@map("work_orders")
@@ -271,6 +273,25 @@ model MaintenanceRecord {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("maintenance_records")
+}
+
+// ===== 班组 =====
+model Team {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  leader      String?
+  memberCount Int?     @default(0) @map("member_count")
+  shift       String?  // 早班/中班/晚班
+  workshopId  String?  @map("workshop_id")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workOrders   WorkOrder[]
+  @@index([workshopId])
+  @@map("teams")
 }
 
 // ===== RCA 分析记录 =====

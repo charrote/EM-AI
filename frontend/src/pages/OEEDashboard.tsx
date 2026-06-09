@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tag } from 'antd';
+import { BarChartIcon, LineChartUpIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
 
 // ── Inline KPI block ──
 function KpiBlock({ title, value, suffix, color, prefix }: {
-  title: string; value: number | string; suffix?: string; color: string; prefix?: string;
+  title: string; value: number | string; suffix?: string; color: string; prefix?: React.ReactNode;
 }) {
   return (
     <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
@@ -35,7 +36,7 @@ export default function OEEDashboard() {
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ 加载中...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
   if (!oee) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;
 
   // ── Device OEE table columns ──
@@ -72,7 +73,7 @@ export default function OEEDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
         <KpiBlock title="全厂 OEE" value={oee.overallOEE} suffix="%" color={oee.overallOEE >= 85 ? '#22C55E' : oee.overallOEE >= 75 ? '#F59E0B' : '#EF4444'} />
         <KpiBlock title="设备总数" value={oee.totalDevices} suffix="台" color="#333" />
-        <KpiBlock title="待处理告警" value={oee.alertCount} color={oee.alertCount > 0 ? '#EF4444' : '#22C55E'} prefix={oee.alertCount > 0 ? '↑' : '↓'} />
+        <KpiBlock title="待处理告警" value={oee.alertCount} color={oee.alertCount > 0 ? '#EF4444' : '#22C55E'} prefix={oee.alertCount > 0 ? <ArrowUpIcon size={16} color="#EF4444" /> : <ArrowDownIcon size={16} color="#22C55E" />} />
         <KpiBlock title="OEE 目标" value={85} suffix="%" color="#1677ff" />
       </div>
 
@@ -80,7 +81,7 @@ export default function OEEDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 16 }}>
         {/* 六大损失分布 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📊 六大损失分布</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><BarChartIcon size={16} color="#3B82F6" style={{ marginRight: 4 }} /> 六大损失分布</h3>
           {(losses || []).map((l: any) => {
             const lossColors = ['#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6', '#22C55E', '#EC4899'];
             const maxVal = Math.max(...(losses || []).map((x: any) => x.value), 1);
@@ -102,7 +103,7 @@ export default function OEEDashboard() {
 
         {/* OEE 趋势 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📈 OEE 趋势</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><LineChartUpIcon size={16} color="#22C55E" style={{ marginRight: 4 }} /> OEE 趋势</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {(oee.trend || []).map((t: any) => {
               const pct = Math.min(100, Math.max(0, t.oee));
@@ -124,7 +125,7 @@ export default function OEEDashboard() {
 
       {/* 设备 OEE 排行表 */}
       <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📊 设备 OEE 排行</h3>
+        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><BarChartIcon size={16} color="#3B82F6" style={{ marginRight: 4 }} /> 设备 OEE 排行</h3>
         <Table
           dataSource={oee.deviceOEE || []}
           columns={deviceColumns}

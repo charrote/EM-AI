@@ -1,19 +1,20 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select, Tag } from 'antd';
+import { BoltIcon, PauseIcon, RefreshIcon, CrossIcon, WrenchIcon, WarningIcon, TrashIcon, QuestionIcon, SpinnerIcon } from '../components/Icons';
 
-const STATUS_CFG: Record<string, { color: string; label: string; icon: string }> = {
-  running: { color: '#22C55E', label: '运行中', icon: '⚡' },
-  idle: { color: '#9CA3AF', label: '待机', icon: '⏸' },
-  changeover: { color: '#F59E0B', label: '换型中', icon: '🔄' },
-  fault: { color: '#EF4444', label: '故障', icon: '❌' },
-  maintenance: { color: '#3B82F6', label: '保养中', icon: '🔧' },
-  repair: { color: '#F97316', label: '检修中', icon: '⚠️' },
-  retired: { color: '#6B7280', label: '已报废', icon: '🗑' },
+const STATUS_CFG = {
+  running: { color: '#22C55E', label: '运行中', icon: <BoltIcon size={14} /> },
+  idle: { color: '#9CA3AF', label: '待机', icon: <PauseIcon size={14} /> },
+  changeover: { color: '#F59E0B', label: '换型中', icon: <RefreshIcon size={14} /> },
+  fault: { color: '#EF4444', label: '故障', icon: <CrossIcon size={14} /> },
+  maintenance: { color: '#3B82F6', label: '保养中', icon: <WrenchIcon size={14} /> },
+  repair: { color: '#F97316', label: '检修中', icon: <WarningIcon size={14} /> },
+  retired: { color: '#6B7280', label: '已报废', icon: <TrashIcon size={14} /> },
 };
 
 function DeviceCard({ device, onClick }: { device: any; onClick: () => void }) {
-  const cfg = STATUS_CFG[device.status] || { color: '#999', label: device.status, icon: '❓' };
+  const cfg = STATUS_CFG[device.status] || { color: '#999', label: device.status, icon: <QuestionIcon size={14} /> };
   const oeeColor = (device.oee || 0) >= 85 ? '#22C55E' : (device.oee || 0) >= 75 ? '#F59E0B' : '#EF4444';
   const healthColor = (device.healthScore || 0) >= 80 ? '#22C55E' : (device.healthScore || 0) >= 60 ? '#F59E0B' : '#EF4444';
 
@@ -196,7 +197,7 @@ export default function DeviceList() {
 
       {/* Device grid by area */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 60, color: '#9CA3AF', fontSize: 16 }}>⏳ 加载中...</div>
+        <div style={{ textAlign: 'center', padding: 60, color: '#9CA3AF', fontSize: 16 }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>
       ) : filteredAreas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#9CA3AF', fontSize: 16 }}>没有匹配的设备</div>
       ) : (

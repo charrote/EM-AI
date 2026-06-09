@@ -1,13 +1,24 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
+import { TreeSelect, Spin, Tag } from 'antd';
+import { useResponsive } from '../hooks/useResponsive';
+import { BoltIcon, SuccessIcon, BarChartIcon, WarningIcon, WrenchIcon, TrophyIcon, RobotIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon, PauseIcon, CrossIcon, STATUS_ICONS } from '../components/Icons';
 
 export default function ExecutiveDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { isMobile } = useResponsive();
+
+  // ── 企业层级选择 ──
+  const [orgTree, setOrgTree] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
+  const [trendData, setTrendData] = useState<any>(null);
+  const [trendLoading, setTrendLoading] = useState(false);
 
   const faultChartDomRef = useRef<HTMLDivElement>(null);
   const faultChartRef = useRef<echarts.ECharts | null>(null);
 
+  // Fetch main dashboard data
   useEffect(() => {
     fetch('/api/dashboard/executive')
       .then(r => r.json())
@@ -18,15 +29,62 @@ export default function ExecutiveDashboard() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Init pie chart — runs after every render until the DOM ref & instance are ready
+  // Fetch org tree for selector
   useEffect(() => {
-    if (!faultChartDomRef.current || faultChartRef.current) return;
+    fetch('/api/organizations/tree')
+      .then(r => r.json())
+      .then(res => setOrgTree(res.data || []))
+      .catch(() => {});
+  }, []);
+
+  // Org tree field mappings for TreeSelect
+  const treeFieldNames = { label: 'name', value: 'id', children: 'children' };
+
+  // Fetch OEE trend for selected org
+  const fetchTrend = useCallback(async (orgId?: string) => {
+    setTrendLoading(true);
+    try {
+      const params = orgId ? `?orgId=${orgId}` : '';
+      const res = await fetch(`/api/dashboard/oee-trend${params}`);
+      const json = await res.json();
+      setTrendData(json.data);
+    } catch {
+      // fallback to main data
+      setTrendData(null);
+    } finally {
+      setTrendLoading(false);
+    }
+  }, []);
+
+  // Load initial trend (no org filter = 全厂)
+  useEffect(() => {
+    fetchTrend(undefined);
+  }, [fetchTrend]);
+
+  const handleOrgChange = (value: string | undefined) => {
+    setSelectedOrgId(value);
+    fetchTrend(value);
+    // Scale trend chart axis if needed
+    if (faultChartRef.current) {
+      faultChartRef.current.resize();
+    }
+  };
+
+  // Use org trend data if available, otherwise fallback to main data
+  const oeeTrend = trendData?.trend || data?.dailyOEETrend || data?.monthlyOEETrend || [];
+  const trendOrgName = trendData?.orgName || '全厂';
+  const currentOEE = trendData?.currentOEE ?? data?.currentOEE;
+  const prevOEE = trendData?.prevOEE ?? data?.prevOEE;
+
+  // Init pie chart — mount once only
+  useEffect(() => {
+    if (!faultChartDomRef.current) return;
     faultChartRef.current = echarts.init(faultChartDomRef.current);
     return () => {
       faultChartRef.current?.dispose();
       faultChartRef.current = null;
     };
-  });
+  }, []);
 
   // Update pie chart when data or chart instance changes
   useEffect(() => {
@@ -60,28 +118,28 @@ export default function ExecutiveDashboard() {
     });
   }, [data?.faultTypeDistribution]);
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ 加载中...</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
   if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;
 
-  const oeeUp = (data.currentOEE ?? 0) >= (data.prevOEE ?? 0);
+  const oeeUp = (currentOEE ?? 0) >= (prevOEE ?? 0);
 
   return (
-    <div style={{ padding: 16, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+    <div style={{ padding: isMobile ? 8 : 16, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
       {/* ═══ KPI 卡片行 ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 140 : 180}px, 1fr))`, gap: isMobile ? 8 : 12, marginBottom: isMobile ? 12 : 16 }}>
         {/* KPI: OEE */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>当前 OEE</div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>当前 OEE <Tag style={{ fontSize: 10, borderRadius: 4, border: 'none', lineHeight: '16px' }}>{trendOrgName}</Tag></div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             {oeeUp
-              ? <span style={{ color: '#22C55E', fontSize: 16 }}>↑</span>
-              : <span style={{ color: '#EF4444', fontSize: 16 }}>↓</span>
+              ? <ArrowUpIcon size={18} color="#22C55E" />
+              : <ArrowDownIcon size={18} color="#EF4444" />
             }
-            <span style={{ fontSize: 28, fontWeight: 700, color: '#3B82F6' }}>{data.currentOEE}</span>
+            <span style={{ fontSize: 28, fontWeight: 700, color: '#3B82F6' }}>{currentOEE}</span>
             <span style={{ fontSize: 14, color: '#999' }}>%</span>
           </div>
           <div style={{ fontSize: 11, color: oeeUp ? '#22C55E' : '#EF4444', marginTop: 2 }}>
-            {oeeUp ? `较上月 +${((data.currentOEE ?? 0) - (data.prevOEE ?? 0)).toFixed(1)}%` : `较上月 ${((data.currentOEE ?? 0) - (data.prevOEE ?? 0)).toFixed(1)}%`}
+            {oeeUp ? `较上期 +${((currentOEE ?? 0) - (prevOEE ?? 0)).toFixed(1)}%` : `较上期 ${((currentOEE ?? 0) - (prevOEE ?? 0)).toFixed(1)}%`}
           </div>
         </div>
 
@@ -126,10 +184,32 @@ export default function ExecutiveDashboard() {
       </div>
 
       {/* ═══ OEE 30日趋势 — 竖柱状图 + 目标线 ═══ */}
-      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16, marginBottom: 16 }}>
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>⚡ OEE 30日趋势</h3>
-
-        {/* Y轴标签 + 图表区 */}
+      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: 0 }}><BoltIcon size={16} color="#F59E0B" style={{ marginRight: 4 }} /> OEE 30日趋势</h3>
+          <TreeSelect
+            placeholder="选择企业层级"
+            allowClear
+            showSearch
+            treeDefaultExpandAll
+            treeNodeFilterProp="name"
+            value={selectedOrgId}
+            onChange={handleOrgChange}
+            style={{ minWidth: isMobile ? 140 : 220 }}
+            size="small"
+            treeData={orgTree}
+            fieldNames={treeFieldNames}
+          />
+        </div>
+        {trendLoading && (
+          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+            <Spin size="small" style={{ marginRight: 8 }} />加载趋势...
+          </div>
+        )}
+        {!trendLoading && oeeTrend.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无趋势数据</div>
+        )}
+        {!trendLoading && oeeTrend.length > 0 && (<>
         <div style={{ display: 'flex', gap: 8, height: 220, position: 'relative' }}>
           {/* Y轴刻度 */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 30, flexShrink: 0, paddingBottom: 28 }}>
@@ -154,11 +234,11 @@ export default function ExecutiveDashboard() {
             }}>目标 85%</span>
 
             {/* 柱状图 — 30天每日数据 */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%', position: 'relative', minWidth: 600 }}>
-              {(data.dailyOEETrend || data.monthlyOEETrend || []).map((t: any, idx: number) => {
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%', position: 'relative', minWidth: isMobile ? 400 : 600 }}>
+              {oeeTrend.map((t: any, idx: number) => {
                 const oee = Math.min(100, Math.max(0, t.oee));
                 const barColor = oee >= 85 ? '#22C55E' : oee >= 70 ? '#3B82F6' : '#F59E0B';
-                const isLast = idx === ((data.dailyOEETrend || data.monthlyOEETrend || []).length - 1);
+                const isLast = idx === (oeeTrend.length - 1);
                 const showLabel = idx % 5 === 0 || isLast;
                 return (
                   <div key={t.date || t.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
@@ -199,13 +279,14 @@ export default function ExecutiveDashboard() {
             ))}
           </div>
         </div>
+        </>)}
       </div>
 
       {/* ═══ 健康度分布 + 状态分布 + 工单趋势 + 故障类型 ═══ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 240 : 280}px, 1fr))`, gap: isMobile ? 8 : 12, marginBottom: isMobile ? 8 : 16 }}>
         {/* 健康度分布 */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>✅ 设备健康度分布</h3>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><SuccessIcon size={16} style={{ marginRight: 4 }} /> 设备健康度分布</h3>
           {(['优秀 (90-100)', '良好 (75-89)', '一般 (60-74)', '较差 (<60)']).map((label, idx) => {
             const h = (data.healthDistribution || []).find((x: any) => x.label === label);
             if (!h) return null;
@@ -225,15 +306,19 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* 设备状态分布 */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📊 设备状态分布</h3>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><BarChartIcon size={16} color="#3B82F6" style={{ marginRight: 4 }} /> 设备状态分布</h3>
           {(data.deviceStatusDistribution || []).map((s: any) => {
             const colorMap: Record<string, string> = { running: '#22C55E', idle: '#999', fault: '#EF4444', maintenance: '#F59E0B', repair: '#F97316' };
             const c = colorMap[s.key] || '#999';
             const pct = data.totalDevices > 0 ? Math.round((s.count / data.totalDevices) * 100) : 0;
+            const StatusIcon = STATUS_ICONS[s.key];
             return (
               <div key={s.key} style={{ marginBottom: 6 }}>
-                <div style={{ fontSize: 11, color: '#666', marginBottom: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: '#666', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {StatusIcon ? <StatusIcon size={12} color={c} /> : null}
+                  {s.label}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <div style={{ flex: 1, height: 12, background: '#f5f5f5', borderRadius: 6, overflow: 'hidden' }}>
                     <div style={{ width: `${pct}%`, height: '100%', background: c, borderRadius: 6 }} />
@@ -246,8 +331,8 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* 工单月度趋势 */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>⚠️ 工单月度趋势</h3>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><WarningIcon size={16} color="#F59E0B" style={{ marginRight: 4 }} /> 工单月度趋势</h3>
           {(data.woMonthlyTrend || []).map((t: any) => {
             const total = t.total || 0;
             const completed = t.completed || 0;
@@ -275,14 +360,14 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* 故障类型分布 — 饼图 */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>🔧 故障类型分布</h3>
-          <div ref={faultChartDomRef} style={{ width: '100%', height: 250 }} />
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><WrenchIcon size={16} color="#EF4444" style={{ marginRight: 4 }} /> 故障类型分布</h3>
+          <div ref={faultChartDomRef} style={{ width: '100%', height: isMobile ? 200 : 250 }} />
         </div>
 
         {/* 设备健康度 Top 10 (简版) */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>🏆 设备健康度 Top 10</h3>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><TrophyIcon size={16} style={{ marginRight: 4 }} /> 设备健康度 Top 10</h3>
           {(data.topHealthyDevices || []).slice(0, 5).map((item: any, idx: number) => (
             <div key={item.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: idx < 4 ? '1px solid #f0f0f0' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -298,8 +383,8 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* 改善 ROI (简版) */}
-        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>🤖 改善活动 ROI 分析</h3>
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><RobotIcon size={16} style={{ marginRight: 4 }} /> 改善活动 ROI 分析</h3>
           <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #f0f0f0' }}>

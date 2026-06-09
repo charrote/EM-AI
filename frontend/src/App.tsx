@@ -22,6 +22,7 @@ import ReportFault from './pages/ReportFault';
 import OrganizationPage from './pages/OrganizationPage';
 import DeviceTypePage from './pages/DeviceTypePage';
 import DeviceManagePage from './pages/DeviceManagePage';
+import TeamPage from './pages/TeamPage';
 
 // ── 待开发占位页面 ────────────────────────────
 import RcaAnalysis from './pages/RcaAnalysis';
@@ -67,8 +68,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AppLayout />}>
-            {/* 默认重定向 */}
-            <Route index element={<Navigate to="/executive" replace />} />
+            {/* 首页 = 决策仪表盘 */}
+            <Route index element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
 
             {/* ─── 故障管理 ─── */}
             <Route path="report-fault" element={<ReportFault />} />
@@ -100,6 +101,7 @@ function App() {
             <Route path="organizations" element={<OrganizationPage />} />
             <Route path="device-types" element={<DeviceTypePage />} />
             <Route path="device-manage" element={<DeviceManagePage />} />
+            <Route path="teams" element={<TeamPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

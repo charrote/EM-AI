@@ -87,7 +87,10 @@ export default function MobileBottomNav() {
       paddingBottom: 'env(safe-area-inset-bottom, 0)',
     }}>
       {navItems.map((item) => {
-        const isActive = currentPath === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+        // 根路径（/）高亮首页按钮；其他路径按常规匹配
+        const isActive = location.pathname === '/'
+          ? item.key === 'home'
+          : currentPath === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
         return (
           <div
             key={item.key}

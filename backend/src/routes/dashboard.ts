@@ -368,4 +368,89 @@ router.get('/executive', async (_req: Request, res: Response) => {
   }
 });
 
+// GET /api/dashboard/oee-trend?orgId=xxx — OEE trend filtered by org level
+router.get('/oee-trend', async (req: Request, res: Response) => {
+  try {
+    const orgId = req.query.orgId as string | undefined;
+    let deviceIds: string[] = [];
+
+    if (orgId) {
+      // Collect org node IDs under the given org (including itself)
+      const allOrgs = await prisma.organization.findMany();
+      const collectIds = (parentId: string): string[] => {
+        const ids = [parentId];
+        allOrgs.filter(o => o.parentId === parentId).forEach(child => {
+          ids.push(...collectIds(child.id));
+        });
+        return ids;
+      };
+      const orgIds = collectIds(orgId);
+
+      // Find devices linked to these orgs
+      const devices = await prisma.device.findMany({
+        where: { OR: [{ workshopId: { in: orgIds } }, { lineId: { in: orgIds } }] },
+        select: { id: true, status: true, oee: true },
+      });
+      deviceIds = devices.map(d => d.id);
+    }
+
+    const devices = orgId
+      ? await prisma.device.findMany({ where: { id: { in: deviceIds } }, select: { status: true, oee: true } })
+      : await prisma.device.findMany({ select: { status: true, oee: true } });
+
+    const runningCount = devices.filter(d => d.status === 'running').length;
+    const totalDevices = devices.length;
+    const baseOEE = totalDevices > 0 ? Math.round((runningCount / totalDevices) * 70 + 15) : 75;
+
+    // Generate 30-day daily trend
+    const faultDays = new Set<number>();
+    for (let i = 0; i < 3; i++) {
+      const day = Math.floor(Math.random() * 30);
+      faultDays.add(day);
+      if (day + 1 < 30) faultDays.add(day + 1);
+    }
+    const trend: { date: string; oee: number }[] = [];
+    let dayOee = baseOEE - 4;
+    for (let i = 29; i >= 0; i--) {
+      let change: number;
+      if (faultDays.has(i)) {
+        change = faultDays.has(i + 1) ? 0.5 + Math.random() * 1.5 : -(8 + Math.random() * 5);
+      } else {
+        change = (Math.random() - 0.5) * 0.8;
+      }
+      dayOee = Math.max(40, Math.min(98, dayOee + change));
+      trend.unshift({
+        date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
+        oee: Math.round(dayOee * 10) / 10,
+      });
+    }
+
+    // Also compute current vs previous period OEE for the delta
+    const periodSize = Math.min(6, Math.floor(trend.length / 5));
+    const currentPeriod = trend.slice(-periodSize);
+    const prevPeriod = trend.slice(-periodSize * 2, -periodSize);
+    const currentAvg = currentPeriod.reduce((s, d) => s + d.oee, 0) / currentPeriod.length;
+    const prevAvg = prevPeriod.length > 0 ? prevPeriod.reduce((s, d) => s + d.oee, 0) / prevPeriod.length : currentAvg;
+
+    const orgName = orgId
+      ? (await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } }))?.name
+      : undefined;
+
+    res.json({
+      data: {
+        orgId: orgId || null,
+        orgName: orgName || '全厂',
+        totalDevices,
+        runningCount,
+        baseOEE,
+        currentOEE: Math.round(currentAvg * 10) / 10,
+        prevOEE: Math.round(prevAvg * 10) / 10,
+        trend,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

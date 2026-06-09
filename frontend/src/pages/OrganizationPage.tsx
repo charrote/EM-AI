@@ -102,6 +102,11 @@ export default function OrganizationPage() {
               {n.name}
             </Text>
             <span style={{ flex: 1 }} />
+            {n.oeeTarget != null && (
+              <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none', fontSize: 10, lineHeight: '16px', padding: '0 4px', marginRight: 4 }}>
+                OEE {n.oeeTarget}%
+              </Tag>
+            )}
             <Tag
               style={{
                 borderRadius: 4, border: 'none',
@@ -355,6 +360,12 @@ export default function OrganizationPage() {
           </Descriptions.Item>
           <Descriptions.Item label="位置">{selectedNode.location || '-'}</Descriptions.Item>
           <Descriptions.Item label="排序">{selectedNode.sortOrder || 0}</Descriptions.Item>
+          <Descriptions.Item label="OEE 目标">
+            {selectedNode.oeeTarget != null
+              ? <Text strong style={{ color: Colors.primary }}>{selectedNode.oeeTarget}%</Text>
+              : '-'
+            }
+          </Descriptions.Item>
         </Descriptions>
 
         {selectedNode.children?.length > 0 && (
@@ -421,6 +432,7 @@ export default function OrganizationPage() {
                   sortOrder: editingNode?.sortOrder,
                   isActive: editingNode?.isActive,
                   location: editingNode?.location,
+                  oeeTarget: editingNode?.oeeTarget,
                 }
           }
           onFinish={handleModalSubmit}
@@ -466,6 +478,10 @@ export default function OrganizationPage() {
 
           <Form.Item label="位置/地址" name="location">
             <Input placeholder="可选" />
+          </Form.Item>
+
+          <Form.Item label="OEE 目标 (%)" name="oeeTarget">
+            <InputNumber min={0} max={100} step={0.1} style={{ width: '100%' }} placeholder="如: 85" />
           </Form.Item>
 
           <div style={{ textAlign: 'right', marginTop: 16 }}>

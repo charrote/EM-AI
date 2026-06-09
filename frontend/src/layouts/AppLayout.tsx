@@ -11,7 +11,7 @@ import {
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
-  PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined,
+  PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -59,6 +59,7 @@ const scenarioGroups: ScenarioGroup[] = [
       { key: 'organizations', icon: <ApartmentOutlined />, label: '企业层级', roles: ['supervisor', 'admin'] },
       { key: 'device-types', icon: <TagsOutlined />, label: '设备类型', roles: ['supervisor', 'admin'] },
       { key: 'device-manage', icon: <DatabaseOutlined />, label: '设备基础数据', roles: ['supervisor', 'admin'] },
+      { key: 'teams', icon: <TeamOutlined />, label: '班组管理', roles: ['supervisor', 'admin'] },
     ],
   },
   {
@@ -187,9 +188,9 @@ export default function AppLayout() {
   const menuItems = useMemo(() => filterMenuByRole(scenarioGroups, user.role), [user.role]);
   const allLeafKeys = useMemo(() => getAllLeafKeys(scenarioGroups, user.role), [user.role]);
 
-  // 当前路径对应的选中 key
-  const currentKey = location.pathname.split('/')[1] || 'devices';
-  const selectedKey = allLeafKeys.includes(currentKey) ? currentKey : 'devices';
+  // 当前路径对应的选中 key（根路径 → executive）
+  const currentKey = location.pathname.split('/')[1] || 'executive';
+  const selectedKey = allLeafKeys.includes(currentKey) ? currentKey : 'executive';
 
   // 当前角色可见的叶子 key → 计算需要展开的父级
   const defaultOpenKeys = useMemo(() => {
