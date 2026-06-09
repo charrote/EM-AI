@@ -258,7 +258,7 @@ export default function MaintenanceExecute() {
                 <Alert
                   type="info"
                   showIcon
-                  message={`步骤 ${currentStep + 1}: ${stepResults[currentStep].name}`}
+                  title={`步骤 ${currentStep + 1}: ${stepResults[currentStep].name}`}
                   style={{ marginBottom: 16 }}
                 />
 

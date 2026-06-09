@@ -405,7 +405,7 @@ export default function OrganizationPage() {
           <Alert
             type="info"
             showIcon
-            message={`上级节点: ${modalParent.name} (${LEVEL_CONFIG[modalParent.level]?.label})`}
+            title={`上级节点: ${modalParent.name} (${LEVEL_CONFIG[modalParent.level]?.label})`}
             style={{ marginBottom: 16 }}
           />
         )}

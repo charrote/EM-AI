@@ -58,7 +58,7 @@ export default function ExecutiveDashboard() {
         })),
       }],
     });
-  }, [faultChart, data?.faultTypeDistribution]);
+  }, [data?.faultTypeDistribution]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ 加载中...</div>;
   if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;

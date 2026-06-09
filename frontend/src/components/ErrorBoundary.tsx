@@ -18,7 +18,7 @@ export default class ErrorBoundary extends Component<Props, State> {
           <Alert
             type="error"
             showIcon
-            message="页面渲染错误"
+            title="页面渲染错误"
             description={this.state.error.message}
             action={
               <Button size="small" onClick={() => this.setState({ error: null })}>

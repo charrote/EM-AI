@@ -369,7 +369,7 @@ export default function RcaAnalysis() {
                       <Alert
                         type="info"
                         showIcon
-                        message="RCA 根因分析"
+                        title="RCA 根因分析"
                         description="通过 5-Why 追问和鱼骨图分析，找到问题的根本原因并制定改善对策。"
                         style={{ marginBottom: 24 }}
                       />
@@ -424,7 +424,7 @@ export default function RcaAnalysis() {
                           type="success"
                           showIcon
                           style={{ marginBottom: 8 }}
-                          message={
+                          title={
                             <div>
                               <Text strong>Q{w.level}: </Text>
                               <Text>{w.question}</Text>
