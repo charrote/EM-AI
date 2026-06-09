@@ -35,7 +35,6 @@ function DeviceMiniCard({ device, onClick }: { device: any; onClick: () => void 
         borderRadius: 8,
         padding: 14,
         cursor: 'pointer',
-        borderLeft: `3px solid ${statusCfg?.color || Colors.gray400}`,
         transition: 'box-shadow 0.2s, border-color 0.2s',
       }}
       onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = Colors.primaryLight; }}

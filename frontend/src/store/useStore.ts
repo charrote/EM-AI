@@ -26,9 +26,9 @@ const roleInfo: Record<UserRole, { name: string }> = {
 
 export const useStore = create<AppState>((set) => ({
   user: {
-    id: 'demo-operator',
-    name: '张操作',
-    role: 'operator',
+    id: 'demo-admin',
+    name: '管理员',
+    role: 'admin',
   },
   setUser: (user) => set({ user }),
   setRole: (role) =>

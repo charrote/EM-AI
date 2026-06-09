@@ -227,6 +227,7 @@ export default function AppLayout() {
 
         {/* 导航菜单 */}
         <Menu
+          key={user.role}
           mode="inline"
           selectedKeys={[selectedKey]}
           defaultOpenKeys={defaultOpenKeys}
