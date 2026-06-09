@@ -76,13 +76,29 @@ router.get('/pareto', async (req: Request, res: Response) => {
     { cause: '其他', count: 15, duration: 1180, percentage: 10.4, cumulative: 100 },
   ];
 
-  // If device scope, return device-specific (slightly varied)
-  if (scope === 'device' && req.query.deviceId) {
-    const varied = mockPareto.map(p => ({
-      ...p,
-      count: Math.max(1, Math.round(p.count * (0.7 + Math.random() * 0.6))),
-      duration: Math.round(p.duration * (0.7 + Math.random() * 0.6)),
-    }));
+  // Apply scope-based variation
+  const vary = (factor: number) => mockPareto.map(p => {
+    const variedCount = Math.max(1, Math.round(p.count * (factor + Math.random() * 0.4)));
+    const variedDuration = Math.round(p.duration * (factor + Math.random() * 0.4));
+    const totalVar = mockPareto.reduce((s, _) => s + variedDuration, 0);
+    const sumMock = mockPareto.reduce((s, p) => s + p.duration, 0);
+    const scaledDuration = Math.round(variedDuration * (sumMock / totalVar));
+    return { ...p, count: variedCount, duration: scaledDuration };
+  });
+
+  if (scope === 'device') {
+    const factor = req.query.deviceId ? 0.6 : 0.8;
+    const varied = vary(factor);
+    return res.json({ data: varied });
+  }
+  if (scope === 'product') {
+    const factor = req.query.product === 'A' ? 0.9 : req.query.product === 'B' ? 0.7 : 0.5;
+    const varied = vary(factor);
+    return res.json({ data: varied });
+  }
+  if (scope === 'team') {
+    const factor = req.query.team === '甲班' ? 1.0 : req.query.team === '乙班' ? 0.8 : 0.6;
+    const varied = vary(factor);
     return res.json({ data: varied });
   }
 
@@ -188,37 +204,168 @@ router.get('/devices/:id/trend', async (req: Request, res: Response) => {
 
 // GET /api/dashboard/executive — executive dashboard
 router.get('/executive', async (_req: Request, res: Response) => {
-  res.json({
-    data: {
-      healthDistribution: [
-        { label: '优秀 (90-100)', count: 3, percentage: 37.5 },
-        { label: '良好 (75-89)', count: 2, percentage: 25 },
-        { label: '一般 (60-74)', count: 2, percentage: 25 },
-        { label: '较差 (<60)', count: 1, percentage: 12.5 },
-      ],
-      monthlyOEETrend: [
-        { month: '2026-01', oee: 72 },
-        { month: '2026-02', oee: 74 },
-        { month: '2026-03', oee: 73 },
-        { month: '2026-04', oee: 76 },
-        { month: '2026-05', oee: 78 },
-        { month: '2026-06', oee: 80 },
-      ],
-      maintenanceCost: [
-        { month: '2026-01', cost: 45000 },
-        { month: '2026-02', cost: 42000 },
-        { month: '2026-03', cost: 48000 },
-        { month: '2026-04', cost: 41000 },
-        { month: '2026-05', cost: 38000 },
-        { month: '2026-06', cost: 35000 },
-      ],
-      improvementROI: [
-        { project: 'SMED 换型优化', investment: 50000, saving: 180000, roi: '260%' },
-        { project: 'TPM 点检体系', investment: 30000, saving: 96000, roi: '220%' },
-        { project: '预测性维护', investment: 80000, saving: 240000, roi: '200%' },
-      ],
-    },
-  });
+  try {
+    // ── Real DB stats ──
+    const totalDevices = await prisma.device.count();
+    const byStatus = await prisma.device.groupBy({ by: ['status'], _count: true });
+    const runningCount = byStatus.find(s => s.status === 'running')?._count || 0;
+    const faultCount = byStatus.find(s => s.status === 'fault')?._count || 0;
+    const idleCount = byStatus.find(s => s.status === 'idle')?._count || 0;
+    const maintenanceCount = byStatus.find(s => ['maintenance', 'repair'].includes(s.status))?._count || 0;
+
+    const woPending = await prisma.workOrder.count({ where: { status: { in: ['pending', 'accepted'] } } });
+    const woCompleted = await prisma.workOrder.count({ where: { status: 'completed' } });
+    const woTotal = await prisma.workOrder.count();
+
+    const healthValues = await prisma.device.findMany({ select: { healthScore: true } });
+    const avgHealth = healthValues.reduce((s, d) => s + (d.healthScore || 0), 0) / (healthValues.length || 1);
+    const excellent = healthValues.filter(d => (d.healthScore || 0) >= 90).length;
+    const good = healthValues.filter(d => (d.healthScore || 0) >= 75 && d.healthScore! < 90).length;
+    const fair = healthValues.filter(d => (d.healthScore || 0) >= 60 && d.healthScore! < 75).length;
+    const poor = healthValues.filter(d => (d.healthScore || 0) < 60).length;
+
+    // ── Monthly simulated trends (no real history in DB) ──
+    const baseOEE = Math.round((runningCount / totalDevices) * 70 + 15);
+    const monthlyOEETrend = [
+      { month: '2026-01', oee: Math.max(60, baseOEE - 8) },
+      { month: '2026-02', oee: Math.max(60, baseOEE - 6) },
+      { month: '2026-03', oee: Math.max(60, baseOEE - 4) },
+      { month: '2026-04', oee: Math.max(60, baseOEE - 2) },
+      { month: '2026-05', oee: baseOEE },
+      { month: '2026-06', oee: Math.min(95, baseOEE + 2) },
+    ];
+
+    // ── Daily OEE trend (30 days) ──
+    const faultDays = new Set<number>();
+    for (let i = 0; i < 3; i++) {
+      const day = Math.floor(Math.random() * 30);
+      faultDays.add(day);
+      if (day + 1 < 30) faultDays.add(day + 1);
+    }
+    const dailyOEETrend: { date: string; oee: number }[] = [];
+    let dayOee = baseOEE - 4;
+    for (let i = 29; i >= 0; i--) {
+      let change: number;
+      if (faultDays.has(i)) {
+        change = faultDays.has(i + 1) ? 0.5 + Math.random() * 1.5 : -(8 + Math.random() * 5);
+      } else {
+        change = (Math.random() - 0.5) * 0.8;
+      }
+      dayOee = Math.max(40, Math.min(98, dayOee + change));
+      dailyOEETrend.unshift({
+        date: new Date(Date.now() - (29 - i) * 86400000).toISOString().slice(0, 10),
+        oee: Math.round(dayOee * 10) / 10,
+      });
+    }
+
+    const maintenanceCost = [
+      { month: '2026-01', cost: Math.round(35000 + faultCount * 1200 + Math.random() * 5000) },
+      { month: '2026-02', cost: Math.round(32000 + faultCount * 1000 + Math.random() * 5000) },
+      { month: '2026-03', cost: Math.round(38000 + faultCount * 1100 + Math.random() * 5000) },
+      { month: '2026-04', cost: Math.round(30000 + faultCount * 900 + Math.random() * 5000) },
+      { month: '2026-05', cost: Math.round(28000 + faultCount * 800 + Math.random() * 5000) },
+      { month: '2026-06', cost: Math.round(25000 + faultCount * 700 + Math.random() * 5000) },
+    ];
+
+    const improvementROI = [
+      { project: 'SMED 换型优化', investment: 50000, saving: 180000, roi: '260%' },
+      { project: 'TPM 点检体系', investment: 30000, saving: 96000, roi: '220%' },
+      { project: '预测性维护试点', investment: 80000, saving: 240000, roi: '200%' },
+      { project: 'OEE 数据采集系统', investment: 45000, saving: 108000, roi: '140%' },
+    ];
+
+    // ── Top devices by health score (desc) ──
+    const topHealthy = await prisma.device.findMany({
+      where: { healthScore: { not: null } },
+      orderBy: { healthScore: 'desc' },
+      take: 10,
+      select: { code: true, name: true, type: true, status: true, healthScore: true, oee: true },
+    });
+
+    // ── Fault type distribution from work orders ──
+    const faultTypes = await prisma.workOrder.groupBy({
+      by: ['faultType'],
+      _count: true,
+      where: { faultType: { not: null } },
+      orderBy: { _count: { faultType: 'desc' } },
+    });
+
+    // ── Work order status distribution ──
+    const woByStatus = await prisma.workOrder.groupBy({ by: ['status'], _count: true });
+
+    // ── Monthly work order count (last 6 months) ──
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const woMonthly = await prisma.workOrder.findMany({
+      where: { createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true, status: true },
+    });
+    const woMonthlyAgg: Record<string, { total: number; completed: number }> = {};
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      woMonthlyAgg[key] = { total: 0, completed: 0 };
+    }
+    for (const wo of woMonthly) {
+      const key = `${wo.createdAt.getFullYear()}-${String(wo.createdAt.getMonth() + 1).padStart(2, '0')}`;
+      if (woMonthlyAgg[key]) {
+        woMonthlyAgg[key].total++;
+        if (wo.status === 'completed') woMonthlyAgg[key].completed++;
+      }
+    }
+
+    res.json({
+      data: {
+        // KPIs
+        totalDevices,
+        runningCount,
+        runningRate: totalDevices > 0 ? Math.round((runningCount / totalDevices) * 10000) / 100 : 0,
+        faultCount,
+        idleCount,
+        maintenanceCount,
+        avgHealth: Math.round(avgHealth * 10) / 10,
+
+        // Work order stats
+        woPending,
+        woCompleted,
+        woTotal,
+        woCompletionRate: woTotal > 0 ? Math.round((woCompleted / woTotal) * 10000) / 100 : 0,
+
+        // Monthly trends
+        monthlyOEETrend,
+        dailyOEETrend,
+        maintenanceCost,
+        woMonthlyTrend: Object.entries(woMonthlyAgg).map(([month, v]) => ({ month, ...v })),
+
+        // Distributions
+        healthDistribution: [
+          { label: '优秀 (90-100)', count: excellent, percentage: totalDevices > 0 ? Math.round(excellent / totalDevices * 10000) / 100 : 0 },
+          { label: '良好 (75-89)', count: good, percentage: totalDevices > 0 ? Math.round(good / totalDevices * 10000) / 100 : 0 },
+          { label: '一般 (60-74)', count: fair, percentage: totalDevices > 0 ? Math.round(fair / totalDevices * 10000) / 100 : 0 },
+          { label: '较差 (<60)', count: poor, percentage: totalDevices > 0 ? Math.round(poor / totalDevices * 10000) / 100 : 0 },
+        ],
+        deviceStatusDistribution: [
+          { label: '运行中', key: 'running', count: runningCount },
+          { label: '待机', key: 'idle', count: idleCount },
+          { label: '故障', key: 'fault', count: faultCount },
+          { label: '保养/维修', key: 'maintenance', count: maintenanceCount },
+        ],
+        woStatusDistribution: woByStatus.map(s => ({ status: s.status, count: s._count })),
+        faultTypeDistribution: faultTypes.map(f => ({ type: f.faultType, count: f._count })),
+
+        // Tables
+        improvementROI,
+        topHealthyDevices: topHealthy,
+
+        // Latest OEE for KPI display
+        currentOEE: monthlyOEETrend[monthlyOEETrend.length - 1].oee,
+        prevOEE: monthlyOEETrend.length > 1 ? monthlyOEETrend[monthlyOEETrend.length - 2].oee : monthlyOEETrend[0].oee,
+        latestCost: maintenanceCost[maintenanceCost.length - 1].cost,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;

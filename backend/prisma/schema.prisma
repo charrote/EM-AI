@@ -7,6 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== 设备类型（主数据） =====
+model DeviceType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?  @unique
+  description String?
+  icon        String?
+  sortOrder   Int?     @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  documents   Json?    // [{id, name, fileName, url, type(manual/inspection/operation/other), size, uploadedAt}]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("device_types")
+}
+
+// ===== 企业层级 =====
+model Organization {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  level     String   // group / company / workshop / line
+  parentId  String?  @map("parent_id")
+  sortOrder Int?     @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  location  String?
+  contact   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children Organization[] @relation("OrgHierarchy")
+
+  @@index([parentId])
+  @@map("organizations")
+}
+
 // ===== 设备 =====
 model Device {
   id           String   @id @default(uuid())
@@ -22,6 +59,28 @@ model Device {
   mttr         Float?
   priority     String   @default("B") // A/B/C
   config       Json?
+
+  // 扩展字段
+  workshopId    String?  @map("workshop_id")
+  lineId        String?  @map("line_id")
+  brand         String?
+  modelName     String?  @map("model_name")
+  serialNo      String?  @map("serial_no")
+  supplier      String?
+  installDate   DateTime? @map("install_date")
+  warrantyUntil DateTime? @map("warranty_until")
+  powerRating   Float?   @map("power_rating")
+  specifications Json?
+  lastMaintenanceAt DateTime? @map("last_maintenance_at")
+  nextMaintenanceAt DateTime? @map("next_maintenance_at")
+  oeeTarget     Float?   @map("oee_target")
+
+  // 设备档案扩展
+  theoreticalCapacity Float? @map("theoretical_capacity")    // 理论产能（件/小时）
+  onlineParams  Json?   @map("online_params")                // 联机参数 [{name, value, unit}]
+  programList   Json?   @map("program_list")                 // 设备程序清单 [{name, version, date, description}]
+  documents     Json?                                         // [{id, name, fileName, url, type, size, uploadedAt}]
+
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
@@ -29,6 +88,8 @@ model Device {
   inspections      Inspection[]
   toolingAssigns   Tooling[]
 
+  @@index([workshopId])
+  @@index([lineId])
   @@map("devices")
 }
 
@@ -98,7 +159,8 @@ model Inspection {
   location        Json?
   createdAt       DateTime @default(now()) @map("created_at")
 
-  device Device @relation(fields: [deviceId], references: [id])
+  device     Device         @relation(fields: [deviceId], references: [id])
+  plan       InspectionPlan? @relation(fields: [planId], references: [id])
 
   @@map("inspections")
 }
@@ -146,6 +208,87 @@ model KnowledgeEntry {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("knowledge_entries")
+}
+
+// ===== 点检计划 =====
+model InspectionPlan {
+  id           String   @id @default(uuid())
+  title        String
+  deviceType   String   @map("device_type")
+  level        String   @default("daily") // daily/weekly/monthly/quarterly
+  frequency    Int      // 频率值（天）
+  items        Json?    // 点检项目列表
+  sopUrl       String?  @map("sop_url")
+  description  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  inspections Inspection[]
+
+  @@map("inspection_plans")
+}
+
+// ===== 保养计划 =====
+model MaintenancePlan {
+  id            String   @id @default(uuid())
+  title         String
+  deviceId      String?  @map("device_id")
+  deviceType    String?  @map("device_type")
+  type          String   @default("daily") // daily/level1/level2/overhaul
+  triggerType   String   @default("time") // time/runtime/output
+  triggerValue  Int      @map("trigger_value")
+  intervalDays  Int?     @map("interval_days")
+  items         Json?    // 保养项目列表
+  sopUrl        String?  @map("sop_url")
+  description   String?
+  active        Boolean  @default(true)
+  lastExecutedAt DateTime? @map("last_executed_at")
+  nextScheduledAt DateTime? @map("next_scheduled_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("maintenance_plans")
+}
+
+// ===== 保养执行记录 =====
+model MaintenanceRecord {
+  id              String   @id @default(uuid())
+  planId          String?  @map("plan_id")
+  deviceId        String   @map("device_id")
+  title           String
+  type            String
+  operatorId      String?  @map("operator_id")
+  status          String   @default("in_progress") // in_progress/completed/skipped
+  steps           Json?    // 执行步骤记录
+  partsUsed       Json?    @map("parts_used")
+  result          String?  // normal/abnormal
+  beforeImages    Json?    @map("before_images")
+  afterImages     Json?    @map("after_images")
+  duration        Int?     // 耗时（分钟）
+  notes           String?
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("maintenance_records")
+}
+
+// ===== RCA 分析记录 =====
+model RcaAnalysis {
+  id            String   @id @default(uuid())
+  workOrderId   String?  @map("work_order_id")
+  deviceId      String   @map("device_id")
+  title         String
+  problemDesc   String   @map("problem_desc")
+  whyChain      Json?    @map("why_chain")  // [{level:1, question, answer}, ...]
+  fishboneData  Json?    @map("fishbone_data") // {man,machine,material,method,measure,environment}
+  rootCause     String?  @map("root_cause")
+  improvement   String?
+  status        String   @default("draft") // draft/completed
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("rca_analyses")
 }
 
 // ===== 改善项目 =====

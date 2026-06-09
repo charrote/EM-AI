@@ -3,6 +3,7 @@ import { ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './layouts/AppLayout';
 import { Colors } from './styles/theme';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // ── 已实现页面 ───────────────────────────────
 import DeviceList from './pages/DeviceList';
@@ -16,6 +17,11 @@ import ImprovementProjects from './pages/ImprovementProjects';
 import KnowledgeBase from './pages/KnowledgeBase';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import ReportFault from './pages/ReportFault';
+
+// ── 基础数据 ──────────────────────────────────
+import OrganizationPage from './pages/OrganizationPage';
+import DeviceTypePage from './pages/DeviceTypePage';
+import DeviceManagePage from './pages/DeviceManagePage';
 
 // ── 待开发占位页面 ────────────────────────────
 import RcaAnalysis from './pages/RcaAnalysis';
@@ -62,7 +68,7 @@ function App() {
         <Routes>
           <Route path="/" element={<AppLayout />}>
             {/* 默认重定向 */}
-            <Route index element={<Navigate to="/devices" replace />} />
+            <Route index element={<Navigate to="/executive" replace />} />
 
             {/* ─── 故障管理 ─── */}
             <Route path="report-fault" element={<ReportFault />} />
@@ -84,11 +90,16 @@ function App() {
             <Route path="loss-analysis" element={<LossAnalysis />} />
             <Route path="improvements" element={<ImprovementProjects />} />
             <Route path="andon-board" element={<AndonBoard />} />
-            <Route path="executive" element={<ExecutiveDashboard />} />
+            <Route path="executive" element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
 
             {/* ─── 工治具管理 ─── */}
             <Route path="toolings" element={<ToolingList />} />
             <Route path="tooling-maintenance" element={<ToolingMaintenance />} />
+
+            {/* ─── 基础数据 ─── */}
+            <Route path="organizations" element={<OrganizationPage />} />
+            <Route path="device-types" element={<DeviceTypePage />} />
+            <Route path="device-manage" element={<DeviceManagePage />} />
           </Route>
         </Routes>
       </BrowserRouter>

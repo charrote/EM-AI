@@ -1,178 +1,138 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Statistic, Table, Tag, Spin } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, BarChartOutlined } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
-import PageCard from '../components/PageCard';
-import api from '../services/api';
-import { Colors } from '../styles/theme';
-import { useResponsive } from '../hooks/useResponsive';
-import { StatCol, ChartCol } from '../styles/responsive';
+import { Table, Tag } from 'antd';
+
+// ── Inline KPI block ──
+function KpiBlock({ title, value, suffix, color, prefix }: {
+  title: string; value: number | string; suffix?: string; color: string; prefix?: string;
+}) {
+  return (
+    <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
+      <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{title}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        {prefix && <span style={{ fontSize: 16 }}>{prefix}</span>}
+        <span style={{ color, fontSize: 28, fontWeight: 700, lineHeight: 1.2 }}>{value}</span>
+        {suffix && <span style={{ color: '#999', fontSize: 14 }}>{suffix}</span>}
+      </div>
+    </div>
+  );
+}
 
 export default function OEEDashboard() {
-  const [data, setData] = useState<any>(null);
+  const [oee, setOee] = useState<any>(null);
+  const [losses, setLosses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { isMobile, isTablet, width } = useResponsive();
 
   useEffect(() => {
     Promise.all([
-      api.get('/dashboard/oee'),
-      api.get('/dashboard/losses'),
-    ]).then(([oeeRes, lossRes]) => {
-      setData({ oee: oeeRes.data.data, losses: lossRes.data.data });
+      fetch('/api/dashboard/oee').then(r => r.json()).then(r => r.data),
+      fetch('/api/dashboard/losses').then(r => r.json()).then(r => r.data).catch(() => []),
+    ]).then(([oeeData, lossData]) => {
+      setOee(oeeData);
+      setLosses(lossData);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
-  if (!data) return <div style={{ textAlign: 'center', padding: 40, color: Colors.gray500 }}>暂无数据</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>⏳ 加载中...</div>;
+  if (!oee) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;
 
-  const { oee, losses } = data;
-
-  const lossChartOption = {
-    tooltip: { trigger: 'item', formatter: '{b}: {c}小时 ({d}%)' },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      label: { formatter: '{b}\n{d}%', fontSize: isMobile ? 10 : 12 },
-      data: losses.map((l: any) => ({ name: l.type, value: l.value })),
-      color: ['#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6', '#22C55E', '#EC4899'],
-      itemStyle: { borderRadius: 4 },
-    }],
-  };
-
-  const trendChartOption = {
-    tooltip: { trigger: 'axis' },
-    xAxis: {
-      type: 'category',
-      data: (oee.trend || []).map((t: any) => t.date.slice(5)),
-      axisLabel: { fontSize: isMobile ? 10 : 12 },
-    },
-    yAxis: { type: 'value', min: 60, max: 100 },
-    grid: { left: 40, right: 15, top: 30, bottom: 20 },
-    series: [{
-      data: (oee.trend || []).map((t: any) => t.oee),
-      type: 'line',
-      smooth: true,
-      areaStyle: { opacity: 0.12, color: Colors.primaryLight },
-      lineStyle: { color: Colors.primary, width: 2 },
-      itemStyle: { color: Colors.primary },
-      markLine: {
-        data: [{ yAxis: 85, label: { formatter: '目标 85%', fontSize: 11 } }],
-        lineStyle: { color: Colors.dangerLight, type: 'dashed' },
-      },
-    }],
-  };
-
+  // ── Device OEE table columns ──
   const deviceColumns = [
     {
       title: '设备', dataIndex: 'name', key: 'name',
       render: (name: string, record: any) => (
-        <a onClick={() => navigate(`/devices/${record.id}`)} style={{ color: Colors.primary, fontSize: isMobile ? 12 : 14 }}>{name}</a>
+        <a onClick={() => navigate(`/devices/${record.id}`)} style={{ color: '#1677ff', cursor: 'pointer' }}>{name}</a>
       ),
     },
     {
       title: '状态', dataIndex: 'status', key: 'status',
       render: (s: string) => {
-        const colors: Record<string, string> = { running: Colors.successLight, idle: Colors.gray400, fault: Colors.dangerLight, maintenance: Colors.info, repair: '#F97316' };
-        return <Tag color={colors[s] || Colors.gray400} style={{ borderRadius: 4, border: 'none', fontSize: isMobile ? 11 : 12 }}>{isMobile ? ({ running: '运行', idle: '待机', fault: '故障', maintenance: '保养', repair: '检修' })[s] || s : s}</Tag>;
+        const colors: Record<string, string> = { running: '#22C55E', idle: '#999', fault: '#EF4444', maintenance: '#3B82F6', repair: '#F97316' };
+        const labels: Record<string, string> = { running: '运行中', idle: '待机', fault: '故障', maintenance: '保养', repair: '检修' };
+        return <Tag color={colors[s] || '#999'}>{labels[s] || s}</Tag>;
       },
     },
     {
       title: 'OEE', dataIndex: 'oee', key: 'oee',
       render: (v: number) => (
-        <span style={{
-          color: v >= 85 ? Colors.successLight : v >= 75 ? Colors.warningLight : Colors.dangerLight,
-          fontWeight: 600, fontSize: isMobile ? 12 : 14,
-        }}>{v}%</span>
+        <span style={{ color: v >= 85 ? '#22C55E' : v >= 75 ? '#F59E0B' : '#EF4444', fontWeight: 600 }}>{v}%</span>
       ),
       sorter: (a: any, b: any) => a.oee - b.oee,
     },
-    ...(isMobile ? [] : [
-      { title: '可用率', dataIndex: 'availability', key: 'availability', render: (v: number) => `${v}%` },
-      { title: '性能率', dataIndex: 'performance', key: 'performance', render: (v: number) => `${v}%` },
-      { title: '质量率', dataIndex: 'quality', key: 'quality', render: (v: number) => `${v}%` },
-    ]),
+    { title: '可用率', dataIndex: 'availability', key: 'availability', render: (v: number) => `${v}%` },
+    { title: '性能率', dataIndex: 'performance', key: 'performance', render: (v: number) => `${v}%` },
+    { title: '质量率', dataIndex: 'quality', key: 'quality', render: (v: number) => `${v}%` },
   ];
 
-  const chartHeight = isMobile ? 220 : isTablet ? 250 : 280;
-
   return (
-    <div>
-      {/* Top KPI Cards — 响应式列 */}
-      <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}>
-        <StatCol span={6}>
-          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
-            <Statistic
-              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>全厂 OEE</span>}
-              value={oee.overallOEE}
-              suffix="%"
-              valueStyle={{
-                color: oee.overallOEE >= 85 ? Colors.successLight : oee.overallOEE >= 75 ? Colors.warningLight : Colors.dangerLight,
-                fontSize: isMobile ? 24 : 32, fontWeight: 700,
-              }}
-            />
-          </PageCard>
-        </StatCol>
-        <StatCol span={6}>
-          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
-            <Statistic
-              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>设备总数</span>}
-              value={oee.totalDevices}
-              suffix="台"
-              valueStyle={{ fontSize: isMobile ? 24 : 32, fontWeight: 700, color: Colors.gray800 }}
-            />
-          </PageCard>
-        </StatCol>
-        <StatCol span={6}>
-          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
-            <Statistic
-              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>待处理告警</span>}
-              value={oee.alertCount}
-              valueStyle={{ color: oee.alertCount > 0 ? Colors.dangerLight : Colors.successLight, fontSize: isMobile ? 24 : 32, fontWeight: 700 }}
-              prefix={oee.alertCount > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-            />
-          </PageCard>
-        </StatCol>
-        <StatCol span={6}>
-          <PageCard bodyStyle={{ padding: isMobile ? '14px 16px' : '20px 24px' }}>
-            <Statistic
-              title={<span style={{ fontSize: isMobile ? 12 : 13, color: Colors.gray500 }}>OEE 目标</span>}
-              value={85}
-              suffix="%"
-              valueStyle={{ color: Colors.primary, fontSize: isMobile ? 24 : 32, fontWeight: 700 }}
-            />
-          </PageCard>
-        </StatCol>
-      </Row>
+    <div style={{ padding: 4, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+      {/* KPI 行 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
+        <KpiBlock title="全厂 OEE" value={oee.overallOEE} suffix="%" color={oee.overallOEE >= 85 ? '#22C55E' : oee.overallOEE >= 75 ? '#F59E0B' : '#EF4444'} />
+        <KpiBlock title="设备总数" value={oee.totalDevices} suffix="台" color="#333" />
+        <KpiBlock title="待处理告警" value={oee.alertCount} color={oee.alertCount > 0 ? '#EF4444' : '#22C55E'} prefix={oee.alertCount > 0 ? '↑' : '↓'} />
+        <KpiBlock title="OEE 目标" value={85} suffix="%" color="#1677ff" />
+      </div>
 
-      {/* Charts — 桌面2列，移动端1列 */}
-      <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]} style={{ marginTop: isMobile ? 8 : 16 }}>
-        <ChartCol>
-          <PageCard icon={<BarChartOutlined />} title="六大损失分布" bodyStyle={{ padding: isMobile ? 12 : 16 }}>
-            <ReactECharts option={lossChartOption} style={{ height: chartHeight }} />
-          </PageCard>
-        </ChartCol>
-        <ChartCol>
-          <PageCard icon={<BarChartOutlined />} title="OEE 趋势" bodyStyle={{ padding: isMobile ? 12 : 16 }}>
-            <ReactECharts option={trendChartOption} style={{ height: chartHeight }} />
-          </PageCard>
-        </ChartCol>
-      </Row>
-
-      {/* Device OEE Table */}
-      <PageCard icon={<BarChartOutlined />} title="设备 OEE 排行" style={{ marginTop: isMobile ? 8 : 16 }}>
-        <div className={isMobile ? 'responsive-table' : ''}>
-          <Table
-            dataSource={oee.deviceOEE || []}
-            columns={deviceColumns}
-            rowKey="id"
-            pagination={isMobile ? { pageSize: 5, size: 'small' } : false}
-            size={isMobile ? 'small' : 'small'}
-          />
+      {/* 图表行 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 12, marginBottom: 16 }}>
+        {/* 六大损失分布 */}
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📊 六大损失分布</h3>
+          {(losses || []).map((l: any) => {
+            const lossColors = ['#EF4444', '#F59E0B', '#3B82F6', '#8B5CF6', '#22C55E', '#EC4899'];
+            const maxVal = Math.max(...(losses || []).map((x: any) => x.value), 1);
+            const idx = (losses || []).indexOf(l);
+            const pct = maxVal > 0 ? Math.round((l.value / maxVal) * 100) : 0;
+            return (
+              <div key={l.type} style={{ marginBottom: 6 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#666', marginBottom: 2 }}>
+                  <span>{l.type}</span>
+                  <span style={{ fontWeight: 600, color: lossColors[idx % lossColors.length] }}>{l.value}{l.unit}</span>
+                </div>
+                <div style={{ height: 10, background: '#f5f5f5', borderRadius: 5, overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: lossColors[idx % lossColors.length], borderRadius: 5 }} />
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </PageCard>
+
+        {/* OEE 趋势 */}
+        <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
+          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📈 OEE 趋势</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(oee.trend || []).map((t: any) => {
+              const pct = Math.min(100, Math.max(0, t.oee));
+              const barColor = pct >= 85 ? '#22C55E' : pct >= 75 ? '#F59E0B' : '#EF4444';
+              return (
+                <div key={t.date} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 60, fontSize: 11, color: '#999', textAlign: 'right' }}>{t.date.slice(5)}</span>
+                  <div style={{ flex: 1, height: 14, background: '#f5f5f5', borderRadius: 7, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: barColor, borderRadius: 7 }} />
+                  </div>
+                  <span style={{ width: 36, fontSize: 12, fontWeight: 600, color: barColor, textAlign: 'right' }}>{t.oee}%</span>
+                  <span style={{ width: 36, fontSize: 10, color: '#EF4444', textAlign: 'center' }}>目标85%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* 设备 OEE 排行表 */}
+      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
+        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>📊 设备 OEE 排行</h3>
+        <Table
+          dataSource={oee.deviceOEE || []}
+          columns={deviceColumns}
+          rowKey="id"
+          pagination={false}
+          size="small"
+        />
+      </div>
     </div>
   );
 }

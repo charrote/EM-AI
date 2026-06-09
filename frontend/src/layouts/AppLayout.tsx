@@ -11,7 +11,7 @@ import {
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
-  PieChartOutlined,
+  PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -41,6 +41,26 @@ interface ScenarioGroup {
 }
 
 const scenarioGroups: ScenarioGroup[] = [
+  {
+    key: 'scenario-dashboard',
+    icon: <RobotOutlined />,
+    label: '决策仪表',
+    roles: ['executive', 'admin'],
+    children: [
+      { key: 'executive', icon: <RobotOutlined />, label: '决策仪表盘', roles: ['executive', 'admin'] },
+    ],
+  },
+  {
+    key: 'scenario-basic-data',
+    icon: <DatabaseOutlined />,
+    label: '基础数据',
+    roles: ['supervisor', 'admin'],
+    children: [
+      { key: 'organizations', icon: <ApartmentOutlined />, label: '企业层级', roles: ['supervisor', 'admin'] },
+      { key: 'device-types', icon: <TagsOutlined />, label: '设备类型', roles: ['supervisor', 'admin'] },
+      { key: 'device-manage', icon: <DatabaseOutlined />, label: '设备基础数据', roles: ['supervisor', 'admin'] },
+    ],
+  },
   {
     key: 'scenario-fault',
     icon: <WarningOutlined />,
@@ -76,7 +96,6 @@ const scenarioGroups: ScenarioGroup[] = [
       { key: 'loss-analysis', icon: <PieChartOutlined />, label: '损失分析', roles: ['supervisor', 'executive', 'admin'] },
       { key: 'improvements', icon: <BulbOutlined />, label: '改善项目', roles: ['supervisor', 'executive', 'admin'] },
       { key: 'andon-board', icon: <MonitorOutlined />, label: '效率看板', roles: ['supervisor', 'executive', 'admin'] },
-      { key: 'executive', icon: <RobotOutlined />, label: '决策仪表盘', roles: ['executive', 'admin'] },
     ],
   },
   {
@@ -95,10 +114,20 @@ const scenarioGroups: ScenarioGroup[] = [
 function filterMenuByRole(groups: ScenarioGroup[], role: Role): MenuProps['items'] {
   return groups
     .filter((group) => group.roles.includes(role))
-    .map((group) => {
+    .flatMap((group) => {
       const visibleChildren = group.children.filter((child) => child.roles.includes(role));
-      if (visibleChildren.length === 0) return null;
-      return {
+      if (visibleChildren.length === 0) return [];
+
+      // 单子分组展开为一级菜单（如决策仪表盘）
+      if (group.key.startsWith('scenario-') && visibleChildren.length === 1) {
+        return visibleChildren.map((child) => ({
+          key: child.key,
+          icon: child.icon,
+          label: child.label,
+        })) as MenuProps['items'];
+      }
+
+      return [{
         key: group.key,
         icon: group.icon,
         label: group.label,
@@ -107,9 +136,8 @@ function filterMenuByRole(groups: ScenarioGroup[], role: Role): MenuProps['items
           icon: child.icon,
           label: child.label,
         })),
-      } as NonNullable<MenuProps['items']>[number];
-    })
-    .filter(Boolean) as MenuProps['items'];
+      }] as MenuProps['items'];
+    });
 }
 
 // ── 角色切换下拉菜单 ─────────────────────────
@@ -228,7 +256,7 @@ export default function AppLayout() {
         <ToolOutlined style={{ fontSize: inDrawer ? 24 : 22, color: Colors.primary }} />
         {(!collapsed || inDrawer) && (
           <span style={{ fontSize: inDrawer ? 18 : 17, fontWeight: 700, color: Colors.gray800, letterSpacing: 1 }}>
-            EM-AI
+            UantekEM-AI
           </span>
         )}
       </div>
@@ -262,10 +290,13 @@ export default function AppLayout() {
           style={{
             background: Colors.sidebarBg,
             borderRight: `1px solid ${Colors.sidebarBorder}`,
+            height: '100vh',
             overflow: 'auto',
+            position: 'sticky',
+            top: 0,
           }}
           theme="light"
-          trigger={isTablet ? undefined : undefined}
+          trigger={null}
         >
           {renderSideMenu(false)}
         </Sider>

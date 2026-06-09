@@ -12,8 +12,14 @@ import toolingRoutes from './routes/toolings';
 import knowledgeRoutes from './routes/knowledge';
 import improvementRoutes from './routes/improvements';
 import dashboardRoutes from './routes/dashboard';
+import inspectionPlanRoutes from './routes/inspectionPlans';
+import maintenanceRoutes from './routes/maintenance';
+import andonRoutes from './routes/andon';
+import rcaRoutes from './routes/rca';
 import demoRoutes from './routes/demo';
 import authRoutes from './routes/auth';
+import uploadRoutes from './routes/upload';
+import organizationRoutes from './routes/organizations';
 import { simulator } from './services/simulator';
 
 const app = express();
@@ -26,6 +32,9 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/devices', deviceRoutes);
@@ -35,7 +44,13 @@ app.use('/api/toolings', toolingRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/improvements', improvementRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/inspection-plans', inspectionPlanRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/dashboard/andon', andonRoutes);
+app.use('/api/rca', rcaRoutes);
 app.use('/api/demo', demoRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

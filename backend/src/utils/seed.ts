@@ -86,7 +86,18 @@ export async function seedDemoData() {
   await prisma.tooling.deleteMany();
   await prisma.improvementProject.deleteMany();
   await prisma.knowledgeEntry.deleteMany();
+  await prisma.organization.deleteMany();
   await prisma.device.deleteMany();
+  await prisma.deviceType.deleteMany();
+
+  // ── 设备类型主数据 ──────────────────────────
+  const deviceTypeNames = [...SCENARIO_METAL_DEVICE_TYPES, ...SCENARIO_CAPACITOR_DEVICE_TYPES, '模具', '夹具', '刀具', '量具'];
+  for (let i = 0; i < deviceTypeNames.length; i++) {
+    await prisma.deviceType.create({
+      data: { name: deviceTypeNames[i], code: `DT-${String(i + 1).padStart(3, '0')}`, sortOrder: i + 1 },
+    });
+  }
+  console.log(`   设备类型: ${deviceTypeNames.length} 种`);
 
   // ── 设备 300 台 ─────────────────────────────
   const allDevices = generateAllDevices();
@@ -251,11 +262,92 @@ export async function seedDemoData() {
     ],
   });
 
+  // ═══════════════════════════════════════════════
+  // 企业层级 Demo 数据
+  // ═══════════════════════════════════════════════
+  const group = await prisma.organization.create({
+    data: { code: 'GRP-01', name: 'Uantek 集团', level: 'group', sortOrder: 1, location: '浙江省温州市' },
+  });
+
+  const company = await prisma.organization.create({
+    data: { code: 'CMP-01', name: 'Uantek 精密制造有限公司', level: 'company', parentId: group.id, sortOrder: 1, location: '温州市经济技术开发区' },
+  });
+
+  const workshopMetal = await prisma.organization.create({
+    data: { code: 'WS-METAL', name: '金属加工车间', level: 'workshop', parentId: company.id, sortOrder: 1, location: 'A 栋 1F' },
+  });
+  const workshopCapacitor = await prisma.organization.create({
+    data: { code: 'WS-CAP', name: '电解电容车间', level: 'workshop', parentId: company.id, sortOrder: 2, location: 'A 栋 2F' },
+  });
+
+  const linesMetal = [
+    { code: 'LN-CNC', name: 'CNC 产线', workshopId: workshopMetal.id, sortOrder: 1 },
+    { code: 'LN-LD', name: '冷墩产线', workshopId: workshopMetal.id, sortOrder: 2 },
+    { code: 'LN-YM', name: '研磨产线', workshopId: workshopMetal.id, sortOrder: 3 },
+    { code: 'LN-ZS', name: '注塑产线', workshopId: workshopMetal.id, sortOrder: 4 },
+    { code: 'LN-JG', name: '激光切割产线', workshopId: workshopMetal.id, sortOrder: 5 },
+    { code: 'LN-WZ', name: '弯折产线', workshopId: workshopMetal.id, sortOrder: 6 },
+    { code: 'LN-WG', name: '外观检测产线', workshopId: workshopMetal.id, sortOrder: 7 },
+  ];
+  const linesCap = [
+    { code: 'LN-CQ', name: '裁切产线', workshopId: workshopCapacitor.id, sortOrder: 1 },
+    { code: 'LN-DJ', name: '钉卷产线', workshopId: workshopCapacitor.id, sortOrder: 2 },
+    { code: 'LN-RK', name: '入壳产线', workshopId: workshopCapacitor.id, sortOrder: 3 },
+    { code: 'LN-TG', name: '套管产线', workshopId: workshopCapacitor.id, sortOrder: 4 },
+    { code: 'LN-LH', name: '老化产线', workshopId: workshopCapacitor.id, sortOrder: 5 },
+    { code: 'LN-BZ', name: '包装产线', workshopId: workshopCapacitor.id, sortOrder: 6 },
+  ];
+
+  const allLines = [...linesMetal, ...linesCap];
+  for (const l of allLines) {
+    await prisma.organization.create({
+      data: { code: l.code, name: l.name, level: 'line', parentId: l.workshopId, sortOrder: l.sortOrder },
+    });
+  }
+
+  // Link some devices to the org hierarchy
+  const metalLines = await prisma.organization.findMany({ where: { parentId: workshopMetal.id }, orderBy: { sortOrder: 'asc' } });
+  const capLines = await prisma.organization.findMany({ where: { parentId: workshopCapacitor.id }, orderBy: { sortOrder: 'asc' } });
+  const metalDevicesList = await prisma.device.findMany({ where: { type: { in: SCENARIO_METAL_DEVICE_TYPES } } });
+  const capDevicesList = await prisma.device.findMany({ where: { type: { in: SCENARIO_CAPACITOR_DEVICE_TYPES } } });
+
+  // Map device types to line index
+  const typeToLineIdx: Record<string, number> = {
+    'CNC': 0, '冷墩机': 1, '研磨机': 2, '注塑机': 3, '激光切割机': 4, '大型弯折机': 5, '全自动外观机': 6,
+  };
+  const typeToLineCap: Record<string, number> = {
+    '裁切机': 0, '钉卷机': 1, '入壳机': 2, '套管机': 3, '老化设备': 4, '自动包装机': 5,
+  };
+
+  for (const d of metalDevicesList) {
+    const idx = typeToLineIdx[d.type] ?? Math.floor(Math.random() * metalLines.length);
+    if (metalLines[idx]) {
+      await prisma.device.update({
+        where: { id: d.id },
+        data: { workshopId: workshopMetal.id, lineId: metalLines[idx].id },
+      });
+    }
+  }
+  for (const d of capDevicesList) {
+    const idx = typeToLineCap[d.type] ?? Math.floor(Math.random() * capLines.length);
+    if (capLines[idx]) {
+      await prisma.device.update({
+        where: { id: d.id },
+        data: { workshopId: workshopCapacitor.id, lineId: capLines[idx].id },
+      });
+    }
+  }
+
   const metalCount = allDevices.filter(d => d.scenario === SCENARIO_METAL).length;
   const capCount = allDevices.filter(d => d.scenario === SCENARIO_CAPACITOR).length;
   console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, 6 knowledge entries, 3 projects`);
   console.log(`   金属加工: ${metalCount}台 · 电解电容: ${capCount}台`);
+  console.log(`   🏗 企业层级: 1 集团 → 1 公司 → 2 车间 → ${allLines.length} 产线`);
 }
+
+// Device type constants (mirrored from routes/devices.ts)
+const SCENARIO_METAL_DEVICE_TYPES = ['CNC', '冷墩机', '研磨机', '注塑机', '激光切割机', '大型弯折机', '全自动外观机'];
+const SCENARIO_CAPACITOR_DEVICE_TYPES = ['裁切机', '钉卷机', '入壳机', '套管机', '老化设备', '自动包装机'];
 
 // Allow running directly
 const isMainModule = process.argv[1]?.includes('seed');
