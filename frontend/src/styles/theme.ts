@@ -105,12 +105,13 @@ export const FaultTypeColors: Record<string, string> = {
 };
 
 // ── 角色配置 ──────────────────────────────────
-export const RoleConfig = {
-  operator: { label: '操作员', icon: 'U' },
+export const RoleConfig: Record<string, { label: string; icon: string }> = {
+  operator: { label: '操作员', icon: 'O' },
   repair: { label: '维修工程师', icon: 'R' },
   supervisor: { label: '设备主管', icon: 'S' },
   executive: { label: '决策层', icon: 'E' },
-} as const;
+  admin: { label: '系统管理员', icon: 'A' },
+};
 
 // ── 共享样式 ──────────────────────────────────
 export const CardStyle: React.CSSProperties = {
