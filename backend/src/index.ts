@@ -49,7 +49,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 EM-AI Backend running on http://localhost:${PORT}`);
+  console.log(`🚀 EM-AI Backend running on http://0.0.0.0:${PORT}`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Ensure demo-data dir exists
