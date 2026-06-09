@@ -11,6 +11,7 @@ import {
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
+  PieChartOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';

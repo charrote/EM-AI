@@ -26,7 +26,7 @@ EM-AI 是一套面向离散制造/流程制造企业的 **AI 驱动的设备智�
 - **npm** >= 9
 - 不需要 Docker（开发模式使用 SQLite）
 
-### 一键启动
+### 一键启动 (Linux / macOS)
 
 ```bash
 # 1. 安装依赖 & 初始化数据库
@@ -40,6 +40,25 @@ cd backend && npm run dev
 
 # 4. 启动前端 (终端 2)
 cd frontend && npm run dev
+```
+
+### 一键启动 (Windows / SSH)
+
+支持 SSH 远程执行，**进程守护**会自动重启崩溃的服务，断开 SSH 连接后服务不停止。
+
+```cmd
+:: 启动服务（前台运行，带进程守护，Ctrl+C 停止）
+.\start-service.bat
+
+:: 停止服务
+.\stop-service.bat
+```
+
+后台守护模式（断开 SSH 后继续运行）：
+
+```powershell
+# 使用 PowerShell 启动隐藏守护进程
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath cmd.exe -WindowStyle Hidden -ArgumentList '/c','start-service.bat'"
 ```
 
 ### 访问地址
@@ -93,7 +112,9 @@ EM-AI/
 │   ├── EM-AI产品设计_v2.md     # v2 优化版（含旅程/技术选型/NFR/竞品等）
 │   └── 开发任务书_详细版.md     # 逐日任务清单
 ├── docker-compose.yml      # PostgreSQL + Redis（生产用）
-└── start-demo.sh           # 一键启动脚本
+├── start-demo.sh           # 一键启动脚本 (Linux/macOS)
+├── start-service.bat       # 一键启动脚本 (Windows，带进程守护)
+└── stop-service.bat        # 停止服务脚本 (Windows)
 ```
 
 ---
