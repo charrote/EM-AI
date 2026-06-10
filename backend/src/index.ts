@@ -21,6 +21,7 @@ import authRoutes from './routes/auth';
 import uploadRoutes from './routes/upload';
 import organizationRoutes from './routes/organizations';
 import teamRoutes from './routes/teams';
+import calendarRoutes from './routes/calendar';
 import { simulator } from './services/simulator';
 
 const app = express();
@@ -52,7 +53,7 @@ app.use('/api/rca', rcaRoutes);
 app.use('/api/demo', demoRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/organizations', organizationRoutes);
-app.use('/api/teams', teamRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { List, Tag, Input, Select, Empty, Spin, Space } from 'antd';
-import { BookOutlined, SearchOutlined } from '@ant-design/icons';
+import { useEffect, useState, useCallback } from 'react';
+import { List, Tag, Input, Select, Empty, Spin, Space, message, Button } from 'antd';
+import { BookOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, FaultTypeColors } from '../styles/theme';
@@ -13,21 +13,37 @@ export default function KnowledgeBase() {
   const [filter, setFilter] = useState('all');
   const { isMobile } = useResponsive();
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
+    setLoading(true);
     const params: any = {};
     if (filter !== 'all') params.status = filter;
     if (search) params.search = search;
 
     api.get('/knowledge', { params }).then((res) => {
-      setEntries(res.data.data);
+      setEntries(res.data.data || []);
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch((err) => {
+      console.error('Knowledge fetch error:', err);
+      message.error('加载知识库失败');
+      setLoading(false);
+    });
   }, [search, filter]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const safeTags = (tags: any): string[] => {
+    if (Array.isArray(tags)) return tags;
+    if (typeof tags === 'string') {
+      try { return JSON.parse(tags); } catch { return [tags]; }
+    }
+    return [];
+  };
 
   return (
     <div>
       <PageCard>
-        {/* Search & Filter — 移动端纵向排列 */}
         <div style={{
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
@@ -54,9 +70,9 @@ export default function KnowledgeBase() {
             style={{ width: isMobile ? '100%' : 120 }}
             size={isMobile ? 'middle' : 'large'}
           />
+          <Button icon={<ReloadOutlined />} onClick={fetchData} size={isMobile ? 'middle' : 'large'}>刷新</Button>
         </div>
 
-        {/* List */}
         {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> :
           !entries.length ? <Empty description="暂无知识条目" /> :
           <List
@@ -88,9 +104,9 @@ export default function KnowledgeBase() {
                   {entry.cause && <div><strong>原因：</strong>{entry.cause}</div>}
                   {entry.solution && <div><strong>方案：</strong>{entry.solution}</div>}
                 </div>
-                {entry.tags && (
+                {entry.tags && safeTags(entry.tags).length > 0 && (
                   <div style={{ marginTop: isMobile ? 4 : 8 }}>
-                    {(entry.tags as string[]).map((tag: string) => (
+                    {safeTags(entry.tags).map((tag: string) => (
                       <Tag key={tag} style={{ marginBottom: 4, borderRadius: 4, fontSize: isMobile ? 11 : 12 }}>{tag}</Tag>
                     ))}
                   </div>

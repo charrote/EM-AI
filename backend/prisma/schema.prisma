@@ -331,3 +331,22 @@ model ImprovementProject {
 
   @@map("improvement_projects")
 }
+
+// ===== 工作日历 =====
+model WorkCalendar {
+  id              String   @id @default(uuid())
+  date            DateTime
+  year            Int
+  month           Int
+  day             Int
+  dayOfWeek       Int      @map("day_of_week") // 0=Sun, 1=Mon, ...
+  isWorkDay       Boolean  @default(true) @map("is_work_day")
+  shiftType        String?  @map("shift_type") // day/night/middle/off
+  holidayName     String?  @map("holiday_name")
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, month, day])
+  @@map("work_calendars")
+}

@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Dropdown, Avatar, Tag, Typography, Space, Drawer } from 'antd';
+import { Layout, Menu, Dropdown, Avatar, Tag, Typography, Space, Drawer, Modal, Select, message } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   DashboardOutlined, ToolOutlined, CheckCircleOutlined,
@@ -17,6 +17,7 @@ import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import MobileBottomNav from '../components/MobileBottomNav';
+import api from '../services/api';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -60,6 +61,7 @@ const scenarioGroups: ScenarioGroup[] = [
       { key: 'device-types', icon: <TagsOutlined />, label: '设备类型', roles: ['supervisor', 'admin'] },
       { key: 'device-manage', icon: <DatabaseOutlined />, label: '设备基础数据', roles: ['supervisor', 'admin'] },
       { key: 'teams', icon: <TeamOutlined />, label: '班组管理', roles: ['supervisor', 'admin'] },
+      { key: 'work-calendar', icon: <CalendarOutlined />, label: '工作日历', roles: ['supervisor', 'admin'] },
     ],
   },
   {
@@ -172,8 +174,38 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [orgTree, setOrgTree] = useState<any[]>([]);
+  const [settingsOrgId, setSettingsOrgId] = useState<string | null>(selectedOrganizationId);
+
+  const fetchOrgTree = useCallback(async () => {
+    try {
+      const res = await api.get('/organizations/tree');
+      const flat: any[] = [];
+      const flatten = (nodes: any[]) => {
+        nodes.forEach((n: any) => {
+          flat.push({ id: n.id, name: n.name, level: n.level });
+          if (n.children) flatten(n.children);
+        });
+      };
+      flatten(res.data.data || []);
+      setOrgTree(flat);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (settingsOpen) fetchOrgTree();
+  }, [settingsOpen, fetchOrgTree]);
+
+  const handleSaveSettings = () => {
+    setSelectedOrganizationId(settingsOrgId);
+    const org = orgTree.find(o => o.id === settingsOrgId);
+    setSelectedOrgName(org?.name || '全厂');
+    message.success('组织选择已更新');
+    setSettingsOpen(false);
+  };
 
   // 移动端：侧栏默认收起；平板：侧栏默认收起；桌面：侧栏默认展开
   const [collapsed, setCollapsed] = useState(!isDesktop);
@@ -225,7 +257,7 @@ export default function AppLayout() {
       onClick: () => setRole(role.key),
     })),
     { type: 'divider' as const },
-    { key: 'settings', icon: <SettingOutlined />, label: '系统设置', disabled: true },
+    { key: 'personal-settings', icon: <SettingOutlined />, label: '个人设置', onClick: () => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); } },
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', disabled: true },
   ];
 
@@ -386,6 +418,24 @@ export default function AppLayout() {
             )}
           </div>
 
+          {/* 当前组织显示 */}
+          <Tag
+            color="default"
+            style={{
+              background: Colors.sidebarActive,
+              border: 'none',
+              borderRadius: 4,
+              color: Colors.primary,
+              fontSize: 12,
+              cursor: 'pointer',
+              lineHeight: '22px',
+            }}
+            onClick={() => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); }}
+          >
+            <ApartmentOutlined style={{ marginRight: 4 }} />
+            {useStore.getState().selectedOrgName || '全厂'}
+          </Tag>
+
           {/* 用户面板 */}
           <Dropdown
             menu={{ items: userMenuItems }}
@@ -453,6 +503,35 @@ export default function AppLayout() {
 
       {/* ─── 移动端：底部导航 ─── */}
       {isMobile && <MobileBottomNav />}
+
+      {/* ─── 个人设置 Modal ─── */}
+      <Modal
+        title={<Space><SettingOutlined /> 个人设置</Space>}
+        open={settingsOpen}
+        onCancel={() => setSettingsOpen(false)}
+        onOk={handleSaveSettings}
+        okText="保存"
+        cancelText="取消"
+        width={400}
+      >
+        <div style={{ padding: '12px 0' }}>
+          <div style={{ marginBottom: 8, fontWeight: 500, color: Colors.gray700 }}>组织选择</div>
+          <Select
+            style={{ width: '100%' }}
+            placeholder="选择组织（默认全厂）"
+            allowClear
+            value={settingsOrgId}
+            onChange={setSettingsOrgId}
+            options={orgTree.map((o: any) => ({
+              value: o.id,
+              label: `${'  '.repeat({ group: 0, company: 1, workshop: 2, line: 3 }[o.level] || 0)}${o.name} (${o.level})`,
+            }))}
+          />
+          <div style={{ marginTop: 8, fontSize: 12, color: Colors.gray400 }}>
+            选择后，涉及组织数据筛选的页面将默认以所选组织层级展示数据。
+          </div>
+        </div>
+      </Modal>
     </Layout>
   );
 }

@@ -86,6 +86,7 @@ export async function seedDemoData() {
   await prisma.tooling.deleteMany();
   await prisma.improvementProject.deleteMany();
   await prisma.knowledgeEntry.deleteMany();
+  await prisma.rcaAnalysis.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.device.deleteMany();
   await prisma.deviceType.deleteMany();
@@ -253,6 +254,37 @@ export async function seedDemoData() {
     ],
   });
 
+  // ── RCA 分析历史记录 8 条 ────────────────────
+  const rcaDevices = await prisma.device.findMany({ take: 8, orderBy: { code: 'asc' } });
+  const rcaData = [
+    { title: 'CNC-001 主轴异响根因分析', problemDesc: 'CNC-001 在运行中发出周期性异响，振动值从3.2mm/s升至7.8mm/s', rootCause: '主轴前轴承磨损严重，保持架断裂', improvement: '更换SKF主轴轴承，建立轴承振动定期监测制度，每500小时检测一次', whyChain: [{ level: 1, question: '为什么会发生这个问题？', answer: '主轴运行异响，振动值超标' }, { level: 2, question: '为什么会是这个原因？', answer: '主轴轴承磨损，间隙增大' }, { level: 3, question: '这个原因的根本因素是什么？', answer: '轴承润滑不足，长期过载运行' }, { level: 4, question: '还有更深层的原因吗？', answer: '润滑系统管路部分堵塞，润滑油流量不足' }, { level: 5, question: '再深一层，真正根源是什么？', answer: '润滑系统未纳入定期点检范围，缺乏预防性维护' }], fishboneData: { man: ['操作不规范', '润滑周期意识不足'], machine: ['主轴轴承', '润滑系统管路'], material: ['润滑油品质下降'], method: ['润滑周期不合理', '点检标准缺失'], measure: ['振动检测周期过长'], environment: ['加工区域粉尘较多'] } },
+    { title: '注塑机 ZS-005 温度异常分析', problemDesc: '注塑机 ZS-005 加热区温度波动大，影响产品质量', rootCause: '温控模块热电偶老化，PID参数偏离最佳值', improvement: '更换热电偶传感器，重新整定PID参数，建立温控系统季度校准制度', whyChain: [{ level: 1, question: '为什么会发生这个问题？', answer: '注塑温度波动大，产品尺寸超差' }, { level: 2, question: '为什么会温度波动？', answer: '温控系统响应迟缓' }, { level: 3, question: '为什么温控响应迟缓？', answer: '热电偶信号漂移' }, { level: 4, question: '为什么热电偶会漂移？', answer: '热电偶使用超期，性能退化' }, { level: 5, question: '根本原因是什么？', answer: '热电偶未纳入定期校准计划' }], fishboneData: { man: ['技术人员校准经验不足'], machine: ['热电偶', 'PID控制器'], material: ['原料批次差异'], method: ['校准周期过长', '无预警机制'], measure: ['温度检测精度不足'], environment: ['车间环境温度变化大'] } },
+    { title: '冷墩机 LD-003 冲头断裂分析', problemDesc: '冷墩机 LD-003 在高速生产中冲头突然断裂，造成模具损坏', rootCause: '冲头材料疲劳达到寿命极限，未及时更换', improvement: '建立冲头寿命数据库，实施寿命到期预警更换制度', whyChain: [{ level: 1, question: '为什么会发生冲头断裂？', answer: '冲头承受反复冲击载荷' }, { level: 2, question: '为什么冲头会到达寿命极限？', answer: '冲头已使用超过理论寿命30%' }, { level: 3, question: '为什么没有及时更换？', answer: '缺乏冲头使用次数记录系统' }, { level: 4, question: '为什么没有记录系统？', answer: '依赖人工经验判断，无数字化管理' }, { level: 5, question: '根本原因是什么？', answer: '工具寿命管理数字化程度不足' }], fishboneData: { man: ['操作员未受过培训'], machine: ['冲头材料', '模具'], material: ['材料硬度不合格'], method: ['无寿命管理流程', '未按计划更换'], measure: ['冲击次数无法实时统计'], environment: ['冷却润滑不足'] } },
+    { title: '液压机 YY-002 压力不稳分析', problemDesc: '液压机系统压力在保压阶段持续下降，无法保持设定压力', rootCause: '液压缸密封圈严重磨损，导致内泄漏', improvement: '更换液压缸密封组件，增加液压油定期检测项目', whyChain: [{ level: 1, question: '为什么会压力不稳？', answer: '液压系统内泄漏' }, { level: 2, question: '为什么会产生内泄漏？', answer: '液压缸密封圈磨损' }, { level: 3, question: '密封圈为什么磨损？', answer: '液压油污染度偏高，加速密封磨损' }, { level: 4, question: '为什么油污染度高？', answer: '液压油滤芯更换周期过长' }, { level: 5, question: '根本原因是什么？', answer: '液压系统维护标准执行不到位' }], fishboneData: { man: ['维护人员技能不足'], machine: ['液压缸密封件', '液压泵'], material: ['液压油污染', '密封件材质'], method: ['更换周期不科学', '点检标准不细致'], measure: ['油品检测频率低'], environment: ['现场粉尘污染'] } },
+    { title: '裁切机 CQ-002 定位偏差分析', problemDesc: '裁切机裁切尺寸出现系统性偏差，偏差量约0.5mm', rootCause: '送料辊编码器联轴器松动，导致位置反馈失准', improvement: '紧固联轴器并增加防松措施，增加编码器信号校准到日点检项目', whyChain: [{ level: 1, question: '为什么出现尺寸偏差？', answer: '送料定位不准' }, { level: 2, question: '为什么送料定位不准？', answer: '位置反馈信号与实际不符' }, { level: 3, question: '为什么反馈信号失准？', answer: '编码器与辊轴连接松动' }, { level: 4, question: '为什么连接会松动？', answer: '长期振动导致联轴器螺栓松动' }, { level: 5, question: '根本原因是什么？', answer: '联轴器紧固未纳入定期检查项目' }], fishboneData: { man: ['操作员未及时发现偏差'], machine: ['编码器', '联轴器', '送料辊'], material: ['材料厚度波动'], method: ['校准频率不足', '无防松设计'], measure: ['尺寸检测频次低'], environment: ['设备基础振动大'] } },
+    { title: '焊接机 HJ-001 焊接缺陷分析', problemDesc: '焊接机出现批量焊接气孔缺陷，不良率达到8%', rootCause: '保护气体管路存在泄漏点，导致保护气氛不足', improvement: '修复气体管路泄漏点，增加气路气密性日检项目', whyChain: [{ level: 1, question: '为什么产生气孔缺陷？', answer: '焊接保护气氛不足' }, { level: 2, question: '为什么保护气氛不足？', answer: '气体流量低于工艺要求' }, { level: 3, question: '为什么流量偏低？', answer: '管路存在微小泄漏' }, { level: 4, question: '为什么管路会泄漏？', answer: '快插接头密封圈老化' }, { level: 5, question: '根本原因是什么？', answer: '气路系统密封件缺乏定期更换计划' }], fishboneData: { man: ['操作员未检查气路'], machine: ['焊枪', '气体管路', '流量计'], material: ['焊丝质量', '保护气体纯度'], method: ['气体流量标准模糊', '无检漏流程'], measure: ['气体流量未实时监控'], environment: ['车间气流影响'] } },
+    { title: '钉卷机 DJ-003 铝箔断裂分析', problemDesc: '钉卷机在高速运转过程中铝箔频繁断裂，每次停机约15分钟', rootCause: '送箔路径上导辊表面有毛刺，划伤铝箔边缘造成应力集中', improvement: '更换导辊表面处理为陶瓷涂层，增加导辊表面质量日检项目', whyChain: [{ level: 1, question: '为什么铝箔断裂？', answer: '铝箔边缘有微裂纹' }, { level: 2, question: '为什么产生微裂纹？', answer: '导辊表面不光滑划伤铝箔' }, { level: 3, question: '为什么导辊表面不光滑？', answer: '导辊表面涂层磨损' }, { level: 4, question: '为什么涂层会磨损？', answer: '长期运行未检查导辊表面状态' }, { level: 5, question: '根本原因是什么？', answer: '导辊表面质量未纳入点检标准' }], fishboneData: { man: ['操作员未关注导辊状态'], machine: ['导辊', '送箔机构', '张力辊'], material: ['铝箔材质', '导辊涂层'], method: ['无导辊检查标准', '更换周期缺失'], measure: ['表面粗糙度无检测'], environment: ['湿度偏高'] } },
+    { title: '空压机系统压力波动分析', problemDesc: '全厂空压系统压力频繁波动，影响多台设备正常运行', rootCause: '干燥机前置过滤器堵塞，造成压差增大，后端供气不足', improvement: '清洗过滤器并缩短更换周期至1个月，增加压差监控报警', whyChain: [{ level: 1, question: '为什么空压压力波动？', answer: '末端用气量大于供气量' }, { level: 2, question: '为什么供气量不足？', answer: '空压机加载时间延长' }, { level: 3, question: '为什么加载时间延长？', answer: '干燥机前置过滤器堵塞' }, { level: 4, question: '为什么过滤芯堵塞？', answer: '更换周期过长（3个月）' }, { level: 5, question: '根本原因是什么？', answer: '过滤器压差无监控，周期性更换不科学' }], fishboneData: { man: ['维护人员巡检不到位'], machine: ['空压机', '干燥机', '过滤器'], material: ['滤芯质量', '压缩空气质量'], method: ['更换周期过长', '无压差监控'], measure: ['压差未实时监测'], environment: ['空压站通风不良'] } },
+  ];
+
+  for (let i = 0; i < rcaData.length; i++) {
+    const device = rcaDevices[i % rcaDevices.length];
+    await prisma.rcaAnalysis.create({
+      data: {
+        deviceId: device.id,
+        title: rcaData[i].title,
+        problemDesc: rcaData[i].problemDesc,
+        whyChain: rcaData[i].whyChain,
+        fishboneData: rcaData[i].fishboneData,
+        rootCause: rcaData[i].rootCause,
+        improvement: rcaData[i].improvement,
+        status: 'completed',
+        createdAt: new Date(Date.now() - (rcaData.length - i) * 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+  }
+  console.log(`   RCA 分析: ${rcaData.length} 条`);
+
   // ── 改善项目 3 ──────────────────────────────
   await prisma.improvementProject.createMany({
     data: [
@@ -261,6 +293,7 @@ export async function seedDemoData() {
       { title: 'TPM 点检体系优化', lossType: '设备故障', currentValue: 18, targetValue: 10, unit: '次/月', assignee: '王五', deadline: new Date('2026-06-20'), status: 'completed', progress: 100, description: '优化点检标准和频率，基于数据分析淘汰无效点检项' },
     ],
   });
+  console.log(`   改善项目: 3 个`);
 
   // ═══════════════════════════════════════════════
   // 企业层级 Demo 数据
@@ -340,7 +373,7 @@ export async function seedDemoData() {
 
   const metalCount = allDevices.filter(d => d.scenario === SCENARIO_METAL).length;
   const capCount = allDevices.filter(d => d.scenario === SCENARIO_CAPACITOR).length;
-  console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, 6 knowledge entries, 3 projects`);
+  console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, 6 knowledge entries, 8 RCA, 3 projects`);
   console.log(`   金属加工: ${metalCount}台 · 电解电容: ${capCount}台`);
   console.log(`   🏗 企业层级: 1 集团 → 1 公司 → 2 车间 → ${allLines.length} 产线`);
 }

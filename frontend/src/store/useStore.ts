@@ -14,6 +14,10 @@ interface AppState {
   setRole: (role: UserRole) => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
+  selectedOrganizationId: string | null;
+  setSelectedOrganizationId: (id: string | null) => void;
+  selectedOrgName: string;
+  setSelectedOrgName: (name: string) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -41,4 +45,8 @@ export const useStore = create<AppState>((set) => ({
     }),
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  selectedOrganizationId: null,
+  setSelectedOrganizationId: (id) => set({ selectedOrganizationId: id }),
+  selectedOrgName: '全厂',
+  setSelectedOrgName: (name) => set({ selectedOrgName: name }),
 }));

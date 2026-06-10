@@ -9,6 +9,7 @@ import { useResponsive } from '../hooks/useResponsive';
 
 export default function WorkOrderList() {
   const [orders, setOrders] = useState<any[]>([]);
+  const [allOrders, setAllOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('pending');
   const navigate = useNavigate();
@@ -16,8 +17,12 @@ export default function WorkOrderList() {
 
   useEffect(() => {
     setLoading(true);
-    api.get(`/work-orders?status=${tab}&limit=50`).then((res) => {
-      setOrders(res.data.data);
+    Promise.all([
+      api.get('/work-orders?limit=200'),
+      api.get(`/work-orders?status=${tab}&limit=50`),
+    ]).then(([allRes, filteredRes]) => {
+      setAllOrders(allRes.data.data || []);
+      setOrders(filteredRes.data.data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [tab]);
@@ -32,10 +37,12 @@ export default function WorkOrderList() {
   };
 
   const counts = {
-    pending: orders.filter(o => o.status === 'pending').length,
-    accepted: orders.filter(o => ['accepted', 'diagnosing', 'repairing', 'verifying'].includes(o.status)).length,
-    completed: orders.filter(o => o.status === 'completed').length,
+    pending: allOrders.filter(o => o.status === 'pending').length,
+    accepted: allOrders.filter(o => ['accepted', 'diagnosing', 'repairing', 'verifying'].includes(o.status)).length,
+    completed: allOrders.filter(o => o.status === 'completed').length,
   };
+
+  const filteredOrders = orders;
 
   return (
     <div>
@@ -52,9 +59,9 @@ export default function WorkOrderList() {
       />
 
       {loading ? <Spin style={{ display: 'block', margin: '40px auto' }} /> :
-        !orders.length ? <Empty description="暂无工单" /> :
+        !filteredOrders.length ? <Empty description="暂无工单" /> :
         <List
-          dataSource={orders}
+          dataSource={filteredOrders}
           renderItem={(wo: any) => {
             const sla = getSlaStatus(wo);
             return (

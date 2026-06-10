@@ -11,6 +11,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors, DeviceStatusConfig, PriorityColors, PriorityLabels } from '../styles/theme';
+import { useResponsive } from '../hooks/useResponsive';
+import { CheckIcon } from '../components/Icons';
 
 const { Text, Title } = Typography;
 
@@ -56,6 +58,7 @@ export default function AndonBoard() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const { isMobile, isTablet } = useResponsive();
 
   const fetchData = useCallback(async () => {
     try {
@@ -160,12 +163,21 @@ export default function AndonBoard() {
 
   const totalLoss = Object.values(data.totalLosses).reduce((a, b) => a + b, 0);
 
+  const isLargeScreen = !isMobile && !isTablet;
+  const kpiFontSize = isLargeScreen ? 36 : isTablet ? 32 : 28;
+  const chartHeight = isLargeScreen ? 'calc(100vh - 320px)' : 420;
+
   return (
-    <div ref={containerRef} style={{ background: isFullscreen ? Colors.bodyBg : 'transparent', minHeight: '100%' }}>
+    <div ref={containerRef} style={{
+      background: isFullscreen ? Colors.bodyBg : 'transparent',
+      minHeight: '100%',
+      padding: isLargeScreen ? '0' : undefined,
+      display: 'flex', flexDirection: 'column',
+    }}>
       {/* ─── 顶栏 ─── */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 12 }}>
         <Col>
-          <Title level={4} style={{ margin: 0 }}>
+          <Title level={isLargeScreen ? 3 : 4} style={{ margin: 0 }}>
             <MonitorOutlined style={{ marginRight: 8 }} />
             效率看板 (Andon)
             <Tag color="blue" style={{ marginLeft: 8, fontWeight: 'normal' }}>自动刷新 10s</Tag>
@@ -187,42 +199,42 @@ export default function AndonBoard() {
       {/* ─── 顶部 KPI ─── */}
       <Row gutter={[12, 12]} style={{ marginBottom: 12 }}>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '16px' } }}>
+          <Card size="small" styles={{ body: { padding: isLargeScreen ? '20px' : '16px' } }}>
             <Statistic
               title="综合 OEE"
               value={data.overallOEE}
               suffix="%"
-              valueStyle={{ color: data.overallOEE >= 85 ? Colors.success : data.overallOEE >= 60 ? Colors.warning : Colors.danger, fontSize: 28 }}
+              valueStyle={{ color: data.overallOEE >= 85 ? Colors.success : data.overallOEE >= 60 ? Colors.warning : Colors.danger, fontSize: kpiFontSize }}
               prefix={<MonitorOutlined />}
             />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '16px' } }}>
+          <Card size="small" styles={{ body: { padding: isLargeScreen ? '20px' : '16px' } }}>
             <Statistic
               title="运行/总数"
               value={`${data.runningCount}/${data.deviceCount}`}
-              valueStyle={{ fontSize: 28, color: Colors.success }}
+              valueStyle={{ fontSize: kpiFontSize, color: Colors.success }}
               prefix={<ThunderboltOutlined />}
             />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '16px' } }}>
+          <Card size="small" styles={{ body: { padding: isLargeScreen ? '20px' : '16px' } }}>
             <Statistic
               title="故障设备"
               value={data.faultCount}
-              valueStyle={{ fontSize: 28, color: Colors.danger }}
+              valueStyle={{ fontSize: kpiFontSize, color: Colors.danger }}
               prefix={<CloseCircleOutlined />}
             />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '16px' } }}>
+          <Card size="small" styles={{ body: { padding: isLargeScreen ? '20px' : '16px' } }}>
             <Statistic
               title="维护中"
               value={data.maintenanceCount}
-              valueStyle={{ fontSize: 28, color: Colors.warning }}
+              valueStyle={{ fontSize: kpiFontSize, color: Colors.warning }}
               prefix={<ToolOutlined />}
             />
           </Card>
@@ -230,33 +242,34 @@ export default function AndonBoard() {
       </Row>
 
       {/* ─── 主体：设备状态 + 损失 + 告警 ─── */}
-      <Row gutter={[12, 12]}>
+      <Row gutter={[12, 12]} style={{ flex: 1, minHeight: 0 }}>
         {/* 设备 OEE 列表 */}
         <Col xs={24} lg={10}>
           <Card
             title={<Space><ThunderboltOutlined /> 设备状态</Space>}
             size="small"
-            styles={{ body: { padding: 0, maxHeight: 420, overflow: 'auto' } }}
+            styles={{ body: { padding: 0, maxHeight: chartHeight, overflow: 'auto', height: isLargeScreen ? '100%' : undefined } }}
           >
             <Table
               columns={deviceColumns}
               dataSource={data.deviceOEEs}
               rowKey="id"
               pagination={false}
-              size="small"
-              scroll={{ y: 350 }}
+              size={isLargeScreen ? 'middle' : 'small'}
+              scroll={{ y: isLargeScreen ? undefined : 350 }}
             />
           </Card>
         </Col>
 
         {/* 六大损失 + 实时告警 */}
         <Col xs={24} lg={14}>
-          <Row gutter={[12, 12]}>
-            <Col span={24}>
+          <Row gutter={[12, 12]} style={{ height: '100%' }}>
+            <Col span={24} style={{ height: isLargeScreen ? '60%' : undefined }}>
               <Card
                 title={<Space><WarningOutlined /> 实时损失 (今日)</Space>}
                 size="small"
-                styles={{ body: { padding: '12px 16px' } }}
+                styles={{ body: { padding: isLargeScreen ? '16px 20px' : '12px 16px', height: isLargeScreen ? 'calc(100% - 42px)' : undefined, overflow: 'auto' } }}
+                style={{ height: '100%' }}
               >
                 <Row gutter={[8, 8]}>
                   {Object.entries(data.totalLosses).map(([key, val]) => (
@@ -265,13 +278,13 @@ export default function AndonBoard() {
                         <div style={{
                           background: `${LOSS_COLORS[key]}15`,
                           borderRadius: 6,
-                          padding: '8px 12px',
+                          padding: isLargeScreen ? '12px 16px' : '8px 12px',
                           borderLeft: `3px solid ${LOSS_COLORS[key]}`,
                         }}>
-                          <Text style={{ fontSize: 11, color: Colors.gray500 }}>{LOSS_LABELS[key]}</Text>
-                          <div style={{ fontSize: 18, fontWeight: 600, color: LOSS_COLORS[key] }}>
+                          <Text style={{ fontSize: isLargeScreen ? 13 : 11, color: Colors.gray500 }}>{LOSS_LABELS[key]}</Text>
+                          <div style={{ fontSize: isLargeScreen ? 24 : 18, fontWeight: 600, color: LOSS_COLORS[key] }}>
                             {val}
-                            <Text style={{ fontSize: 11, color: Colors.gray400, fontWeight: 'normal', marginLeft: 4 }}>分</Text>
+                            <Text style={{ fontSize: isLargeScreen ? 13 : 11, color: Colors.gray400, fontWeight: 'normal', marginLeft: 4 }}>分</Text>
                           </div>
                           <Progress
                             percent={Math.round((val / totalLoss) * 100)}
@@ -288,11 +301,12 @@ export default function AndonBoard() {
               </Card>
             </Col>
 
-            <Col span={24}>
+            <Col span={24} style={{ height: isLargeScreen ? '40%' : undefined }}>
               <Card
                 title={<Space><CloseCircleOutlined style={{ color: Colors.danger }} /> 实时告警</Space>}
                 size="small"
-                styles={{ body: { padding: 0, maxHeight: 240, overflow: 'auto' } }}
+                styles={{ body: { padding: 0, maxHeight: isLargeScreen ? undefined : 240, overflow: 'auto', height: isLargeScreen ? 'calc(100% - 42px)' : undefined } }}
+                style={{ height: '100%' }}
               >
                 {data.activeAlerts.length > 0 ? (
                   <Table
@@ -300,8 +314,8 @@ export default function AndonBoard() {
                     dataSource={data.activeAlerts}
                     rowKey="id"
                     pagination={false}
-                    size="small"
-                    scroll={{ y: 180 }}
+                    size={isLargeScreen ? 'middle' : 'small'}
+                    scroll={{ y: isLargeScreen ? undefined : 180 }}
                   />
                 ) : (
                   <div style={{ padding: 24, textAlign: 'center', color: Colors.gray400 }}>
@@ -315,7 +329,7 @@ export default function AndonBoard() {
       </Row>
 
       {/* ─── 底部 ─── */}
-      <div style={{ textAlign: 'center', marginTop: 12, color: Colors.gray400, fontSize: 12 }}>
+      <div style={{ textAlign: 'center', marginTop: 12, color: Colors.gray400, fontSize: isLargeScreen ? 13 : 12 }}>
         数据每 10 秒自动刷新 · 最后更新: {new Date(data.updatedAt).toLocaleTimeString()}
       </div>
     </div>

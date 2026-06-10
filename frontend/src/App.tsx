@@ -23,6 +23,7 @@ import OrganizationPage from './pages/OrganizationPage';
 import DeviceTypePage from './pages/DeviceTypePage';
 import DeviceManagePage from './pages/DeviceManagePage';
 import TeamPage from './pages/TeamPage';
+import WorkCalendar from './pages/WorkCalendar';
 
 // ── 待开发占位页面 ────────────────────────────
 import RcaAnalysis from './pages/RcaAnalysis';
@@ -102,6 +103,7 @@ function App() {
             <Route path="device-types" element={<DeviceTypePage />} />
             <Route path="device-manage" element={<DeviceManagePage />} />
             <Route path="teams" element={<TeamPage />} />
+            <Route path="work-calendar" element={<WorkCalendar />} />
           </Route>
         </Routes>
       </BrowserRouter>

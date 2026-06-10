@@ -33,6 +33,7 @@ export default function OrganizationPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  const [autoExpandDone, setAutoExpandDone] = useState(false);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -50,19 +51,38 @@ export default function OrganizationPage() {
       const tree = res.data.data || [];
       setTreeData(tree);
 
-      // Build flat list
+      // Build flat list with OEE inheritance
       const flat: any[] = [];
       const flatten = (nodes: any[], parent?: any) => {
         nodes.forEach(n => {
-          flat.push({ ...n, parentName: parent?.name || null });
-          if (n.children) flatten(n.children, n);
+          const inheritedOee = n.oeeTarget != null ? n.oeeTarget : (parent?._oeeDisplay ?? null);
+          flat.push({
+            ...n,
+            parentName: parent?.name || null,
+            _oeeDisplay: inheritedOee,
+            _oeeInherited: n.oeeTarget == null && inheritedOee != null,
+          });
+          if (n.children) flatten(n.children, { ...n, _oeeDisplay: inheritedOee });
         });
       };
       flatten(tree);
       setFlatData(flat);
 
-      if (tree.length > 0 && !selectedNode) {
-        setExpandedKeys([tree[0].id]);
+      // Collect all keys for full expansion
+      if (tree.length > 0 && !autoExpandDone) {
+        const allKeys: React.Key[] = [];
+        const collectKeys = (nodes: any[]) => {
+          nodes.forEach(n => {
+            allKeys.push(n.id);
+            if (n.children) collectKeys(n.children);
+          });
+        };
+        collectKeys(tree);
+        setExpandedKeys(allKeys);
+        setAutoExpandDone(true);
+        if (!selectedNode) {
+          setSelectedNode(tree[0]);
+        }
       }
     } catch {
       message.error('加载组织架构失败');
@@ -102,9 +122,9 @@ export default function OrganizationPage() {
               {n.name}
             </Text>
             <span style={{ flex: 1 }} />
-            {n.oeeTarget != null && (
-              <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none', fontSize: 10, lineHeight: '16px', padding: '0 4px', marginRight: 4 }}>
-                OEE {n.oeeTarget}%
+            {n._oeeDisplay != null && (
+              <Tag color={n._oeeInherited ? Colors.gray400 : Colors.primary} style={{ borderRadius: 4, border: 'none', fontSize: 10, lineHeight: '16px', padding: '0 4px', marginRight: 4 }}>
+                OEE {n._oeeDisplay}%{n._oeeInherited ? '(继承)' : ''}
               </Tag>
             )}
             <Tag
@@ -198,6 +218,8 @@ export default function OrganizationPage() {
   };
 
   // ── Filter tree by search ──────────────────
+  const hasGroupRoot = useMemo(() => flatData.some(n => n.level === 'group' && !n.parentId), [flatData]);
+
   const filteredFlatData = useMemo(() => {
     if (!search) return flatData;
     const s = search.toLowerCase();
@@ -216,7 +238,7 @@ export default function OrganizationPage() {
       }
       extra={
         <Space size={4}>
-          <Button size="small" icon={<PlusOutlined />} onClick={() => openCreateModal()} disabled={treeData.length === 0}>
+          <Button size="small" icon={<PlusOutlined />} onClick={() => openCreateModal()} disabled={hasGroupRoot}>
             新增
           </Button>
           <Button size="small" icon={<ReloadOutlined />} onClick={fetchTree} />
@@ -361,8 +383,11 @@ export default function OrganizationPage() {
           <Descriptions.Item label="位置">{selectedNode.location || '-'}</Descriptions.Item>
           <Descriptions.Item label="排序">{selectedNode.sortOrder || 0}</Descriptions.Item>
           <Descriptions.Item label="OEE 目标">
-            {selectedNode.oeeTarget != null
-              ? <Text strong style={{ color: Colors.primary }}>{selectedNode.oeeTarget}%</Text>
+            {selectedNode._oeeDisplay != null
+              ? <Text strong style={{ color: selectedNode._oeeInherited ? Colors.gray500 : Colors.primary }}>
+                  {selectedNode._oeeDisplay}%
+                  {selectedNode._oeeInherited && <Text type="secondary"> (继承)</Text>}
+                </Text>
               : '-'
             }
           </Descriptions.Item>
@@ -445,7 +470,7 @@ export default function OrganizationPage() {
             </Col>
             <Col span={12}>
               <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入名称' }]}>
-                <Input placeholder="如: 华峰集团" />
+                <Input placeholder="如: Uantek集团" />
               </Form.Item>
             </Col>
           </Row>
@@ -481,7 +506,7 @@ export default function OrganizationPage() {
           </Form.Item>
 
           <Form.Item label="OEE 目标 (%)" name="oeeTarget">
-            <InputNumber min={0} max={100} step={0.1} style={{ width: '100%' }} placeholder="如: 85" />
+            <InputNumber min={0} max={100} step={0.1} style={{ width: '100%' }} placeholder={modalParent?._oeeDisplay ? `继承: ${modalParent._oeeDisplay}%` : '如: 85'} />
           </Form.Item>
 
           <div style={{ textAlign: 'right', marginTop: 16 }}>

@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Tag } from 'antd';
+import { Table, Tag, Select, Space, DatePicker } from 'antd';
 import { BarChartIcon, LineChartUpIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
+import { useStore } from '../store/useStore';
+import { Colors } from '../styles/theme';
+import api from '../services/api';
+
+const { RangePicker } = DatePicker;
 
 // ── Inline KPI block ──
 function KpiBlock({ title, value, suffix, color, prefix }: {
@@ -23,18 +28,36 @@ export default function OEEDashboard() {
   const [oee, setOee] = useState<any>(null);
   const [losses, setLosses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orgTree, setOrgTree] = useState<any[]>([]);
   const navigate = useNavigate();
+  const { selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
 
   useEffect(() => {
+    api.get('/organizations/tree').then(res => {
+      const flat: any[] = [];
+      const flatten = (nodes: any[]) => {
+        nodes.forEach((n: any) => {
+          flat.push({ id: n.id, name: n.name, level: n.level });
+          if (n.children) flatten(n.children);
+        });
+      };
+      flatten(res.data.data || []);
+      setOrgTree(flat);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    const params = selectedOrganizationId ? `?orgId=${selectedOrganizationId}` : '';
     Promise.all([
-      fetch('/api/dashboard/oee').then(r => r.json()).then(r => r.data),
+      fetch(`/api/dashboard/oee${params}`).then(r => r.json()).then(r => r.data),
       fetch('/api/dashboard/losses').then(r => r.json()).then(r => r.data).catch(() => []),
     ]).then(([oeeData, lossData]) => {
       setOee(oeeData);
       setLosses(lossData);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [selectedOrganizationId]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
   if (!oee) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;
@@ -67,8 +90,33 @@ export default function OEEDashboard() {
     { title: '质量率', dataIndex: 'quality', key: 'quality', render: (v: number) => `${v}%` },
   ];
 
+  const handleOrgChange = (orgId: string | null) => {
+    setSelectedOrganizationId(orgId);
+    const org = orgTree.find(o => o.id === orgId);
+    setSelectedOrgName(org?.name || '全厂');
+  };
+
   return (
     <div style={{ padding: 4, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>
+      {/* 筛选栏 */}
+      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: '12px 16px', marginBottom: 16 }}>
+        <Space wrap size={12}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>筛选</span>
+          <Select
+            style={{ width: 200 }}
+            size="small"
+            placeholder="选择组织层级"
+            allowClear
+            value={selectedOrganizationId}
+            onChange={handleOrgChange}
+            options={orgTree.map((o: any) => ({
+              value: o.id,
+              label: `${'  '.repeat({ group: 0, company: 1, workshop: 2, line: 3 }[o.level] || 0)}${o.name}`,
+            }))}
+          />
+        </Space>
+      </div>
+
       {/* KPI 行 */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 16 }}>
         <KpiBlock title="全厂 OEE" value={oee.overallOEE} suffix="%" color={oee.overallOEE >= 85 ? '#22C55E' : oee.overallOEE >= 75 ? '#F59E0B' : '#EF4444'} />

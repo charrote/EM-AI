@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { Table, Tag, Select, Space } from 'antd';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Table, Tag, Select, Space, Typography } from 'antd';
 import * as echarts from 'echarts';
 import { SpinnerIcon } from '../components/Icons';
+
+const { Text } = Typography;
 
 const SCOPE_LABELS: Record<string, string> = {
   plant: '全厂',
@@ -18,6 +20,7 @@ export default function LossAnalysis() {
   const [product, setProduct] = useState<string>('');
   const [team, setTeam] = useState<string>('');
   const [devices, setDevices] = useState<any[]>([]);
+  const [chartReady, setChartReady] = useState(false);
   const chartDomRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
@@ -26,156 +29,132 @@ export default function LossAnalysis() {
     fetch('/api/devices').then(r => r.json()).then(res => setDevices(res.data || [])).catch(() => {});
   }, []);
 
-  // Init chart — uses a counter to re-trigger after the DOM container appears
-  const [chartInitTick, setChartInitTick] = useState(0);
+  // Init chart
   useEffect(() => {
-    if (!chartDomRef.current || chartRef.current) return;
-    chartRef.current = echarts.init(chartDomRef.current);
-    const handleResize = () => chartRef.current?.resize();
+    const dom = chartDomRef.current;
+    if (!dom || chartRef.current) return;
+    const chart = echarts.init(dom);
+    chartRef.current = chart;
+    setChartReady(true);
+    const handleResize = () => chart.resize();
     window.addEventListener('resize', handleResize);
-    // trigger a re-render so the data-update effect can run after init
-    setChartInitTick(t => t + 1);
     return () => {
-      chartRef.current?.dispose();
+      chart.dispose();
       chartRef.current = null;
       window.removeEventListener('resize', handleResize);
+      setChartReady(false);
     };
-    // intentionally run after every render until chart is initialized
-  });
+  }, []);
 
   // Build query params
-  const buildQuery = () => {
+  const buildQuery = useCallback(() => {
     const params = new URLSearchParams({ scope });
     if (scope === 'device' && deviceId) params.set('deviceId', deviceId);
     if (scope === 'product' && product) params.set('product', product);
     if (scope === 'team' && team) params.set('team', team);
     return params.toString();
-  };
+  }, [scope, deviceId, product, team]);
 
   useEffect(() => {
     setLoading(true);
     fetch(`/api/dashboard/pareto?${buildQuery()}`)
       .then(r => r.json())
-      .then(res => { setPareto(res.data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [scope, deviceId, product, team]);
+      .then(res => { setPareto(res.data || []); setLoading(false); })
+      .catch(() => { setPareto([]); setLoading(false); });
+  }, [buildQuery]);
 
   // Update chart when data changes
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || pareto.length === 0) return;
+    if (!chart || pareto.length === 0 || !chartReady) return;
 
-    const causes = pareto.map(p => p.cause);
-    const durations = pareto.map(p => p.duration);
-    const cumulatives = pareto.map(p => p.cumulative);
+    try {
+      const causes = pareto.map(p => p.cause);
+      const durations = pareto.map(p => p.duration);
+      const cumulatives = pareto.map(p => p.cumulative);
 
-    const top80Idx = cumulatives.findIndex(c => c >= 80);
-    const mark80 = top80Idx >= 0 ? top80Idx + 0.5 : null;
+      const top80Idx = cumulatives.findIndex(c => c >= 80);
+      const mark80 = top80Idx >= 0 ? top80Idx + 0.5 : null;
 
-    chart.setOption({
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-        formatter: (params: any[]) => {
-          const bar = params.find((p: any) => p.seriesName === '停机时长');
-          const line = params.find((p: any) => p.seriesName === '累计占比');
-          let html = `<strong>${bar?.axisValue || ''}</strong><br/>`;
-          if (bar) html += `停机时长: ${bar.value} min<br/>`;
-          if (line) html += `累计占比: ${line.value}%`;
-          return html;
-        },
-      },
-      legend: {
-        data: ['停机时长', '累计占比'],
-        top: 0,
-        right: 0,
-        itemWidth: 12,
-        itemHeight: 8,
-        textStyle: { fontSize: 12 },
-      },
-      grid: { left: 50, right: 50, top: 30, bottom: 30 },
-      xAxis: {
-        type: 'category',
-        data: causes,
-        axisLabel: {
-          fontSize: 11,
-          interval: 0,
-          rotate: causes.length > 6 ? 25 : 0,
-          overflow: 'truncate',
-          width: 70,
-        },
-      },
-      yAxis: [
-        {
-          type: 'value',
-          name: '停机时长 (min)',
-          nameTextStyle: { fontSize: 11 },
-          axisLabel: { fontSize: 10 },
-          splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
-        },
-        {
-          type: 'value',
-          name: '累计占比 (%)',
-          nameTextStyle: { fontSize: 11 },
-          axisLabel: { fontSize: 10, formatter: '{value}%' },
-          min: 0,
-          max: 100,
-          splitLine: { show: false },
-        },
-      ],
-      series: [
-        {
-          name: '停机时长',
-          type: 'bar',
-          data: durations.map((v, i) => ({
-            value: v,
-            itemStyle: {
-              color: cumulatives[i] <= 80
-                ? '#EF4444'
-                : cumulatives[i] <= 90
-                  ? '#F59E0B'
-                  : '#3B82F6',
-              borderRadius: [2, 2, 0, 0],
-            },
-          })),
-          barMaxWidth: 40,
-        },
-        {
-          name: '累计占比',
-          type: 'line',
-          yAxisIndex: 1,
-          data: cumulatives,
-          smooth: false,
-          symbol: 'circle',
-          symbolSize: 6,
-          lineStyle: { color: '#8B5CF6', width: 2 },
-          itemStyle: { color: '#8B5CF6' },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(139, 92, 246, 0.2)' },
-              { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
-            ]),
+      chart.setOption({
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'cross' },
+          formatter: (params: any[]) => {
+            const bar = params.find((p: any) => p.seriesName === '停机时长');
+            const line = params.find((p: any) => p.seriesName === '累计占比');
+            let html = `<strong>${bar?.axisValue || ''}</strong><br/>`;
+            if (bar) html += `停机时长: ${bar.value} min<br/>`;
+            if (line) html += `累计占比: ${line.value}%`;
+            return html;
           },
-          markLine: mark80 !== null ? {
-            silent: true,
-            data: [
-              {
-                xAxis: mark80,
-                label: {
-                  formatter: '80% 关键线',
-                  color: '#EF4444',
-                  fontSize: 11,
-                  fontWeight: 600,
-                  position: 'end',
-                },
-                lineStyle: { color: '#EF4444', type: 'dashed', width: 2 },
-              },
-            ],
-          } : undefined,
         },
-      ],
-    });
-  }, [pareto, chartInitTick]);
+        legend: {
+          data: ['停机时长', '累计占比'],
+          top: 0, right: 0, itemWidth: 12, itemHeight: 8,
+          textStyle: { fontSize: 12 },
+        },
+        grid: { left: 50, right: 50, top: 30, bottom: 30 },
+        xAxis: {
+          type: 'category',
+          data: causes,
+          axisLabel: { fontSize: 11, interval: 0, rotate: causes.length > 6 ? 25 : 0 },
+        },
+        yAxis: [
+          {
+            type: 'value', name: '停机时长 (min)',
+            nameTextStyle: { fontSize: 11 },
+            axisLabel: { fontSize: 10 },
+            splitLine: { lineStyle: { type: 'dashed', color: '#f0f0f0' } },
+          },
+          {
+            type: 'value', name: '累计占比 (%)',
+            nameTextStyle: { fontSize: 11 },
+            axisLabel: { fontSize: 10, formatter: '{value}%' },
+            min: 0, max: 100, splitLine: { show: false },
+          },
+        ],
+        series: [
+          {
+            name: '停机时长', type: 'bar',
+            data: durations.map((v, i) => ({
+              value: v,
+              itemStyle: {
+                color: (cumulatives[i] || 0) <= 80 ? '#EF4444' : (cumulatives[i] || 0) <= 90 ? '#F59E0B' : '#3B82F6',
+                borderRadius: [2, 2, 0, 0],
+              },
+            })),
+            barMaxWidth: 40,
+          },
+          {
+            name: '累计占比', type: 'line', yAxisIndex: 1,
+            data: cumulatives,
+            smooth: false, symbol: 'circle', symbolSize: 6,
+            lineStyle: { color: '#8B5CF6', width: 2 },
+            itemStyle: { color: '#8B5CF6' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(139, 92, 246, 0.2)' },
+                { offset: 1, color: 'rgba(139, 92, 246, 0.02)' },
+              ]),
+            },
+            ...(mark80 !== null ? {
+              markLine: {
+                silent: true,
+                data: [{
+                  xAxis: mark80,
+                  label: { formatter: '80% 关键线', color: '#EF4444', fontSize: 11, fontWeight: 600, position: 'end' },
+                  lineStyle: { color: '#EF4444', type: 'dashed', width: 2 },
+                }],
+              },
+            } : {}),
+          },
+        ],
+      });
+    } catch (e) {
+      console.error('Chart render error:', e);
+    }
+  }, [pareto, chartReady]);
 
   const handleScopeChange = (val: string) => {
     setScope(val);
@@ -302,23 +281,23 @@ export default function LossAnalysis() {
           rowKey="cause"
           pagination={false}
           size="small"
-          summary={() => (
+            summary={() => pareto.length > 0 ? (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0}><strong>TOP 3 占总量</strong></Table.Summary.Cell>
               <Table.Summary.Cell index={1}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + p.count, 0)}</strong>
+                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.count || 0), 0)}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + p.duration, 0)} min</strong>
+                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.duration || 0), 0)} min</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={3}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + p.percentage, 0).toFixed(1)}%</strong>
+                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.percentage || 0), 0).toFixed(1)}%</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={4}>
-                <Tag color="#EF4444">{pareto[2]?.cumulative.toFixed(1) || 0}%</Tag>
+                <Tag color="#EF4444">{pareto[2] ? (Number(pareto[2]?.cumulative) || 0).toFixed(1) : 0}%</Tag>
               </Table.Summary.Cell>
             </Table.Summary.Row>
-          )}
+          ) : null}
         />
       </div>
     </div>

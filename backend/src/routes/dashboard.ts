@@ -4,9 +4,23 @@ import { prisma } from '../db';
 const router = Router();
 
 // GET /api/dashboard/oee — overall OEE data
-router.get('/oee', async (_req: Request, res: Response) => {
+router.get('/oee', async (req: Request, res: Response) => {
   try {
-    const devices = await prisma.device.findMany();
+    const orgId = req.query.orgId as string | undefined;
+    let deviceWhere: any = {};
+    if (orgId) {
+      const allOrgs = await prisma.organization.findMany();
+      const collectIds = (parentId: string): string[] => {
+        const ids = [parentId];
+        allOrgs.filter(o => o.parentId === parentId).forEach(child => {
+          ids.push(...collectIds(child.id));
+        });
+        return ids;
+      };
+      const orgIds = collectIds(orgId);
+      deviceWhere = { OR: [{ workshopId: { in: orgIds } }, { lineId: { in: orgIds } }] };
+    }
+    const devices = await prisma.device.findMany({ where: deviceWhere });
     const workOrders = await prisma.workOrder.findMany({
       where: { createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
     });
@@ -135,48 +149,84 @@ router.get('/devices/:id/oee', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/dashboard/devices/:id/trend — device trend (realistic smooth curve)
+// GET /api/dashboard/devices/:id/trend — device trend (24h or date range)
 router.get('/devices/:id/trend', async (req: Request, res: Response) => {
   try {
     const device = await prisma.device.findUnique({ where: { id: req.params.id as string } });
     const currentOEE = device?.oee ?? 75;
+    const range = req.query.range as string;
 
-    const range = parseInt(String(req.query.range || '30')) || 30;
-    const points = Math.min(range, 30);
+    if (range === '24h') {
+      // Generate 24-hour trend
+      const trend: { hour: string; oee: number; availability: number; performance: number; quality: number }[] = [];
+      let hourOee = currentOEE;
+      for (let i = 23; i >= 0; i--) {
+        const change = (Math.random() - 0.5) * 4;
+        hourOee = Math.max(40, Math.min(100, hourOee + change));
+        const h = new Date(Date.now() - i * 3600000);
+        trend.push({
+          hour: `${String(h.getHours()).padStart(2, '0')}:00`,
+          oee: Math.round(hourOee * 100) / 100,
+          availability: Math.round(Math.min(100, hourOee + 5 + (Math.random() - 0.5) * 2) * 100) / 100,
+          performance: Math.round(Math.min(100, hourOee + 8 + (Math.random() - 0.5) * 2) * 100) / 100,
+          quality: Math.round(Math.min(100, hourOee + 10 + (Math.random() - 0.5) * 1) * 100) / 100,
+        });
+      }
+      return res.json({ data: trend });
+    }
 
-    // Walk backwards from current OEE, applying small incremental changes
-    // to create a smooth, realistic 30-day trajectory.
+    if (range === 'range') {
+      // Generate trend for a date range (daily)
+      const start = req.query.start as string;
+      const end = req.query.end as string;
+      const startDate = start ? new Date(start) : new Date(Date.now() - 7 * 86400000);
+      const endDate = end ? new Date(end) : new Date();
+      const days = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / 86400000));
+      const points = Math.min(days, 60);
+
+      const trend: { date: string; oee: number; availability: number; performance: number; quality: number }[] = [];
+      let dayOee = currentOEE - 5;
+      for (let i = points - 1; i >= 0; i--) {
+        const change = (Math.random() - 0.5) * 3;
+        dayOee = Math.max(40, Math.min(100, dayOee + change));
+        const d = new Date(endDate.getTime() - i * 86400000);
+        trend.push({
+          date: d.toISOString().slice(0, 10),
+          oee: Math.round(dayOee * 100) / 100,
+          availability: Math.round(Math.min(100, dayOee + 5 + (Math.random() - 0.5) * 2) * 100) / 100,
+          performance: Math.round(Math.min(100, dayOee + 8 + (Math.random() - 0.5) * 2) * 100) / 100,
+          quality: Math.round(Math.min(100, dayOee + 10 + (Math.random() - 0.5) * 1) * 100) / 100,
+        });
+      }
+      return res.json({ data: trend });
+    }
+
+    // Default: 30-day trend
+    const points = Math.min(parseInt(range || '30') || 30, 30);
     const trend: { date: string; oee: number; availability: number; performance: number; quality: number }[] = [];
     let dayOee = currentOEE;
     let dayAvail = Math.min(100, currentOEE + 5);
     let dayPerf = Math.min(100, currentOEE + 8);
     let dayQual = Math.min(100, currentOEE + 10);
 
-    // Pre-generate a few "fault days" with recovery patterns
     const faultDays = new Set<number>();
     for (let i = 0; i < 3; i++) {
       const day = Math.floor(Math.random() * points);
       faultDays.add(day);
-      // Also add recovery days after each fault
       if (day + 1 < points) faultDays.add(day + 1);
       if (day + 2 < points) faultDays.add(day + 2);
     }
 
     for (let i = points - 1; i >= 0; i--) {
-      // Determine daily change — small and incremental
       let oeeChange: number;
-
       if (faultDays.has(i)) {
-        // Fault event: sharp drop then gradual recovery
         if (i === Math.max(...Array.from(faultDays).filter(d => faultDays.has(d)))) {
-          oeeChange = -(8 + Math.random() * 5); // -8 to -13 on first fault day
+          oeeChange = -(8 + Math.random() * 5);
         } else {
-          oeeChange = 0.5 + Math.random() * 1.5; // +0.5 to +2 recovery
+          oeeChange = 0.5 + Math.random() * 1.5;
         }
       } else {
-        // Normal day: tiny drift ±0.3%
         oeeChange = (Math.random() - 0.5) * 0.6;
-        // Add a very gentle weekly pattern (slightly higher mid-week)
         const dayOfWeek = new Date(Date.now() - i * 86400000).getDay();
         if (dayOfWeek >= 2 && dayOfWeek <= 4) oeeChange += 0.1;
       }
@@ -186,7 +236,6 @@ router.get('/devices/:id/trend', async (req: Request, res: Response) => {
       dayPerf = Math.min(100, Math.max(dayOee + 5, dayPerf + (Math.random() - 0.5) * 0.4));
       dayQual = Math.min(100, Math.max(dayOee + 7, dayQual + (Math.random() - 0.5) * 0.3));
 
-      // Record from oldest to newest
       trend.unshift({
         date: new Date(Date.now() - (points - 1 - i) * 86400000).toISOString().slice(0, 10),
         oee: Math.round(dayOee * 100) / 100,
