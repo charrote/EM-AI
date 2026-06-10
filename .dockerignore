@@ -1,0 +1,40 @@
+# ── EM-AI .dockerignore ──────────────────────
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+backend/dist/
+frontend/dist/
+
+# Database
+backend/prisma/dev.db
+backend/prisma/dev.db-journal
+
+# Demo data (generated daily)
+backend/demo-data/*.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitkeep
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+/tmp/

@@ -1,0 +1,47 @@
+# ── EM-AI Docker Compose ─────────────────────
+# One-command deployment: docker compose up -d --build
+# Access frontend at http://localhost
+# Backend API at http://localhost/api/ (proxied through nginx)
+
+services:
+  # ── Backend ─────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: emai-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=5273
+      - DATABASE_URL=file:/app/data/dev.db
+    ports:
+      - "5273:5273"
+    volumes:
+      # Persistent SQLite database
+      - emai_data:/app/data
+      # Demo data directory (simulator snapshots)
+      - emai_demo_data:/app/demo-data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5273/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  # ── Frontend ────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: emai-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  emai_data:
+  emai_demo_data:

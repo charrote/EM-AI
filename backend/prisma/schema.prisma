@@ -1,0 +1,352 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== 设备类型（主数据） =====
+model DeviceType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String?  @unique
+  description String?
+  icon        String?
+  sortOrder   Int?     @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  documents   Json?    // [{id, name, fileName, url, type(manual/inspection/operation/other), size, uploadedAt}]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("device_types")
+}
+
+// ===== 企业层级 =====
+model Organization {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  level     String   // group / company / workshop / line
+  parentId  String?  @map("parent_id")
+  sortOrder Int?     @default(0) @map("sort_order")
+  isActive  Boolean  @default(true) @map("is_active")
+  location  String?
+  contact   Json?
+  oeeTarget Float?   @map("oee_target")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  parent   Organization?  @relation("OrgHierarchy", fields: [parentId], references: [id])
+  children Organization[] @relation("OrgHierarchy")
+
+  @@index([parentId])
+  @@map("organizations")
+}
+
+// ===== 设备 =====
+model Device {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  type         String   // 设备类型：注塑机/CNC/冲床/...
+  status       String   @default("idle") // running/idle/changeover/fault/maintenance/repair/retired
+  area         String?
+  line         String?
+  healthScore  Float?   @map("health_score")
+  oee          Float?
+  mtbf         Float?
+  mttr         Float?
+  priority     String   @default("B") // A/B/C
+  config       Json?
+
+  // 扩展字段
+  workshopId    String?  @map("workshop_id")
+  lineId        String?  @map("line_id")
+  brand         String?
+  modelName     String?  @map("model_name")
+  serialNo      String?  @map("serial_no")
+  supplier      String?
+  installDate   DateTime? @map("install_date")
+  warrantyUntil DateTime? @map("warranty_until")
+  powerRating   Float?   @map("power_rating")
+  specifications Json?
+  lastMaintenanceAt DateTime? @map("last_maintenance_at")
+  nextMaintenanceAt DateTime? @map("next_maintenance_at")
+  oeeTarget     Float?   @map("oee_target")
+
+  // 设备档案扩展
+  theoreticalCapacity Float? @map("theoretical_capacity")    // 理论产能（件/小时）
+  onlineParams  Json?   @map("online_params")                // 联机参数 [{name, value, unit}]
+  programList   Json?   @map("program_list")                 // 设备程序清单 [{name, version, date, description}]
+  documents     Json?                                         // [{id, name, fileName, url, type, size, uploadedAt}]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  workOrders       WorkOrder[]
+  inspections      Inspection[]
+  toolingAssigns   Tooling[]
+
+  @@index([workshopId])
+  @@index([lineId])
+  @@map("devices")
+}
+
+// ===== 工单 =====
+model WorkOrder {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  type            String   @default("repair") // repair/inspection/maintenance
+  source          String   @default("manual") // manual/scan/voice/iot_auto
+  deviceId        String   @map("device_id")
+  status          String   @default("pending") // pending/accepted/diagnosing/repairing/verifying/completed/cancelled
+  priority        String   @default("P1") // P0/P1/P2/P3
+  faultType       String?  @map("fault_type")
+  faultCode       String?  @map("fault_code")
+  description     String?
+  aiRecommendation Json?   @map("ai_recommendation")
+  assigneeId      String?  @map("assignee_id")
+  teamId          String?  @map("team_id")
+  slaResponseMin  Int?     @map("sla_response_min")
+  slaRepairMin    Int?     @map("sla_repair_min")
+  slaDeadline     DateTime? @map("sla_deadline")
+  respondedAt     DateTime? @map("responded_at")
+  actualStartAt   DateTime? @map("actual_start_at")
+  actualEndAt     DateTime? @map("actual_end_at")
+  rootCause       String?  @map("root_cause")
+  resolution      String?
+  partsUsed       Json?    @map("parts_used")
+  cost            Float?
+  satisfactionScore Int?   @map("satisfaction_score")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  device Device @relation(fields: [deviceId], references: [id])
+  team   Team?  @relation(fields: [teamId], references: [id])
+  workLogs WorkLog[]
+
+  @@map("work_orders")
+}
+
+// ===== 维修记录 =====
+model WorkLog {
+  id          String   @id @default(uuid())
+  workOrderId String   @map("work_order_id")
+  step        Int
+  content     String?
+  duration    Int?
+  images      Json?
+  operator    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workOrder WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@map("work_logs")
+}
+
+// ===== 点检记录 =====
+model Inspection {
+  id              String   @id @default(uuid())
+  planId          String?  @map("plan_id")
+  deviceId        String   @map("device_id")
+  level           String   @default("daily") // daily/weekly/monthly/quarterly
+  operatorId      String?  @map("operator_id")
+  status          String   @default("pending") // pending/in_progress/completed/skipped
+  items           Json?
+  abnormalCount   Int?     @map("abnormal_count")
+  triggeredWoId   String?  @map("triggered_wo_id")
+  doneAt          DateTime? @map("done_at")
+  location        Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  device     Device         @relation(fields: [deviceId], references: [id])
+  plan       InspectionPlan? @relation(fields: [planId], references: [id])
+
+  @@map("inspections")
+}
+
+// ===== 工治具 =====
+model Tooling {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  type            String   // 模具/夹具/刀具/量具
+  status          String   @default("in_stock") // in_stock/in_use/maintenance/repair/retired/pending_inspect
+  deviceId        String?  @map("device_id")
+  location        String?
+  supplier        String?
+  theoreticalLife Int?     @map("theoretical_life")
+  lifeUnit        String?  @map("life_unit") // cycles/hours/days
+  lifeUsed        Int?     @map("life_used")
+  lifeRemaining   Int?     @map("life_remaining")
+  healthScore     Float?   @map("health_score")
+  purchaseDate    DateTime? @map("purchase_date")
+  purchaseCost    Float?   @map("purchase_cost")
+  lastMaintenanceAt DateTime? @map("last_maintenance_at")
+  config          Json?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  device Device? @relation(fields: [deviceId], references: [id])
+
+  @@map("toolings")
+}
+
+// ===== 知识条目 =====
+model KnowledgeEntry {
+  id          String   @id @default(uuid())
+  title       String
+  faultType   String?  @map("fault_type")
+  symptom     String?
+  cause       String?
+  solution    String?
+  tags        Json?
+  status      String   @default("pending") // pending/approved/rejected
+  sourceWoId  String?  @map("source_wo_id")
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("knowledge_entries")
+}
+
+// ===== 点检计划 =====
+model InspectionPlan {
+  id           String   @id @default(uuid())
+  title        String
+  deviceType   String   @map("device_type")
+  level        String   @default("daily") // daily/weekly/monthly/quarterly
+  frequency    Int      // 频率值（天）
+  items        Json?    // 点检项目列表
+  sopUrl       String?  @map("sop_url")
+  description  String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  inspections Inspection[]
+
+  @@map("inspection_plans")
+}
+
+// ===== 保养计划 =====
+model MaintenancePlan {
+  id            String   @id @default(uuid())
+  title         String
+  deviceId      String?  @map("device_id")
+  deviceType    String?  @map("device_type")
+  type          String   @default("daily") // daily/level1/level2/overhaul
+  triggerType   String   @default("time") // time/runtime/output
+  triggerValue  Int      @map("trigger_value")
+  intervalDays  Int?     @map("interval_days")
+  items         Json?    // 保养项目列表
+  sopUrl        String?  @map("sop_url")
+  description   String?
+  active        Boolean  @default(true)
+  lastExecutedAt DateTime? @map("last_executed_at")
+  nextScheduledAt DateTime? @map("next_scheduled_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("maintenance_plans")
+}
+
+// ===== 保养执行记录 =====
+model MaintenanceRecord {
+  id              String   @id @default(uuid())
+  planId          String?  @map("plan_id")
+  deviceId        String   @map("device_id")
+  title           String
+  type            String
+  operatorId      String?  @map("operator_id")
+  status          String   @default("in_progress") // in_progress/completed/skipped
+  steps           Json?    // 执行步骤记录
+  partsUsed       Json?    @map("parts_used")
+  result          String?  // normal/abnormal
+  beforeImages    Json?    @map("before_images")
+  afterImages     Json?    @map("after_images")
+  duration        Int?     // 耗时（分钟）
+  notes           String?
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("maintenance_records")
+}
+
+// ===== 班组 =====
+model Team {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  leader      String?
+  memberCount Int?     @default(0) @map("member_count")
+  shift       String?  // 早班/中班/晚班
+  workshopId  String?  @map("workshop_id")
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workOrders   WorkOrder[]
+  @@index([workshopId])
+  @@map("teams")
+}
+
+// ===== RCA 分析记录 =====
+model RcaAnalysis {
+  id            String   @id @default(uuid())
+  workOrderId   String?  @map("work_order_id")
+  deviceId      String   @map("device_id")
+  title         String
+  problemDesc   String   @map("problem_desc")
+  whyChain      Json?    @map("why_chain")  // [{level:1, question, answer}, ...]
+  fishboneData  Json?    @map("fishbone_data") // {man,machine,material,method,measure,environment}
+  rootCause     String?  @map("root_cause")
+  improvement   String?
+  status        String   @default("draft") // draft/completed
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("rca_analyses")
+}
+
+// ===== 改善项目 =====
+model ImprovementProject {
+  id            String   @id @default(uuid())
+  title         String
+  lossType      String?  @map("loss_type")
+  currentValue  Float?   @map("current_value")
+  targetValue   Float?   @map("target_value")
+  unit          String?  // min/%/count
+  assignee      String?
+  deadline      DateTime?
+  status        String   @default("active") // active/completed/cancelled
+  progress      Int?     @default(0) // 0-100
+  effectData    Json?    @map("effect_data")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("improvement_projects")
+}
+
+// ===== 工作日历 =====
+model WorkCalendar {
+  id              String   @id @default(uuid())
+  date            DateTime
+  year            Int
+  month           Int
+  day             Int
+  dayOfWeek       Int      @map("day_of_week") // 0=Sun, 1=Mon, ...
+  isWorkDay       Boolean  @default(true) @map("is_work_day")
+  shiftType        String?  @map("shift_type") // day/night/middle/off
+  holidayName     String?  @map("holiday_name")
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, month, day])
+  @@map("work_calendars")
+}
