@@ -1,5 +1,10 @@
 @echo off
+title UantekEM-AI Build
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "$Host.UI.RawUI.WindowTitle = 'UantekEM-AI Build'" >nul 2>&1
 setlocal enabledelayedexpansion
+
+:: Ensure Node.js is in PATH (fixes PowerShell PATH inheritance issue)
+where node >nul 2>&1 || set "PATH=D:\Program Files\nodejs;C:\Program Files\nodejs;%PATH%"
 
 set SCRIPT_DIR=%~dp0
 set BACKEND_DIR=%SCRIPT_DIR%backend

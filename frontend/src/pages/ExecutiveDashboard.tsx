@@ -1,17 +1,20 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
-import { TreeSelect, Spin, Tag } from 'antd';
+import { TreeSelect, Spin, Tag, Tooltip } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useResponsive } from '../hooks/useResponsive';
+import { useStore } from '../store/useStore';
 import { BoltIcon, SuccessIcon, BarChartIcon, WarningIcon, WrenchIcon, TrophyIcon, RobotIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon, PauseIcon, CrossIcon, STATUS_ICONS } from '../components/Icons';
 
 export default function ExecutiveDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { isMobile } = useResponsive();
+  const { selectedOrganizationId, setSelectedOrganizationId, selectedOrgName } = useStore();
 
   // ── 企业层级选择 ──
   const [orgTree, setOrgTree] = useState<any[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(undefined);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(selectedOrganizationId || undefined);
   const [trendData, setTrendData] = useState<any>(null);
   const [trendLoading, setTrendLoading] = useState(false);
 
@@ -63,8 +66,8 @@ export default function ExecutiveDashboard() {
 
   const handleOrgChange = (value: string | undefined) => {
     setSelectedOrgId(value);
+    setSelectedOrganizationId(value || null);
     fetchTrend(value);
-    // Scale trend chart axis if needed
     if (faultChartRef.current) {
       faultChartRef.current.resize();
     }
@@ -80,7 +83,10 @@ export default function ExecutiveDashboard() {
   useEffect(() => {
     if (!faultChartDomRef.current) return;
     faultChartRef.current = echarts.init(faultChartDomRef.current);
+    const handleResize = () => faultChartRef.current?.resize();
+    window.addEventListener('resize', handleResize);
     return () => {
+      window.removeEventListener('resize', handleResize);
       faultChartRef.current?.dispose();
       faultChartRef.current = null;
     };
@@ -89,7 +95,14 @@ export default function ExecutiveDashboard() {
   // Update pie chart when data or chart instance changes
   useEffect(() => {
     const chart = faultChartRef.current;
-    if (!chart || !data?.faultTypeDistribution) return;
+    if (!chart) return;
+    if (!data?.faultTypeDistribution || data.faultTypeDistribution.length === 0) {
+      chart.setOption({
+        title: { text: '暂无数据', left: 'center', top: 'center', textStyle: { fontSize: 13, color: '#999' } },
+        series: [],
+      });
+      return;
+    }
     const colors = ['#EF4444', '#3B82F6', '#8B5CF6', '#06B6D4', '#F59E0B', '#F97316'];
     chart.setOption({
       tooltip: { trigger: 'item', formatter: '{b}: {c}次 ({d}%)' },
@@ -116,6 +129,7 @@ export default function ExecutiveDashboard() {
         })),
       }],
     });
+    chart.resize();
   }, [data?.faultTypeDistribution]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
@@ -129,7 +143,13 @@ export default function ExecutiveDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fit, minmax(${isMobile ? 140 : 180}px, 1fr))`, gap: isMobile ? 8 : 12, marginBottom: isMobile ? 12 : 16 }}>
         {/* KPI: OEE */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>当前 OEE <Tag style={{ fontSize: 10, borderRadius: 4, border: 'none', lineHeight: '16px' }}>{trendOrgName}</Tag></div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            当前 OEE
+            <Tooltip title="OEE = 可用率 × 性能率 × 质量率。数据来源于近30天设备运行状态统计。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+            <Tag style={{ fontSize: 10, borderRadius: 4, border: 'none', lineHeight: '16px' }}>{trendOrgName}</Tag>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             {oeeUp
               ? <ArrowUpIcon size={18} color="#22C55E" />
@@ -145,7 +165,12 @@ export default function ExecutiveDashboard() {
 
         {/* KPI: 设备总数 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>设备总数 / 运行率</div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            设备总数 / 运行率
+            <Tooltip title="运行率 = 当前运行中设备 / 设备总数 × 100%。反映整体设备利用率。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span style={{ fontSize: 28, fontWeight: 700, color: '#333' }}>{data.totalDevices}</span>
             <span style={{ fontSize: 14, color: '#999' }}>台</span>
@@ -155,7 +180,12 @@ export default function ExecutiveDashboard() {
 
         {/* KPI: 健康度 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>平均健康度</div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            平均健康度
+            <Tooltip title="设备健康度综合评分（0-100），基于运行状态、故障频率、保养记录等指标加权计算。优秀≥90，良好≥75，一般≥60。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span style={{ fontSize: 28, fontWeight: 700, color: data.avgHealth >= 75 ? '#22C55E' : data.avgHealth >= 60 ? '#F59E0B' : '#EF4444' }}>{data.avgHealth}</span>
             <span style={{ fontSize: 14, color: '#999' }}>分</span>
@@ -165,7 +195,12 @@ export default function ExecutiveDashboard() {
 
         {/* KPI: 待处理工单 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>待处理工单</div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            待处理工单
+            <Tooltip title="当前处于待接单/处理中的工单数量。完成率 = 已完成工单 / 工单总数 × 100%。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span style={{ fontSize: 28, fontWeight: 700, color: data.woPending > 10 ? '#EF4444' : '#F59E0B' }}>{data.woPending}</span>
             <span style={{ fontSize: 14, color: '#999' }}>个</span>
@@ -175,7 +210,12 @@ export default function ExecutiveDashboard() {
 
         {/* KPI: 维保成本 */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
-          <div style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>本月维保成本</div>
+          <div style={{ fontSize: 12, color: '#999', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            本月维保成本
+            <Tooltip title="本月累计设备维护保养支出（含配件、人工、外包等）。数据来源于工单成本汇总与保养记录。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
             <span style={{ fontSize: 28, fontWeight: 700, color: '#333' }}>¥{data.latestCost?.toLocaleString()}</span>
           </div>
@@ -336,26 +376,26 @@ export default function ExecutiveDashboard() {
           {(data.woMonthlyTrend || []).map((t: any) => {
             const total = t.total || 0;
             const completed = t.completed || 0;
+            const pending = total - completed;
             const pct = total > 0 ? (completed / total) * 100 : 0;
             return (
               <div key={t.month} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <span style={{ width: 36, fontSize: 10, color: '#999' }}>{t.month.slice(5)}</span>
-                <div style={{ flex: 1, display: 'flex', height: 16, borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ flex: 1, background: '#91caff', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: '#333' }}>{total}</span>
+                <div style={{ flex: 1, height: 18, background: '#f0f0f0', borderRadius: 3, overflow: 'hidden', display: 'flex' }}>
+                  <div style={{ width: `${pct}%`, minWidth: completed > 0 ? 4 : 0, background: '#22C55E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {completed > 0 && <span style={{ fontSize: 9, color: '#fff', fontWeight: 600 }}>{completed}</span>}
                   </div>
-                  {total > 0 && (
-                    <div style={{ flex: 1, height: `${Math.max(pct, 5)}%`, background: '#22C55E', alignSelf: 'flex-end', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <span style={{ fontSize: 8, color: '#fff', fontWeight: 600 }}>{completed}</span>
-                    </div>
-                  )}
+                  <div style={{ flex: 1, background: '#91caff', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 9, color: '#666' }}>{pending > 0 ? pending : ''}</span>
+                  </div>
                 </div>
+                <span style={{ width: 28, fontSize: 10, color: '#666', textAlign: 'right' }}>{total}</span>
               </div>
             );
           })}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', fontSize: 10, color: '#999', marginTop: 4 }}>
-            <span><span style={{ display: 'inline-block', width: 8, height: 8, background: '#91caff', borderRadius: 2, marginRight: 4 }} />总数</span>
             <span><span style={{ display: 'inline-block', width: 8, height: 8, background: '#22C55E', borderRadius: 2, marginRight: 4 }} />已完成</span>
+            <span><span style={{ display: 'inline-block', width: 8, height: 8, background: '#91caff', borderRadius: 2, marginRight: 4 }} />待处理</span>
           </div>
         </div>
 
@@ -367,7 +407,12 @@ export default function ExecutiveDashboard() {
 
         {/* 设备健康度 Top 10 (简版) */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
-          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><TrophyIcon size={16} style={{ marginRight: 4 }} /> 设备健康度 Top 10</h3>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <TrophyIcon size={16} style={{ marginRight: 4 }} /> 设备健康度 Top 10
+            <Tooltip title="基于设备健康度评分降序排列。评分综合考虑设备状态、故障历史、保养执行情况等因素。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </h3>
           {(data.topHealthyDevices || []).slice(0, 5).map((item: any, idx: number) => (
             <div key={item.code} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderBottom: idx < 4 ? '1px solid #f0f0f0' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -384,7 +429,12 @@ export default function ExecutiveDashboard() {
 
         {/* 改善 ROI (简版) */}
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16 }}>
-          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><RobotIcon size={16} style={{ marginRight: 4 }} /> 改善活动 ROI 分析</h3>
+          <h3 style={{ fontSize: isMobile ? 14 : 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <RobotIcon size={16} style={{ marginRight: 4 }} /> 改善活动 ROI 分析
+            <Tooltip title="ROI = (年节省金额 - 投入金额) / 投入金额 × 100%。反映改善项目的投资回报率。">
+              <QuestionCircleOutlined style={{ fontSize: 11, color: '#bbb', cursor: 'help' }} />
+            </Tooltip>
+          </h3>
           <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #f0f0f0' }}>

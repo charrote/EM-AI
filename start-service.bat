@@ -1,5 +1,10 @@
 @echo off
+title UantekEM-AI Service
+%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "$Host.UI.RawUI.WindowTitle = 'UantekEM-AI Service'" >nul 2>&1
 setlocal enabledelayedexpansion
+
+:: Ensure Node.js is in PATH
+where node >nul 2>&1 || set "PATH=D:\Program Files\nodejs;C:\Program Files\nodejs;%PATH%"
 
 set SCRIPT_DIR=%~dp0
 call "%SCRIPT_DIR%config.bat"
@@ -54,47 +59,43 @@ echo   [OK] Frontend build found
 cd /d "%BACKEND_DIR%"
 echo [3/5] Initializing database...
 
-:: Ensure node_modules and prisma client exist
 if not exist "node_modules" (
     echo [INFO] Installing backend dependencies...
     call npm install
-)
-if not exist "node_modules\.prisma" (
-    call npx prisma generate
+    if errorlevel 1 (
+        echo [ERROR] npm install failed
+        pause
+        exit /b 1
+    )
 )
 
-set PRISMA_RETRY=0
-:prisma_retry
-call npx prisma generate
-if not errorlevel 1 goto prisma_ok
-set /a PRISMA_RETRY+=1
-if !PRISMA_RETRY! geq 3 (
-    echo [ERROR] prisma generate failed after !PRISMA_RETRY! retries
-    pause
-    exit /b 1
-)
-echo   [WARN] prisma generate failed, retrying (!PRISMA_RETRY!/3)...
-call "%SCRIPT_DIR%stop-service.bat"
-taskkill /F /IM node.exe >nul 2>&1
-timeout /t 2 /nobreak >nul
-goto prisma_retry
-:prisma_ok
-echo   [OK] Prisma Client generated
-
+:: Push schema
 call npx prisma db push --accept-data-loss
 if errorlevel 1 (
-    echo [ERROR] prisma db push failed
-    pause
-    exit /b 1
+    echo [WARN] prisma db push failed, retrying...
+    timeout /t 2 /nobreak >nul
+    call npx prisma db push --accept-data-loss
+    if errorlevel 1 (
+        echo [ERROR] prisma db push failed
+        pause
+        exit /b 1
+    )
 )
 echo   [OK] Database schema pushed
 
+:: Generate Prisma client
+call npx prisma generate >nul 2>&1
+if errorlevel 1 (
+    del /f /q "node_modules\.prisma\client\query_engine-windows.dll.node" >nul 2>&1
+    timeout /t 1 /nobreak >nul
+    call npx prisma generate >nul 2>&1
+)
+echo   [OK] Prisma Client ready
+
 :: 4. Seed demo data
 echo [4/5] Seeding demo data...
-set SEED_LOG=%LOG_DIR%\seed.log
-call npx tsx src/utils/seed.ts > "%SEED_LOG%" 2>&1
+call npx tsx src/utils/seed.ts
 if errorlevel 1 (
-    type "%SEED_LOG%"
     echo [ERROR] Demo data seed failed
     pause
     exit /b 1
@@ -106,54 +107,49 @@ cd /d "%SCRIPT_DIR%"
 :: 5. Start services
 echo [5/5] Starting services...
 
+:: Stop any leftovers on our ports first
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%API_PORT% "') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%FRONTEND_PORT% "') do taskkill /F /PID %%a >nul 2>&1
+
 set BACKEND_LOG=%LOG_DIR%\backend.log
 set FRONTEND_LOG=%LOG_DIR%\frontend.log
 
 :: Launch backend
-powershell -NoProfile -Command "$p = Start-Process -FilePath cmd.exe -ArgumentList '/c','set PORT=%API_PORT% && node dist/index.js >> \"%BACKEND_LOG%\" 2>&1' -WorkingDirectory '%BACKEND_DIR%' -WindowStyle Hidden -PassThru; $p.Id | Out-File '%PID_BACKEND%' -Encoding ASCII"
-set /p BACKEND_PID=<%PID_BACKEND%
+start "UantekEM-AI Backend" /min cmd /c "title UantekEM-AI Backend && cd /d %BACKEND_DIR% && set PORT=%API_PORT% && node dist/index.js >> "%BACKEND_LOG%" 2>&1"
 
-:: Launch frontend (static server + /api proxy)
-powershell -NoProfile -Command "$p = Start-Process -FilePath cmd.exe -ArgumentList '/c','node serve.cjs >> \"%FRONTEND_LOG%\" 2>&1' -WorkingDirectory '%FRONTEND_DIR%' -WindowStyle Hidden -PassThru; $p.Id | Out-File '%PID_FRONTEND%' -Encoding ASCII"
-set /p FRONTEND_PID=<%PID_FRONTEND%
+:: Launch frontend
+start "UantekEM-AI Frontend" /min cmd /c "title UantekEM-AI Frontend && cd /d %FRONTEND_DIR% && node serve.cjs >> "%FRONTEND_LOG%" 2>&1"
 
-echo   [OK] Backend started (PID: !BACKEND_PID!) - http://localhost:!API_PORT!/api
-echo   [OK] Frontend started (PID: !FRONTEND_PID!) - http://localhost:!FRONTEND_PORT!
+echo   [OK] Backend started - http://localhost:!API_PORT!/api
+echo   [OK] Frontend started - http://localhost:!FRONTEND_PORT!
 
 echo ================================================
 echo   EM-AI Demo is running (production mode)
 echo.
-echo   Frontend:    http://localhost:!FRONTEND_PORT!
-echo   Backend API: http://localhost:!API_PORT!/api/health
+echo   Frontend:    http://localhost:%FRONTEND_PORT%
+echo   Backend API: http://localhost:%API_PORT%/api/health
 echo   Backend log: %BACKEND_LOG%
 echo   Frontend log:%FRONTEND_LOG%
 echo.
-echo   Press Ctrl+C to stop all services
+echo   Close this window or press Ctrl+C to stop
 echo ================================================
 echo.
-echo [Guardian] Monitoring processes (check every 10s)...
 
+:: Guardian loop (check every 30s via port)
 :guard
-timeout /t 10 /nobreak >nul
+timeout /t 30 /nobreak >nul
 
-:: Check backend
-tasklist /FI "PID eq !BACKEND_PID!" 2>nul | findstr "!BACKEND_PID!" >nul
+netstat -ano | findstr ":%API_PORT% " >nul
 if errorlevel 1 (
-    echo [%date% %time%] [Guardian] Backend crashed, restarting...
-    powershell -NoProfile -Command "$p = Start-Process -FilePath cmd.exe -ArgumentList '/c','set PORT=%API_PORT% && node dist/index.js >> \"%BACKEND_LOG%\" 2>&1' -WorkingDirectory '%BACKEND_DIR%' -WindowStyle Hidden -PassThru; $p.Id | Out-File '%PID_BACKEND%' -Encoding ASCII"
-    set /p BACKEND_PID=<%PID_BACKEND%
-    echo [%date% %time%] [Guardian] Backend restarted (PID: !BACKEND_PID!)
+    echo [!date! !time!] Backend port !API_PORT! not responding, restarting...
+    start "UantekEM-AI Backend" /min cmd /c "title UantekEM-AI Backend && cd /d %BACKEND_DIR% && set PORT=%API_PORT% && node dist/index.js >> "%BACKEND_LOG%" 2>&1"
 )
 
-:: Check frontend
-tasklist /FI "PID eq !FRONTEND_PID!" 2>nul | findstr "!FRONTEND_PID!" >nul
+netstat -ano | findstr ":%FRONTEND_PORT% " >nul
 if errorlevel 1 (
-    echo [%date% %time%] [Guardian] Frontend crashed, restarting...
-    powershell -NoProfile -Command "$p = Start-Process -FilePath cmd.exe -ArgumentList '/c','node serve.cjs >> \"%FRONTEND_LOG%\" 2>&1' -WorkingDirectory '%FRONTEND_DIR%' -WindowStyle Hidden -PassThru; $p.Id | Out-File '%PID_FRONTEND%' -Encoding ASCII"
-    set /p FRONTEND_PID=<%PID_FRONTEND%
-    echo [%date% %time%] [Guardian] Frontend restarted (PID: !FRONTEND_PID!)
+    echo [!date! !time!] Frontend port !FRONTEND_PORT! not responding, restarting...
+    start "UantekEM-AI Frontend" /min cmd /c "title UantekEM-AI Frontend && cd /d %FRONTEND_DIR% && node serve.cjs >> "%FRONTEND_LOG%" 2>&1"
 )
 
 goto guard
-
 endlocal

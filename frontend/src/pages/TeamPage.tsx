@@ -29,6 +29,7 @@ export default function TeamPage() {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingTeam, setEditingTeam] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [orgTree, setOrgTree] = useState<any[]>([]);
   const [form] = Form.useForm();
   const { isMobile } = useResponsive();
 
@@ -47,6 +48,22 @@ export default function TeamPage() {
   }, [keyword]);
 
   useEffect(() => { fetchTeams(); }, [fetchTeams]);
+
+  useEffect(() => {
+    api.get('/organizations/tree').then(res => {
+      const flat: any[] = [];
+      const flatten = (nodes: any[]) => {
+        nodes.forEach((n: any) => {
+          if (n.level === 'workshop' || n.level === 'line') {
+            flat.push({ id: n.id, name: n.name, level: n.level });
+          }
+          if (n.children) flatten(n.children);
+        });
+      };
+      flatten(res.data.data || []);
+      setOrgTree(flat);
+    }).catch(() => {});
+  }, []);
 
   const openCreate = () => {
     setModalMode('create');
@@ -239,6 +256,15 @@ export default function TeamPage() {
                 <Select placeholder="选择班次" options={SHIFT_OPTIONS} allowClear />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item label="所属车间" name="workshopId">
+                <Select placeholder="选择车间" allowClear showSearch
+                  options={orgTree.map((o: any) => ({ value: o.id, label: o.name }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
             <Col span={12}>
               <Form.Item label="状态" name="isActive">
                 <Select options={[{ value: true, label: '启用' }, { value: false, label: '停用' }]} />

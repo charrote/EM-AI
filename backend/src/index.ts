@@ -53,6 +53,7 @@ app.use('/api/rca', rcaRoutes);
 app.use('/api/demo', demoRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/organizations', organizationRoutes);
+app.use('/api/teams', teamRoutes);
 app.use('/api/calendar', calendarRoutes);
 
 // Health check

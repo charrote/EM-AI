@@ -48,7 +48,10 @@ cd frontend && npm run dev
 支持 SSH 远程执行，**进程守护**会自动重启崩溃的服务，断开 SSH 连接后服务不停止。
 
 ```cmd
-:: 启动服务（前台运行，带进程守护，Ctrl+C 停止）
+:: 开发模式（两个前台窗口，适合调试）
+.\start-dev.bat
+
+:: 生产模式（前台运行，带进程守护，Ctrl+C 停止）
 .\start-service.bat
 
 :: 停止服务
@@ -115,7 +118,8 @@ EM-AI/
 ├── docker-compose.yml      # PostgreSQL + Redis（生产用）
 ├── start-demo.sh           # 一键启动脚本 (Linux/macOS)
 ├── start-demo.ps1          # 一键启动脚本 (Windows PowerShell)
-├── start-service.bat       # 一键启动脚本 (Windows，带进程守护)
+├── start-dev.bat           # 开发模式一键启动 (Windows，前台窗口)
+├── start-service.bat       # 生产模式一键启动 (Windows，带进程守护)
 ├── stop-demo.ps1           # 停止服务脚本 (Windows PowerShell)
 ├── stop-service.bat        # 停止服务脚本 (Windows)
 └── curl                    # API 调试 curl 命令集

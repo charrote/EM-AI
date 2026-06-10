@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Button, Space, Typography, Row, Col, Tag, message, Select, Spin, Switch, Tooltip, Input, Modal,
+  Card, Button, Space, Typography, Row, Col, Tag, message, Select, Spin, Switch, Tooltip, Modal,
 } from 'antd';
 import {
   CalendarOutlined, ReloadOutlined, LeftOutlined, RightOutlined,
@@ -12,6 +12,13 @@ import { useResponsive } from '../hooks/useResponsive';
 import dayjs from 'dayjs';
 
 const { Text, Title } = Typography;
+
+const SHIFT_OPTIONS = [
+  { value: 'day', label: '白班', color: Colors.primary, icon: <SunOutlined /> },
+  { value: 'night', label: '夜班', color: '#8B5CF6', icon: <MoonOutlined /> },
+  { value: 'middle', label: '中班', color: Colors.warning, icon: <ClockCircleOutlined /> },
+  { value: 'off', label: '休息', color: Colors.gray400, icon: null },
+];
 
 const SHIFT_LABELS: Record<string, { label: string; color: string }> = {
   day: { label: '白班', color: Colors.primary },
@@ -27,6 +34,11 @@ export default function WorkCalendar() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [initModalOpen, setInitModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
+  const [editShift, setEditShift] = useState<string | undefined>(undefined);
+  const [editHoliday, setEditHoliday] = useState<string | undefined>(undefined);
+  const [editIsWorkDay, setEditIsWorkDay] = useState(true);
   const { isMobile } = useResponsive();
 
   const year = currentDate.year();
@@ -64,18 +76,24 @@ export default function WorkCalendar() {
     }
   };
 
-  const toggleWorkDay = async (entry: any) => {
-    try {
-      await api.put(`/calendar/${entry.id}`, { isWorkDay: !entry.isWorkDay });
-      fetchData();
-    } catch {
-      message.error('更新失败');
-    }
+  const openEditModal = (entry: any) => {
+    setEditingEntry(entry);
+    setEditShift(entry?.shiftType || undefined);
+    setEditHoliday(entry?.holidayName || undefined);
+    setEditIsWorkDay(entry?.isWorkDay !== false);
+    setEditModalOpen(true);
   };
 
-  const changeShift = async (entry: any, shift: string) => {
+  const handleSaveEdit = async () => {
+    if (!editingEntry) return;
     try {
-      await api.put(`/calendar/${entry.id}`, { shiftType: shift === entry.shiftType ? null : shift });
+      await api.put(`/calendar/${editingEntry.id}`, {
+        isWorkDay: editIsWorkDay,
+        shiftType: editShift || null,
+        holidayName: editHoliday || null,
+      });
+      message.success('已更新');
+      setEditModalOpen(false);
       fetchData();
     } catch {
       message.error('更新失败');
@@ -87,12 +105,10 @@ export default function WorkCalendar() {
   const renderCalendar = () => {
     const cells: React.ReactNode[] = [];
 
-    // Empty cells before first day
     for (let i = 0; i < firstDayOfWeek; i++) {
       cells.push(<div key={`empty-${i}`} style={{ minHeight: isMobile ? 60 : 90 }} />);
     }
 
-    // Day cells
     for (let day = 1; day <= daysInMonth; day++) {
       const entry = getEntryForDay(day);
       const isToday = day === dayjs().date() && month === dayjs().month() + 1 && year === dayjs().year();
@@ -102,20 +118,21 @@ export default function WorkCalendar() {
       cells.push(
         <div
           key={day}
+          onClick={() => entry && openEditModal(entry)}
           style={{
             border: `1px solid ${isToday ? Colors.primary : Colors.gray200}`,
             borderRadius: 6,
             padding: isMobile ? 4 : 6,
             minHeight: isMobile ? 60 : 90,
             background: isToday ? Colors.sidebarActive : isWorkDay ? '#fff' : Colors.gray50,
-            cursor: 'pointer',
+            cursor: entry ? 'pointer' : 'default',
             transition: 'all 0.2s',
             display: 'flex',
             flexDirection: 'column',
             gap: 2,
           }}
-          onMouseEnter={e => { if (!isToday) e.currentTarget.style.borderColor = Colors.primary; }}
-          onMouseLeave={e => { if (!isToday) e.currentTarget.style.borderColor = Colors.gray200; }}
+          onMouseEnter={e => { if (!isToday && entry) e.currentTarget.style.borderColor = Colors.primary; }}
+          onMouseLeave={e => { if (!isToday && entry) e.currentTarget.style.borderColor = Colors.gray200; }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{
@@ -129,7 +146,7 @@ export default function WorkCalendar() {
               <Switch
                 size="small"
                 checked={isWorkDay}
-                onChange={() => toggleWorkDay(entry)}
+                onClick={(checked, e) => { e.stopPropagation(); openEditModal(entry); }}
                 style={{ transform: 'scale(0.7)' }}
               />
             )}
@@ -149,6 +166,11 @@ export default function WorkCalendar() {
               {entry.shiftType && entry.shiftType !== 'day' && shiftCfg && (
                 <Tag color={shiftCfg.color} style={{ borderRadius: 4, border: 'none', fontSize: 10, padding: '0 4px', lineHeight: '16px', marginTop: 1 }}>
                   {shiftCfg.label}
+                </Tag>
+              )}
+              {entry.shiftType === 'day' && isWorkDay && (
+                <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none', fontSize: 10, padding: '0 4px', lineHeight: '16px', marginTop: 1 }}>
+                  白班
                 </Tag>
               )}
             </div>
@@ -196,7 +218,7 @@ export default function WorkCalendar() {
         </Col>
         <Col xs={8}>
           <Card size="small" styles={{ body: { padding: '10px 16px' } }}>
-            <Text style={{ fontSize: 11, color: Colors.gray500 }}>班次</Text>
+            <Text style={{ fontSize: 11, color: Colors.gray500 }}>排班天数</Text>
             <div style={{ fontSize: 20, fontWeight: 700, color: Colors.warning }}>
               {entries.filter(e => e.shiftType && e.shiftType !== 'day').length} 个
             </div>
@@ -252,9 +274,11 @@ export default function WorkCalendar() {
         <span><Tag color={Colors.gray50} style={{ border: `1px solid ${Colors.gray200}`, borderRadius: 4 }}> 休息日</Tag></span>
         <span><SunOutlined style={{ color: Colors.primary }} /> 白班</span>
         <span><MoonOutlined style={{ color: '#8B5CF6' }} /> 夜班</span>
-        <span><Tooltip title="点击日期切换工作日/休息日"><ClockCircleOutlined /> 点击切换</Tooltip></span>
+        <span><ClockCircleOutlined style={{ color: Colors.warning }} /> 中班</span>
+        <span><Tooltip title="点击日期编辑详细设置"><CalendarOutlined /> 点击编辑</Tooltip></span>
       </div>
 
+      {/* Init Modal */}
       <Modal
         title="初始化工作日历"
         open={initModalOpen}
@@ -264,6 +288,70 @@ export default function WorkCalendar() {
       >
         <p>将为 {year} 年 {month} 月初始化工作日历（周一至周五工作日，周六周日休息）。</p>
         <p style={{ color: Colors.gray500, fontSize: 12 }}>如果该月已初始化，此操作不会重复执行。</p>
+      </Modal>
+
+      {/* Edit Day Modal */}
+      <Modal
+        title={editingEntry ? `编辑 ${year}年${month}月${editingEntry.day}日` : '编辑'}
+        open={editModalOpen}
+        onCancel={() => setEditModalOpen(false)}
+        onOk={handleSaveEdit}
+        okText="保存"
+        width={400}
+      >
+        {editingEntry && (
+          <div style={{ padding: '8px 0' }}>
+            <div style={{ marginBottom: 16 }}>
+              <Text style={{ fontWeight: 500, color: Colors.gray700 }}>工作日/休息日</Text>
+              <div style={{ marginTop: 8 }}>
+                <Switch checked={editIsWorkDay} onChange={setEditIsWorkDay} />
+                <span style={{ marginLeft: 8, color: Colors.gray600 }}>
+                  {editIsWorkDay ? '工作日' : '休息日'}
+                </span>
+              </div>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <Text style={{ fontWeight: 500, color: Colors.gray700 }}>班次</Text>
+              <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {SHIFT_OPTIONS.map(opt => (
+                  <Tag
+                    key={opt.value}
+                    onClick={() => setEditShift(editShift === opt.value ? undefined : opt.value)}
+                    style={{
+                      cursor: 'pointer', padding: '4px 12px', fontSize: 13, borderRadius: 6,
+                      border: editShift === opt.value ? `2px solid ${opt.color}` : '1px solid #d9d9d9',
+                      background: editShift === opt.value ? `${opt.color}15` : '#fff',
+                      color: editShift === opt.value ? opt.color : Colors.gray600,
+                    }}
+                  >
+                    {opt.icon}{' '}{opt.label}
+                  </Tag>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Text style={{ fontWeight: 500, color: Colors.gray700 }}>节假日名称（可选）</Text>
+              <div style={{ marginTop: 8 }}>
+                <Select
+                  style={{ width: '100%' }}
+                  placeholder="选择或输入节假日"
+                  allowClear
+                  value={editHoliday}
+                  onChange={setEditHoliday}
+                  options={[
+                    { value: '元旦', label: '元旦' },
+                    { value: '春节', label: '春节' },
+                    { value: '清明节', label: '清明节' },
+                    { value: '劳动节', label: '劳动节' },
+                    { value: '端午节', label: '端午节' },
+                    { value: '中秋节', label: '中秋节' },
+                    { value: '国庆节', label: '国庆节' },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

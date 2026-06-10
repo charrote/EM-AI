@@ -50,7 +50,11 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
+# PID files
+.pid_*
+
 # Misc
 .tmp/
+NUL
 *.pem
 *.cert
