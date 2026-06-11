@@ -87,6 +87,7 @@ export async function seedDemoData() {
   await prisma.improvementProject.deleteMany();
   await prisma.knowledgeEntry.deleteMany();
   await prisma.rcaAnalysis.deleteMany();
+  await prisma.team.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.device.deleteMany();
   await prisma.deviceType.deleteMany();
@@ -437,6 +438,22 @@ export async function seedDemoData() {
   const metalCount = allDevices.filter(d => d.scenario === SCENARIO_METAL).length;
   const capCount = allDevices.filter(d => d.scenario === SCENARIO_CAPACITOR).length;
   console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, 6 knowledge entries, 8 RCA, 3 projects`);
+  // ── 班组 8 个 ────────────────────────────────
+  const teamData = [
+    { code: 'TEAM-MA', name: '金属甲班', leader: '张伟', memberCount: 12, shift: '早班', workshopId: workshopMetal.id },
+    { code: 'TEAM-MB', name: '金属乙班', leader: '李强', memberCount: 10, shift: '中班', workshopId: workshopMetal.id },
+    { code: 'TEAM-MC', name: '金属丙班', leader: '王磊', memberCount: 8, shift: '晚班', workshopId: workshopMetal.id },
+    { code: 'TEAM-CA', name: '电容甲班', leader: '陈明', memberCount: 11, shift: '早班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-CB', name: '电容乙班', leader: '刘洋', memberCount: 9, shift: '中班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-CC', name: '电容丙班', leader: '赵刚', memberCount: 7, shift: '晚班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-MNT', name: '维修班组', leader: '周浩', memberCount: 6, shift: '轮班', workshopId: workshopMetal.id },
+    { code: 'TEAM-QC', name: '质检班组', leader: '孙健', memberCount: 5, shift: '早班', workshopId: workshopCapacitor.id, description: '负责来料检验和过程巡检' },
+  ];
+  for (const t of teamData) {
+    await prisma.team.create({ data: t });
+  }
+  console.log(`   班组: ${teamData.length} 个`);
+
   console.log(`   金属加工: ${metalCount}台 · 电解电容: ${capCount}台`);
   console.log(`   🏗 企业层级: 1 集团 → 1 公司 → 2 车间 → ${allLines.length} 产线`);
 }

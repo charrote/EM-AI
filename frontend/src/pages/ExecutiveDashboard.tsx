@@ -79,9 +79,12 @@ export default function ExecutiveDashboard() {
   const currentOEE = trendData?.currentOEE ?? data?.currentOEE;
   const prevOEE = trendData?.prevOEE ?? data?.prevOEE;
 
-  // Init pie chart — mount once only
+  // Init pie chart — re-init when loading finishes (DOM ready)
   useEffect(() => {
-    if (!faultChartDomRef.current) return;
+    if (loading || !faultChartDomRef.current) return;
+    if (faultChartRef.current) {
+      faultChartRef.current.dispose();
+    }
     faultChartRef.current = echarts.init(faultChartDomRef.current);
     const handleResize = () => faultChartRef.current?.resize();
     window.addEventListener('resize', handleResize);
@@ -90,7 +93,7 @@ export default function ExecutiveDashboard() {
       faultChartRef.current?.dispose();
       faultChartRef.current = null;
     };
-  }, []);
+  }, [loading]);
 
   // Update pie chart when data or chart instance changes
   useEffect(() => {

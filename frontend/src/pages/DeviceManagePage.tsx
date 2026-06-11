@@ -83,6 +83,10 @@ export default function DeviceManagePage() {
   const [activeTab, setActiveTab] = useState('basic');
   const [form] = Form.useForm();
 
+  // Detail modal
+  const [detailModal, setDetailModal] = useState(false);
+  const [detailDevice, setDetailDevice] = useState<any>(null);
+
   // ── Tab 3: Document management ──
   const [typeDocs, setTypeDocs] = useState<DocRecord[]>([]);
   const [deviceDocs, setDeviceDocs] = useState<DocRecord[]>([]);
@@ -787,7 +791,7 @@ export default function DeviceManagePage() {
           dataSource={devices}
           rowKey="id"
           loading={loading}
-          scroll={{ x: isMobile ? 500 : 900 }}
+          scroll={{ x: 'max-content' }}
           size="small"
           pagination={{
             current: page,
@@ -799,8 +803,52 @@ export default function DeviceManagePage() {
             onChange: (p, ps) => { setPage(p); setPageSize(ps); },
           }}
           locale={{ emptyText: <Empty description="暂无设备数据" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+          onRow={(record) => ({
+            onClick: () => { setDetailDevice(record); setDetailModal(true); },
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
+
+      {/* ── Detail Modal ── */}
+      <Modal
+        title={<Space><DatabaseOutlined /> {detailDevice?.name || '设备详情'}</Space>}
+        open={detailModal}
+        onCancel={() => setDetailModal(false)}
+        footer={null}
+        width={640}
+        destroyOnClose
+      >
+        {detailDevice && (
+          <Descriptions column={2} size="small" bordered>
+            <Descriptions.Item label="编码">{detailDevice.code}</Descriptions.Item>
+            <Descriptions.Item label="名称">{detailDevice.name}</Descriptions.Item>
+            <Descriptions.Item label="类型">{detailDevice.type}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Tag color={STATUS_OPTIONS.find(s => s.value === detailDevice.status)?.color}
+                style={{ borderRadius: 4, border: 'none' }}>
+                {STATUS_OPTIONS.find(s => s.value === detailDevice.status)?.label || detailDevice.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="品牌">{detailDevice.brand || '-'}</Descriptions.Item>
+            <Descriptions.Item label="型号">{detailDevice.modelName || '-'}</Descriptions.Item>
+            <Descriptions.Item label="序列号">{detailDevice.serialNo || '-'}</Descriptions.Item>
+            <Descriptions.Item label="区域/产线">{detailDevice.area || '-'} / {detailDevice.line || '-'}</Descriptions.Item>
+            <Descriptions.Item label="健康度">
+              {detailDevice.healthScore != null
+                ? <Text strong style={{ color: detailDevice.healthScore >= 75 ? Colors.success : detailDevice.healthScore >= 60 ? Colors.warning : Colors.danger }}>{detailDevice.healthScore}</Text>
+                : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="OEE">{detailDevice.oee != null ? `${detailDevice.oee}%` : '-'}</Descriptions.Item>
+            <Descriptions.Item label="MTBF">{detailDevice.mtbf ? `${detailDevice.mtbf}h` : '-'}</Descriptions.Item>
+            <Descriptions.Item label="MTTR">{detailDevice.mttr ? `${detailDevice.mttr}h` : '-'}</Descriptions.Item>
+            <Descriptions.Item label="供应商">{detailDevice.supplier || '-'}</Descriptions.Item>
+            <Descriptions.Item label="安装日期">{detailDevice.installDate ? new Date(detailDevice.installDate).toLocaleDateString() : '-'}</Descriptions.Item>
+            <Descriptions.Item label="功率">{detailDevice.powerRating ? `${detailDevice.powerRating}kW` : '-'}</Descriptions.Item>
+            <Descriptions.Item label="OEE目标">{detailDevice.oeeTarget != null ? `${detailDevice.oeeTarget}%` : '-'}</Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
 
       {/* ── Create/Edit Modal ── */}
       <Modal

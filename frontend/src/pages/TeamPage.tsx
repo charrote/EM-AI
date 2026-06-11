@@ -200,7 +200,7 @@ export default function TeamPage() {
           dataSource={teams}
           rowKey="id"
           loading={loading}
-          scroll={{ x: isMobile ? 400 : 700 }}
+          scroll={{ x: 'max-content' }}
           size="small"
           pagination={{
             showTotal: t => `共 ${t} 个班组`,

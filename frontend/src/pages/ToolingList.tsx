@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Tag, Button, Space, Card, Input, Select, Row, Col, Statistic,
-  Modal, Form, message, Popconfirm, Typography, Tooltip, Badge,
+  Modal, Form, message, Popconfirm, Typography, Tooltip, Badge, Descriptions,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
@@ -61,6 +61,10 @@ export default function ToolingList() {
   const { isMobile } = useResponsive();
   const [form] = Form.useForm();
   const [statusForm] = Form.useForm();
+
+  // Detail modal
+  const [detailTarget, setDetailTarget] = useState<Tooling | null>(null);
+  const [detailModal, setDetailModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -285,9 +289,13 @@ export default function ToolingList() {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 'max-content' }}
           size="small"
-          pagination={{ pageSize: 20, showSizeChanger: true, showTotal: t => `共 ${t} 条` }}
+          pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: t => `共 ${t} 条` }}
+          onRow={(record) => ({
+            onClick: () => { setDetailTarget(record); setDetailModal(true); },
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
 
@@ -376,6 +384,43 @@ export default function ToolingList() {
             <Select options={STATUS_OPTIONS} />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* ─── 详情 Modal ─── */}
+      <Modal
+        title={<Space><BuildOutlined /> {detailTarget?.name || '工治具详情'}</Space>}
+        open={detailModal}
+        onCancel={() => setDetailModal(false)}
+        footer={null}
+        width={560}
+        destroyOnClose
+      >
+        {detailTarget && (
+          <Descriptions column={2} size="small" bordered>
+            <Descriptions.Item label="编码">{detailTarget.code}</Descriptions.Item>
+            <Descriptions.Item label="名称">{detailTarget.name}</Descriptions.Item>
+            <Descriptions.Item label="类型">{detailTarget.type}</Descriptions.Item>
+            <Descriptions.Item label="状态">
+              <Badge color={STATUS_CONFIG[detailTarget.status]?.color} text={STATUS_CONFIG[detailTarget.status]?.label} />
+            </Descriptions.Item>
+            <Descriptions.Item label="储位">{detailTarget.location || '-'}</Descriptions.Item>
+            <Descriptions.Item label="供应商">{detailTarget.supplier || '-'}</Descriptions.Item>
+            <Descriptions.Item label="理论寿命">
+              {detailTarget.theoreticalLife ? `${detailTarget.theoreticalLife} ${detailTarget.lifeUnit}` : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="已用寿命">
+              {detailTarget.lifeUsed != null ? `${detailTarget.lifeUsed} ${detailTarget.lifeUnit}` : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="剩余寿命">
+              <Tag color={detailTarget.lifeRemaining != null && detailTarget.theoreticalLife
+                ? (detailTarget.lifeRemaining / detailTarget.theoreticalLife > 0.5 ? 'success' : detailTarget.lifeRemaining / detailTarget.theoreticalLife > 0.2 ? 'warning' : 'error')
+                : 'default'}>
+                {detailTarget.lifeRemaining != null ? `${detailTarget.lifeRemaining} ${detailTarget.lifeUnit}` : '-'}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="关联设备">{detailTarget.device?.name || '-'}</Descriptions.Item>
+          </Descriptions>
+        )}
       </Modal>
     </div>
   );

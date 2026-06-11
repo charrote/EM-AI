@@ -39,6 +39,8 @@ export default function WorkCalendar() {
   const [editShift, setEditShift] = useState<string | undefined>(undefined);
   const [editHoliday, setEditHoliday] = useState<string | undefined>(undefined);
   const [editIsWorkDay, setEditIsWorkDay] = useState(true);
+  const [batchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchShiftValue, setBatchShiftValue] = useState<string | undefined>(undefined);
   const { isMobile } = useResponsive();
 
   const year = currentDate.year();
@@ -82,6 +84,26 @@ export default function WorkCalendar() {
     setEditHoliday(entry?.holidayName || undefined);
     setEditIsWorkDay(entry?.isWorkDay !== false);
     setEditModalOpen(true);
+  };
+
+  const handleBatchShift = async () => {
+    if (!batchShiftValue) return;
+    const workDayEntries = entries.filter(e => e.isWorkDay !== false);
+    if (workDayEntries.length === 0) {
+      message.warning('当前月份没有工作日');
+      return;
+    }
+    try {
+      for (const entry of workDayEntries) {
+        await api.put(`/calendar/${entry.id}`, { shiftType: batchShiftValue });
+      }
+      message.success(`已为 ${workDayEntries.length} 个工作日设置班次`);
+      setBatchModalOpen(false);
+      setBatchShiftValue(undefined);
+      fetchData();
+    } catch {
+      message.error('批量设置失败');
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -197,6 +219,7 @@ export default function WorkCalendar() {
         <Col>
           <Space>
             <Button size="small" onClick={() => setInitModalOpen(true)}>初始化月份</Button>
+            <Button size="small" onClick={() => setBatchModalOpen(true)} disabled={entries.length === 0}>批量排班</Button>
             <Button size="small" icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
           </Space>
         </Col>
@@ -288,6 +311,38 @@ export default function WorkCalendar() {
       >
         <p>将为 {year} 年 {month} 月初始化工作日历（周一至周五工作日，周六周日休息）。</p>
         <p style={{ color: Colors.gray500, fontSize: 12 }}>如果该月已初始化，此操作不会重复执行。</p>
+      </Modal>
+
+      {/* Batch Shift Modal */}
+      <Modal
+        title="批量设置班次"
+        open={batchModalOpen}
+        onCancel={() => setBatchModalOpen(false)}
+        onOk={handleBatchShift}
+        okText="应用"
+        width={400}
+      >
+        <div style={{ padding: '8px 0' }}>
+          <p style={{ marginBottom: 16, color: Colors.gray500, fontSize: 13 }}>
+            将 {year} 年 {month} 月所有<strong>工作日</strong>的班次设置为：
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {SHIFT_OPTIONS.filter(o => o.value !== 'off').map(opt => (
+              <Tag
+                key={opt.value}
+                onClick={() => setBatchShiftValue(batchShiftValue === opt.value ? undefined : opt.value)}
+                style={{
+                  cursor: 'pointer', padding: '6px 16px', fontSize: 14, borderRadius: 6,
+                  border: batchShiftValue === opt.value ? `2px solid ${opt.color}` : '1px solid #d9d9d9',
+                  background: batchShiftValue === opt.value ? `${opt.color}15` : '#fff',
+                  color: batchShiftValue === opt.value ? opt.color : Colors.gray600,
+                }}
+              >
+                {opt.icon}{' '}{opt.label}
+              </Tag>
+            ))}
+          </div>
+        </div>
       </Modal>
 
       {/* Edit Day Modal */}

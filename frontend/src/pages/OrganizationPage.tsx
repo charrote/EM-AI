@@ -145,10 +145,10 @@ export default function OrganizationPage() {
     return convert(treeData);
   }, [treeData, selectedNode, isMobile]);
 
-  // Handle tree node select
-  const handleSelect: TreeProps['onSelect'] = async (keys, info) => {
+  // Handle tree node select — use flatData to include computed _oeeDisplay
+  const handleSelect: TreeProps['onSelect'] = (keys, info) => {
     if (keys.length === 0) return;
-    const node = findNodeById(treeData, keys[0] as string);
+    const node = flatData.find((n: any) => n.id === keys[0]);
     if (!node) return;
     setSelectedNode(node);
   };
@@ -265,8 +265,7 @@ export default function OrganizationPage() {
             <div
               key={n.id}
               onClick={() => {
-                const node = findNodeById(treeData, n.id);
-                if (node) handleSelect([n.id] as any, {} as any);
+                setSelectedNode(n);
               }}
               style={{
                 padding: '6px 8px',
@@ -403,7 +402,10 @@ export default function OrganizationPage() {
                   key={child.id}
                   color={LEVEL_CONFIG[child.level]?.color}
                   style={{ borderRadius: 4, border: 'none', cursor: 'pointer' }}
-                  onClick={() => setSelectedNode(child)}
+                  onClick={() => {
+                    const found = flatData.find((f: any) => f.id === child.id);
+                    if (found) setSelectedNode(found);
+                  }}
                 >
                   {child.name}
                 </Tag>

@@ -28,19 +28,17 @@ function DeviceCard({ device, onClick }: { device: any; onClick: () => void }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#3B82F6'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#E5E7EB'; }}
     >
-      {/* Row 1: icon + name + status */}
+      {/* Row 1: name + status badge (icon + label) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-          <span style={{ fontSize: 14 }}>{cfg.icon}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {device.name}
-          </span>
-        </div>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {device.name}
+        </span>
         <span style={{
           background: cfg.color, color: '#fff', borderRadius: 3, padding: '0 8px',
           fontSize: 10, lineHeight: '18px', fontWeight: 500, flexShrink: 0,
+          display: 'inline-flex', alignItems: 'center', gap: 4,
         }}>
-          {cfg.label}
+          {cfg.icon}{cfg.label}
         </span>
       </div>
 

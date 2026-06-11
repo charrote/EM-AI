@@ -37,6 +37,12 @@ echo   [OK]
 :: 2. Generate Prisma client
 echo [2/4] Generating Prisma client...
 cd /d "%BACKEND_DIR%"
+
+:: Clean up any lingering node processes and stale prisma artifacts first
+taskkill /F /IM node.exe >nul 2>&1
+timeout /t 2 /nobreak >nul
+if exist "node_modules\.prisma" rmdir /s /q "node_modules\.prisma" 2>nul
+
 set PRISMA_RETRY=0
 :prisma_gen_retry
 call npx prisma generate

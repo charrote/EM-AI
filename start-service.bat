@@ -83,12 +83,24 @@ if errorlevel 1 (
 )
 echo   [OK] Database schema pushed
 
+:: Kill any lingering node processes and clean stale prisma artifacts
+taskkill /F /IM node.exe >nul 2>&1
+timeout /t 2 /nobreak >nul
+if exist "node_modules\.prisma" rmdir /s /q "node_modules\.prisma" 2>nul
+
 :: Generate Prisma client
-call npx prisma generate >nul 2>&1
+call npx prisma generate
 if errorlevel 1 (
-    del /f /q "node_modules\.prisma\client\query_engine-windows.dll.node" >nul 2>&1
-    timeout /t 1 /nobreak >nul
-    call npx prisma generate >nul 2>&1
+    echo [WARN] prisma generate failed, retrying...
+    taskkill /F /IM node.exe >nul 2>&1
+    timeout /t 2 /nobreak >nul
+    if exist "node_modules\.prisma" rmdir /s /q "node_modules\.prisma" 2>nul
+    call npx prisma generate
+    if errorlevel 1 (
+        echo [ERROR] prisma generate failed after retry
+        pause
+        exit /b 1
+    )
 )
 echo   [OK] Prisma Client ready
 
