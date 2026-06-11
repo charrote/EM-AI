@@ -18,6 +18,10 @@ interface AppState {
   setSelectedOrganizationId: (id: string | null) => void;
   selectedOrgName: string;
   setSelectedOrgName: (name: string) => void;
+  // AI 右边栏
+  aiSidebarOpen: boolean;
+  setAISidebarOpen: (open: boolean) => void;
+  toggleAISidebar: () => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -49,4 +53,8 @@ export const useStore = create<AppState>((set) => ({
   setSelectedOrganizationId: (id) => set({ selectedOrganizationId: id }),
   selectedOrgName: '全厂',
   setSelectedOrgName: (name) => set({ selectedOrgName: name }),
+  // AI 右边栏
+  aiSidebarOpen: false,
+  setAISidebarOpen: (open) => set({ aiSidebarOpen: open }),
+  toggleAISidebar: () => set((s) => ({ aiSidebarOpen: !s.aiSidebarOpen })),
 }));

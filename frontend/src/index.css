@@ -201,6 +201,52 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+/* ── AURA 浮标按钮 ──────────────────────────── */
+.aura-float-btn {
+  animation: auraFloatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes auraFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ── AURA 遮罩 ──────────────────────────────── */
+.aura-overlay {
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ── AURA 边栏搜索高亮 ──────────────────────── */
+.aura-sidebar .ant-input-affix-wrapper {
+  transition: box-shadow 0.2s ease;
+}
+.aura-sidebar .ant-input-affix-wrapper:focus-within {
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
+}
+
+/* ── 边栏滚动条 ─────────────────────────────── */
+.aura-sidebar div[style*="overflow: auto"]::-webkit-scrollbar {
+  width: 4px;
+}
+.aura-sidebar div[style*="overflow: auto"]::-webkit-scrollbar-thumb {
+  background: #E5E7EB;
+  border-radius: 2px;
+}
+
+/* ── 移动端：AURA 边栏全宽 ──────────────────── */
+@media (max-width: 575px) {
+  .aura-sidebar > div[style*="width"] {
+    width: 100vw !important;
+  }
+}
+
 /* ── 简单动画 ────────────────────────────────── */
 .fade-in {
   animation: fadeIn 0.2s ease-in;

@@ -17,6 +17,7 @@ import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import MobileBottomNav from '../components/MobileBottomNav';
+import AISidebar from '../components/AISidebar';
 import api from '../services/api';
 
 const { Header, Sider, Content } = Layout;
@@ -503,6 +504,9 @@ export default function AppLayout() {
 
       {/* ─── 移动端：底部导航 ─── */}
       {isMobile && <MobileBottomNav />}
+
+      {/* ─── AURA AI 智能助手边栏 ─── */}
+      <AISidebar />
 
       {/* ─── 个人设置 Modal ─── */}
       <Modal
