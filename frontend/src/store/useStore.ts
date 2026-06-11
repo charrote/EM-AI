@@ -12,6 +12,10 @@ interface AppState {
   user: User;
   setUser: (user: User) => void;
   setRole: (role: UserRole) => void;
+  // 认证
+  isAuthenticated: boolean;
+  login: (username: string, password: string) => boolean;
+  logout: () => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   selectedOrganizationId: string | null;
@@ -32,6 +36,9 @@ const roleInfo: Record<UserRole, { name: string }> = {
   admin: { name: '系统管理员' },
 };
 
+const VALID_USERNAME = 'admin';
+const VALID_PASSWORD = 'admin';
+
 export const useStore = create<AppState>((set) => ({
   user: {
     id: 'demo-admin',
@@ -47,6 +54,16 @@ export const useStore = create<AppState>((set) => ({
         role,
       },
     }),
+  // 认证
+  isAuthenticated: false,
+  login: (username, password) => {
+    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+      set({ isAuthenticated: true });
+      return true;
+    }
+    return false;
+  },
+  logout: () => set({ isAuthenticated: false }),
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   selectedOrganizationId: null,

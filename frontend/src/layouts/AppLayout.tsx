@@ -236,6 +236,12 @@ export default function AppLayout() {
     return openKeys;
   }, [user.role]);
 
+  // 退出登录
+  const handleLogout = () => {
+    useStore.getState().logout();
+    navigate('/login', { replace: true });
+  };
+
   // 用户面板下拉菜单
   const userMenuItems: MenuProps['items'] = [
     {
@@ -259,7 +265,8 @@ export default function AppLayout() {
     })),
     { type: 'divider' as const },
     { key: 'personal-settings', icon: <SettingOutlined />, label: '个人设置', onClick: () => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); } },
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', disabled: true },
+    { type: 'divider' as const },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: handleLogout },
   ];
 
   // 菜单点击处理

@@ -5,7 +5,9 @@ import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './layouts/AppLayout';
 import { Colors } from './styles/theme';
 import ErrorBoundary from './components/ErrorBoundary';
+import { useStore } from './store/useStore';
 
+const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DeviceList = lazy(() => import('./pages/DeviceList'));
 const DeviceDetail = lazy(() => import('./pages/DeviceDetail'));
 const WorkOrderList = lazy(() => import('./pages/WorkOrderList'));
@@ -36,6 +38,15 @@ function PageLoading() {
       <Spin size="large" />
     </div>
   );
+}
+
+/** 认证守卫：未登录 → 跳转 /login */
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
 }
 
 function App() {
@@ -73,7 +84,11 @@ function App() {
       <BrowserRouter>
         <Suspense fallback={<PageLoading />}>
         <Routes>
-          <Route path="/" element={<AppLayout />}>
+          {/* 登录页（独立布局，无侧栏） */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* 受保护的主应用 */}
+          <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
             {/* 首页 = 决策仪表盘 */}
             <Route index element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
 
@@ -110,6 +125,9 @@ function App() {
             <Route path="teams" element={<TeamPage />} />
             <Route path="work-calendar" element={<WorkCalendar />} />
           </Route>
+
+          {/* 未匹配路由 → 登录页 */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         </Suspense>
       </BrowserRouter>
