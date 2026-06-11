@@ -30,7 +30,7 @@ RUN mkdir -p demo-data
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-# Expose port
-EXPOSE 8080
+# Expose port (docker-compose overrides to 5273)
+EXPOSE 5273
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

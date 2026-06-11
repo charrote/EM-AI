@@ -10,12 +10,19 @@ Write-Host "================================================" -ForegroundColor C
 Write-Host "  正在停止 EM-AI Demo 服务..." -ForegroundColor Yellow
 Write-Host "================================================" -ForegroundColor Cyan
 
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$ConfigJson = Get-Content (Join-Path $ScriptDir "config.json") -ErrorAction SilentlyContinue | ConvertFrom-Json
+$ApiPort = if ($ConfigJson) { $ConfigJson.API_PORT } else { $null }
+$FrontendPort = if ($ConfigJson) { $ConfigJson.FRONTEND_PORT } else { $null }
+if (-not $ApiPort) { $ApiPort = 5174 }
+if (-not $FrontendPort) { $FrontendPort = 5173 }
+
 $stopped = $false
 
 # -- 通过端口查找并杀进程 --
 $portTargets = @(
-    @{ Port = 8080; Name = "后端 (port 8080)" }
-    @{ Port = 5173; Name = "前端 (port 5173)" }
+    @{ Port = $ApiPort; Name = "后端 (port $ApiPort)" }
+    @{ Port = $FrontendPort; Name = "前端 (port $FrontendPort)" }
 )
 
 foreach ($target in $portTargets) {

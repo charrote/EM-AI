@@ -2,6 +2,7 @@
 title UantekEM-AI
 %SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "$Host.UI.RawUI.WindowTitle = 'UantekEM-AI'" >nul 2>&1
 cd /d "%~dp0"
+call "%~dp0config.bat"
 
 :: Ensure Node.js is in PATH
 where node >nul 2>&1 || set "PATH=D:\Program Files\nodejs;C:\Program Files\nodejs;%PATH%"
@@ -67,8 +68,8 @@ start "UantekEM-AI Backend" cmd /c "cd /d %CD%\backend && title UantekEM-AI Back
 start "UantekEM-AI Frontend" cmd /c "cd /d %CD%\frontend && title UantekEM-AI Frontend && npm run dev"
 
 echo ================================================
-echo   Backend:  http://localhost:5273
-echo   Frontend: http://localhost:5173
+echo   Backend:  http://localhost:%API_PORT%/api
+echo   Frontend: http://localhost:%FRONTEND_PORT%
 echo.
 echo   Close the two new windows to stop.
 echo ================================================

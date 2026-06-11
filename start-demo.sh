@@ -49,8 +49,12 @@ echo ""
 echo "================================================"
 echo -e "  ${GREEN}✅ EM-AI 演示系统启动中...${NC}"
 echo ""
-echo "  前端:  http://localhost:5173"
-echo "  后端:  http://localhost:8080/api/health"
+# Read ports from config.json
+API_PORT=$(node -e "console.log(require('./config.json').API_PORT || 5174)" 2>/dev/null || echo 5174)
+FRONTEND_PORT=$(node -e "console.log(require('./config.json').FRONTEND_PORT || 5173)" 2>/dev/null || echo 5173)
+
+echo "  前端:  http://localhost:${FRONTEND_PORT}"
+echo "  后端:  http://localhost:${API_PORT}/api/health"
 echo ""
 echo "  按 Ctrl+C 停止所有服务"
 echo "================================================"

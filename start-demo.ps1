@@ -169,8 +169,15 @@ PrintAndLog "[5/5] 启动完成!" Green
 PrintAndLog "================================================" Cyan
 PrintAndLog "  EM-AI 演示系统运行中" Green
 PrintAndLog ""
-PrintAndLog "  前端:       http://localhost:5173"
-PrintAndLog "  后端:       http://localhost:8080/api/health"
+# Read ports from config.json
+$ConfigJson = Get-Content (Join-Path $ScriptDir "config.json") | ConvertFrom-Json
+$ApiPort = $ConfigJson.API_PORT
+$FrontendPort = $ConfigJson.FRONTEND_PORT
+if (-not $ApiPort) { $ApiPort = 5174 }
+if (-not $FrontendPort) { $FrontendPort = 5173 }
+
+PrintAndLog "  前端:       http://localhost:$FrontendPort"
+PrintAndLog "  后端:       http://localhost:${ApiPort}/api/health"
 PrintAndLog "  后端日志:   $BackendLog"
 PrintAndLog "  前端日志:   $FrontendLog"
 PrintAndLog "  守护日志:   $SupervisorLog"

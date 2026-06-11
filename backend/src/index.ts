@@ -5,6 +5,13 @@ import morgan from 'morgan';
 import fs from 'fs';
 import path from 'path';
 
+let cfg: any = {};
+try {
+  cfg = JSON.parse(fs.readFileSync(path.join(__dirname, '../../config.json'), 'utf-8'));
+} catch {
+  // config.json not found (e.g., Docker deployment) — use env vars or defaults
+}
+
 import deviceRoutes from './routes/devices';
 import workOrderRoutes from './routes/workOrders';
 import inspectionRoutes from './routes/inspections';
@@ -25,7 +32,7 @@ import calendarRoutes from './routes/calendar';
 import { simulator } from './services/simulator';
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = cfg.API_PORT || parseInt(process.env.PORT || '') || 5174;
 
 // Middleware
 app.use(helmet());

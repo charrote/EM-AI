@@ -27,25 +27,19 @@ EM-AI 是一套面向离散制造/流程制造企业的 **AI 驱动的设备智�
 - **npm** >= 9
 - 不需要 Docker（开发模式使用 SQLite）
 
-### 一键启动 (Linux / macOS)
+### 一键启动
+
+#### macOS / Linux
 
 ```bash
-# 1. 安装依赖 & 初始化数据库
-cd backend && npm install && npx prisma generate && npx prisma db push --accept-data-loss && cd ..
+# 首次需要添加执行权限
+chmod +x *.sh
 
-# 2. 注入演示数据
-cd backend && npx tsx src/utils/seed.ts && cd ..
-
-# 3. 启动后端 (终端 1)
-cd backend && npm run dev
-
-# 4. 启动前端 (终端 2)
-cd frontend && npm run dev
+# 一键启动演示（自动安装依赖 + 初始化数据 + 启动前后端）
+./start-demo.sh
 ```
 
-### 一键启动 (Windows / SSH)
-
-支持 SSH 远程执行，**进程守护**会自动重启崩溃的服务，断开 SSH 连接后服务不停止。
+#### Windows
 
 ```cmd
 :: 开发模式（两个前台窗口，适合调试）
@@ -56,6 +50,9 @@ cd frontend && npm run dev
 
 :: 停止服务
 .\stop-service.bat
+
+:: 构建生产版本
+.\start-build.bat
 ```
 
 后台守护模式（断开 SSH 后继续运行）：
@@ -65,13 +62,35 @@ cd frontend && npm run dev
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath cmd.exe -WindowStyle Hidden -ArgumentList '/c','start-service.bat'"
 ```
 
+### 脚本对照
+
+| 功能 | macOS / Linux | Windows |
+|------|--------------|---------|
+| 演示开发（一键启动） | `./start-demo.sh` | `start-demo.ps1` / `start-dev.bat` |
+| 构建生产版本 | `./start-build.sh` | `start-build.bat` |
+| 生产部署（进程守护） | — | `start-service.bat` |
+| 停止服务 | `Ctrl+C` | `stop-demo.ps1` / `stop-service.bat` |
+
+> 💡 Git clone 后如果遇到 `permission denied`，执行 `chmod +x *.sh` 即可。
+
 ### 访问地址
 
-| 服务 | 地址 |
-|------|------|
-| 前端界面 | http://localhost:5173 |
-| 后端 API | http://localhost:8080/api/health |
-| 演示数据重置 | `POST http://localhost:8080/api/demo/reset` |
+端口通过项目根目录的 `config.json` 统一管理，默认值：
+
+```json
+{
+  "API_PORT": 5174,
+  "FRONTEND_PORT": 5173
+}
+```
+
+| 服务 | 地址 | 配置项 |
+|------|------|--------|
+| 前端界面 | http://localhost:5173 | `FRONTEND_PORT` |
+| 后端 API | http://localhost:5174/api/health | `API_PORT` |
+| 演示数据重置 | `POST http://localhost:5174/api/demo/reset` | — |
+
+> ⚠️ 后端端口默认 5174（非传统 8080），如需修改请改 `config.json`，前端 Vite 代理会自动跟随。
 
 ---
 
@@ -115,15 +134,35 @@ EM-AI/
 │   ├── EM-AI产品设计.md        # v1 产品设计
 │   ├── EM-AI产品设计_v2.md     # v2 优化版（含旅程/技术选型/NFR/竞品等）
 │   └── 功能清单与开发计划_v2.md # 功能清单 & 逐日任务清单
+├── config.json             # 统一端口配置（前后端共享）
+├── config.bat              # 端口配置读取脚本 (Windows)
 ├── docker-compose.yml      # PostgreSQL + Redis（生产用）
-├── start-demo.sh           # 一键启动脚本 (Linux/macOS)
-├── start-demo.ps1          # 一键启动脚本 (Windows PowerShell)
+├── start-demo.sh           # 一键启动脚本 (macOS/Linux)
+├── start-build.sh          # 生产构建脚本 (macOS/Linux)
+├── start-demo.ps1          # 一键启动脚本 (Windows PowerShell，带进程守护)
 ├── start-dev.bat           # 开发模式一键启动 (Windows，前台窗口)
 ├── start-service.bat       # 生产模式一键启动 (Windows，带进程守护)
 ├── stop-demo.ps1           # 停止服务脚本 (Windows PowerShell)
 ├── stop-service.bat        # 停止服务脚本 (Windows)
 └── curl                    # API 调试 curl 命令集
 ```
+
+---
+
+## 跨平台说明
+
+项目支持 **macOS（开发）** + **Windows Server（部署）** 双平台运行。
+
+| 要点 | 说明 |
+|------|------|
+| **路径分隔符** | 代码中统一使用 `path.join()`，Node.js 自动适配系统分隔符 |
+| **端口配置** | 所有端口写死在 `config.json` 中，各平台脚本均从该文件动态读取 |
+| **macOS 脚本** | `.sh` 文件，需要 `chmod +x` 执行权限 |
+| **Windows 脚本** | `.bat`（cmd）和 `.ps1`（PowerShell）两种格式 |
+| **Docker 部署** | `docker-compose.yml` 配合 `Dockerfile`，容器内为 Linux 环境，不受宿主机影响 |
+| **数据库** | 开发用 SQLite（文件路径 `file:./dev.db` 跨平台兼容），生产可切换 PostgreSQL |
+
+> ⚠️ `backend/.env` 中不要设置 `PORT` 变量。Prisma Client 会自动加载 `.env` 导致 `process.env.PORT` 被覆盖，端口应统一由 `config.json` 管理。
 
 ---
 
