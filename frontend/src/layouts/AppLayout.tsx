@@ -73,6 +73,7 @@ const scenarioGroups: ScenarioGroup[] = [
     roles: ['supervisor', 'executive', 'admin'],
     children: [
       { key: 'aura-data-convergence', icon: <NodeIndexOutlined />, label: '多元数据汇聚', roles: ['supervisor', 'executive', 'admin'] },
+      { key: 'aura-device-health', icon: <MonitorOutlined />, label: '设备健康基线', roles: ['supervisor', 'executive', 'admin'] },
     ],
   },
   {
@@ -185,7 +186,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, setAuraModalOpen } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, setAuraModalOpen, setDeviceHealthModalOpen } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -281,9 +282,11 @@ export default function AppLayout() {
 
   // 菜单点击处理
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    // AURA 多元数据汇聚 → 打开模态窗
+    // AURA → 打开模态窗
     if (key === 'aura-data-convergence') {
       setAuraModalOpen(true);
+    } else if (key === 'aura-device-health') {
+      setDeviceHealthModalOpen(true);
     } else {
       navigate('/' + key);
     }

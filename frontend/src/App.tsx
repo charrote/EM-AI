@@ -33,6 +33,8 @@ const AndonBoard = lazy(() => import('./pages/AndonBoard'));
 const ToolingList = lazy(() => import('./pages/ToolingList'));
 const ToolingMaintenance = lazy(() => import('./pages/ToolingMaintenance'));
 const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
+const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
+const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
 
 function PageLoading() {
   return (
@@ -57,6 +59,14 @@ function App() {
   const [auraModalOpen, setAuraModalOpen] = [
     useStore((s) => s.auraModalOpen),
     useStore((s) => s.setAuraModalOpen),
+  ];
+  const [dataCleaningModalOpen, setDataCleaningModalOpen] = [
+    useStore((s) => s.dataCleaningModalOpen),
+    useStore((s) => s.setDataCleaningModalOpen),
+  ];
+  const [deviceHealthModalOpen, setDeviceHealthModalOpen] = [
+    useStore((s) => s.deviceHealthModalOpen),
+    useStore((s) => s.setDeviceHealthModalOpen),
   ];
 
   return (
@@ -102,6 +112,22 @@ function App() {
             element={
               <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
                 <AuraDataConvergence />
+              </div>
+            }
+          />
+          <Route
+            path="/aura/data-cleaning"
+            element={
+              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
+                <AuraDataCleaning />
+              </div>
+            }
+          />
+          <Route
+            path="/aura/device-health"
+            element={
+              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
+                <AuraDeviceHealth />
               </div>
             }
           />
@@ -185,6 +211,58 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDataConvergence />
+        </div>
+      </Modal>
+      {/* ─── AURA AI 数据清洗模态窗 ─── */}
+      <Modal
+        open={dataCleaningModalOpen}
+        onCancel={() => setDataCleaningModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        style={{ padding: 0, margin: 0 }}
+        classNames={{
+          content: 'aura-modal-content',
+          body: 'aura-modal-body',
+          mask: 'aura-modal-mask',
+        }}
+        styles={{
+          body: { height: '90vh', padding: 0, margin: 0 },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraDataCleaning />
+        </div>
+      </Modal>
+      {/* ─── AURA 设备健康基线模态窗 ─── */}
+      <Modal
+        open={deviceHealthModalOpen}
+        onCancel={() => setDeviceHealthModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        style={{ padding: 0, margin: 0 }}
+        classNames={{
+          content: 'aura-modal-content',
+          body: 'aura-modal-body',
+          mask: 'aura-modal-mask',
+        }}
+        styles={{
+          body: { height: '90vh', padding: 0, margin: 0 },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraDeviceHealth />
         </div>
       </Modal>
       </ConfigProvider>

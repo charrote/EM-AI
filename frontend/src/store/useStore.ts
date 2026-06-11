@@ -29,6 +29,12 @@ interface AppState {
   // AURA 模态窗
   auraModalOpen: boolean;
   setAuraModalOpen: (open: boolean) => void;
+  // AI 数据清洗模态窗
+  dataCleaningModalOpen: boolean;
+  setDataCleaningModalOpen: (open: boolean) => void;
+  // 设备健康基线模态窗
+  deviceHealthModalOpen: boolean;
+  setDeviceHealthModalOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -95,4 +101,10 @@ export const useStore = create<AppState>((set) => ({
   // AURA 模态窗
   auraModalOpen: false,
   setAuraModalOpen: (open) => set({ auraModalOpen: open }),
+  // AI 数据清洗模态窗
+  dataCleaningModalOpen: false,
+  setDataCleaningModalOpen: (open) => set({ dataCleaningModalOpen: open }),
+  // 设备健康基线模态窗
+  deviceHealthModalOpen: false,
+  setDeviceHealthModalOpen: (open) => set({ deviceHealthModalOpen: open }),
 }));

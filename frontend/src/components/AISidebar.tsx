@@ -10,11 +10,8 @@ import {
   CloseOutlined,
   RightOutlined,
   DownOutlined,
-  CheckCircleFilled,
-  ClockCircleFilled,
-  MinusCircleFilled,
 } from '@ant-design/icons';
-import { Input, Badge, Tooltip } from 'antd';
+import { Input, Tooltip } from 'antd';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
@@ -40,26 +37,6 @@ interface AICategory {
   children: SubFeature[];
 }
 
-/* ─── 状态映射 ──────────────────────────────── */
-
-const StatusConfig: Record<FeatureStatus, { color: string; icon: React.ReactNode; label: string }> = {
-  ready: {
-    color: Colors.success,
-    icon: <CheckCircleFilled style={{ color: Colors.success, fontSize: 14 }} />,
-    label: '就绪',
-  },
-  developing: {
-    color: Colors.warning,
-    icon: <ClockCircleFilled style={{ color: Colors.warning, fontSize: 14 }} />,
-    label: '开发中',
-  },
-  planned: {
-    color: Colors.gray400,
-    icon: <MinusCircleFilled style={{ color: Colors.gray400, fontSize: 14 }} />,
-    label: '规划中',
-  },
-};
-
 /* ─── AI 功能数据（源自 EM-AI-Native 功能清单）─── */
 
 const AI_FEATURES: AICategory[] = [
@@ -71,8 +48,8 @@ const AI_FEATURES: AICategory[] = [
     color: '#3B82F6',
     children: [
       { key: 'data-collection', label: '多源数据汇聚', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing', route: '/aura/data-convergence' },
-      { key: 'data-cleaning', label: 'AI 数据清洗', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'planned' },
-      { key: 'health-baseline', label: '设备健康基线', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'planned' },
+      { key: 'data-cleaning', label: 'AI 数据清洗', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'developing', route: '/aura/data-cleaning' },
+      { key: 'health-baseline', label: '设备健康基线', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'developing', route: '/aura/device-health' },
       { key: 'device-profile', label: '设备全景画像', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'planned' },
     ],
   },
@@ -135,7 +112,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -405,7 +382,6 @@ export default function AISidebar() {
                 {isExpanded && (
                   <div style={{ paddingLeft: 38, paddingRight: 4 }}>
                     {category.children.map((child) => {
-                      const cfg = StatusConfig[child.status];
                       return (
                         <Tooltip
                           key={child.key}
@@ -417,7 +393,13 @@ export default function AISidebar() {
                             onClick={() => {
                               if (child.route) {
                                 setAISidebarOpen(false);
-                                setTimeout(() => setAuraModalOpen(true), 350);
+                                if (child.key === 'data-cleaning') {
+                                  setTimeout(() => setDataCleaningModalOpen(true), 350);
+                                } else if (child.key === 'health-baseline') {
+                                  setTimeout(() => setDeviceHealthModalOpen(true), 350);
+                                } else {
+                                  setTimeout(() => setAuraModalOpen(true), 350);
+                                }
                               }
                             }}
                             style={{
@@ -432,7 +414,17 @@ export default function AISidebar() {
                             onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray50; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                           >
-                            <div style={{ marginTop: 2, flexShrink: 0 }}>{cfg.icon}</div>
+                            <div
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                background: category.color,
+                                marginTop: 6,
+                                flexShrink: 0,
+                                opacity: 0.5,
+                              }}
+                            />
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 12, fontWeight: 500, color: Colors.gray700 }}>
                                 {child.label}
@@ -441,23 +433,6 @@ export default function AISidebar() {
                                 {child.desc}
                               </div>
                             </div>
-                            <Badge
-                              count={cfg.label}
-                              size="small"
-                              style={{
-                                fontSize: 9,
-                                background: cfg.color + '20',
-                                color: cfg.color,
-                                border: 'none',
-                                fontWeight: 500,
-                                padding: '0 6px',
-                                lineHeight: '16px',
-                                height: 16,
-                                boxShadow: 'none',
-                                flexShrink: 0,
-                                marginTop: 1,
-                              }}
-                            />
                           </div>
                         </Tooltip>
                       );
@@ -483,28 +458,18 @@ export default function AISidebar() {
           )}
         </div>
 
-        {/* 底部状态 */}
+        {/* 底部注脚 */}
         <div
           style={{
             padding: '12px 20px',
             borderTop: `1px solid ${Colors.gray100}`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
+            textAlign: 'center',
             fontSize: 11,
             color: Colors.gray400,
             flexShrink: 0,
           }}
         >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <CheckCircleFilled style={{ color: Colors.success, fontSize: 10 }} /> 就绪
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <ClockCircleFilled style={{ color: Colors.warning, fontSize: 10 }} /> 开发中
-          </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <MinusCircleFilled style={{ color: Colors.gray400, fontSize: 10 }} /> 规划中
-          </span>
+          Uantek AI Crew Engine
         </div>
       </div>
     </>
