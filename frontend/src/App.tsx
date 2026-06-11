@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ConfigProvider, theme, Spin } from 'antd';
+import { ConfigProvider, theme, Spin, Modal } from 'antd';
+import { CloseOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './layouts/AppLayout';
 import { Colors } from './styles/theme';
@@ -53,6 +54,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  const [auraModalOpen, setAuraModalOpen] = [
+    useStore((s) => s.auraModalOpen),
+    useStore((s) => s.setAuraModalOpen),
+  ];
+
   return (
     <ConfigProvider
       locale={zhCN}
@@ -144,6 +150,62 @@ function App() {
         </Routes>
         </Suspense>
       </BrowserRouter>
+
+      {/* ─── AURA 多元数据汇聚模态窗 ─── */}
+      <ConfigProvider
+        theme={{
+          components: {
+            Modal: {
+              contentBg: '#070A1A',
+              headerBg: '#070A1A',
+            },
+          },
+        }}
+      >
+      <Modal
+        open={auraModalOpen}
+        onCancel={() => setAuraModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        style={{ padding: 0, margin: 0 }}
+        classNames={{
+          content: 'aura-modal-content',
+          body: 'aura-modal-body',
+          mask: 'aura-modal-mask',
+        }}
+        styles={{
+          body: { height: '90vh', padding: 0, margin: 0 },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraDataConvergence />
+        </div>
+      </Modal>
+      </ConfigProvider>
+
+      <style>{`
+        .aura-modal-content {
+          background: #070A1A !important;
+          border: none !important;
+          outline: none !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+          border-radius: 12px !important;
+        }
+        .aura-modal-body {
+          background: #070A1A !important;
+          border: none !important;
+          outline: none !important;
+        }
+        .aura-modal-mask {
+          background: rgba(0,0,0,0.5) !important;
+        }
+      `}</style>
     </ConfigProvider>
   );
 }

@@ -185,7 +185,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, setAuraModalOpen } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -281,9 +281,9 @@ export default function AppLayout() {
 
   // 菜单点击处理
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    // AURA 独立路由映射（@see App.tsx 中 /aura/* 路由组）
+    // AURA 多元数据汇聚 → 打开模态窗
     if (key === 'aura-data-convergence') {
-      navigate('/aura/data-convergence');
+      setAuraModalOpen(true);
     } else {
       navigate('/' + key);
     }

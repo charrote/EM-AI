@@ -15,7 +15,6 @@ import {
   MinusCircleFilled,
 } from '@ant-design/icons';
 import { Input, Badge, Tooltip } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
@@ -136,8 +135,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const navigate = useNavigate();
-  const { aiSidebarOpen, setAISidebarOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -418,8 +416,8 @@ export default function AISidebar() {
                           <div
                             onClick={() => {
                               if (child.route) {
-                                navigate(child.route);
                                 setAISidebarOpen(false);
+                                setTimeout(() => setAuraModalOpen(true), 350);
                               }
                             }}
                             style={{

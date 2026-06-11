@@ -27,9 +27,11 @@ interface DeviceConfig {
   color: string;
   icon: React.ReactNode;
   angle: number; // 角度（弧度），用于在椭圆轨道上定位
+  distanceFactor: number; // 距 EM-AI 中心的远近比例，范围 0.50~0.95
   metrics: string[];
   unit: string[];
   valueRange: [number, number];
+  deviceCount: number; // 归属该协议中心的设备台数（每设备产生 1~10 个星云点）
 }
 
 const DEVICES: DeviceConfig[] = [
@@ -41,9 +43,11 @@ const DEVICES: DeviceConfig[] = [
     color: PROTOCOL_COLORS['Modbus'],
     icon: <ApiOutlined />,
     angle: -2.2,
+    distanceFactor: 0.65,
     metrics: ['主轴转速', '进给速度', '扭矩', '功率'],
     unit: ['rpm', 'mm/min', 'N·m', 'kW'],
     valueRange: [0, 2000],
+    deviceCount: 110,
   },
   {
     id: 'scada',
@@ -53,9 +57,11 @@ const DEVICES: DeviceConfig[] = [
     color: PROTOCOL_COLORS['OPC-UA'],
     icon: <CloudServerOutlined />,
     angle: -0.8,
+    distanceFactor: 0.50,
     metrics: ['产线速度', '良品率', 'OEE', '能耗'],
     unit: ['m/min', '%', '%', 'kWh'],
     valueRange: [50, 100],
+    deviceCount: 85,
   },
   {
     id: 'sensor',
@@ -65,9 +71,11 @@ const DEVICES: DeviceConfig[] = [
     color: PROTOCOL_COLORS['MQTT'],
     icon: <RocketOutlined />,
     angle: 0.8,
+    distanceFactor: 0.95,
     metrics: ['温度', '振动', '电流', '电压'],
     unit: ['℃', 'mm/s', 'A', 'V'],
     valueRange: [0, 500],
+    deviceCount: 65,
   },
   {
     id: 'manual',
@@ -77,9 +85,11 @@ const DEVICES: DeviceConfig[] = [
     color: PROTOCOL_COLORS['HTTP'],
     icon: <ThunderboltOutlined />,
     angle: 2.2,
+    distanceFactor: 0.55,
     metrics: ['批次号', '产量', '不良数', '操作员ID'],
     unit: ['', '件', '件', ''],
     valueRange: [0, 1000],
+    deviceCount: 40,
   },
 ];
 
@@ -157,6 +167,43 @@ function formatMs(ms: number): string {
   return String(Math.floor(ms)).padStart(3, '0');
 }
 
+/* ─── 子节点轨道数据生成（确定性种子，不闪烁） ── */
+interface SubOrbit {
+  angleOffset: number;
+  radiusRatio: number;
+  size: number;
+}
+
+/** 用简单的种子随机生成伪随机数 0~1 */
+function seededRandom(seed: number): number {
+  const x = Math.sin(seed * 9301 + 49297) * 49297;
+  return x - Math.floor(x);
+}
+
+function generateSubOrbits(deviceCount: number, seed: number): SubOrbit[] {
+  const orbits: SubOrbit[] = [];
+  let pointIdx = 0;
+  for (let di = 0; di < deviceCount; di++) {
+    // 每台设备产生 1~10 个星云点
+    const pointsPerDevice = Math.floor(seededRandom(seed + di * 31) * 10) + 1;
+    // 该设备的基准位置（在星云中的大致方位）
+    const deviceBaseAngle = (di / deviceCount) * Math.PI * 2;
+    const deviceBaseRadius = seededRandom(seed + di * 37) * 0.7 + 0.3;
+    for (let pi = 0; pi < pointsPerDevice; pi++) {
+      // 该设备的每个数据点围绕基准位置微小聚集偏移
+      const angleJitter = (seededRandom(seed + pointIdx * 7) - 0.5) * 0.25;
+      const radiusJitter = (seededRandom(seed + pointIdx * 13) - 0.5) * 0.12;
+      orbits.push({
+        angleOffset: deviceBaseAngle + angleJitter,
+        radiusRatio: Math.max(0.1, Math.min(1.0, deviceBaseRadius + radiusJitter)),
+        size: seededRandom(seed + pointIdx * 19) * 2.0 + 1.5,
+      });
+      pointIdx++;
+    }
+  }
+  return orbits;
+}
+
 /* ─── 仪表盘数据生成器 ──────────────────────── */
 function generateEntry(id: number, now: Date): DashboardEntry {
   const protocols = ['MQTT', 'Modbus', 'OPC-UA', 'HTTP'];
@@ -208,14 +255,15 @@ export default function AuraDataConvergence() {
   const lastTimeRef = useRef<number>(0);
   const spawnTimerRef = useRef<number[]>([]);
   const entryIdRef = useRef<number>(0);
+  const subOrbitsRef = useRef<Map<string, SubOrbit[]> | null>(null);
 
   /* ── 状态 ── */
   const [dashboardData, setDashboardData] = useState<DashboardEntry[]>([]);
   const [statsData, setStatsData] = useState({
-    totalDevices: 86,
-    activeDevices: 72,
+    totalDevices: 300,
+    activeDevices: 276,
     protocols: 4,
-    dataPointsToday: 28473,
+    dataPointsToday: 87342,
   });
 
   /* ── 动态统计更新 ── */
@@ -231,29 +279,50 @@ export default function AuraDataConvergence() {
   }, []);
 
   /* ── 仪表盘数据生成 ── */
+  // 启动时立即填满 20 条初始数据
+  useEffect(() => {
+    const initials: DashboardEntry[] = [];
+    for (let i = 0; i < 20; i++) {
+      entryIdRef.current += 1;
+      initials.push(generateEntry(entryIdRef.current, new Date()));
+    }
+    setDashboardData(initials);
+  }, []);
+
+  // 每 2.5s 追加 1~5 条，保留最近 22 条确保始终填满
   useEffect(() => {
     const interval = setInterval(() => {
-      entryIdRef.current += 1;
-      const entry = generateEntry(entryIdRef.current, new Date());
+      const count = Math.floor(Math.random() * 5) + 1;
+      const entries: DashboardEntry[] = [];
+      for (let i = 0; i < count; i++) {
+        entryIdRef.current += 1;
+        entries.push(generateEntry(entryIdRef.current, new Date()));
+      }
       setDashboardData((prev) => {
-        const next = [...prev, entry];
-        if (next.length > 300) return next.slice(-200);
+        const next = [...prev, ...entries];
+        if (next.length > 28) return next.slice(-22);
         return next;
       });
-    }, 200);
+    }, 2500);
     return () => clearInterval(interval);
   }, []);
 
-  /* ── 仪表盘自动滚动 ── */
+  /* ── 仪表盘自动滚动至最新 ── */
   useEffect(() => {
     const el = dashboardRef.current;
-    if (!el) return;
-    // 如果用户没有手动向上滚动，则自动滚到底部
-    const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-    if (isAtBottom) {
-      el.scrollTop = el.scrollHeight;
-    }
+    if (el) el.scrollTop = el.scrollHeight;
   }, [dashboardData]);
+
+  /* ── 子节点轨道数据初始化 ── */
+  useEffect(() => {
+    if (!subOrbitsRef.current) {
+      const map = new Map<string, SubOrbit[]>();
+      DEVICES.forEach((dev, di) => {
+        map.set(dev.id, generateSubOrbits(dev.deviceCount, di * 1000 + 42));
+      });
+      subOrbitsRef.current = map;
+    }
+  }, []);
 
   /* ── Canvas 动画 ── */
   const getCanvasSize = useCallback(() => {
@@ -268,15 +337,15 @@ export default function AuraDataConvergence() {
       const cx = w / 2;
       const cy = h / 2;
 
-      // 设备节点位置（椭圆轨道）
-      const rx = Math.min(w, h) * 0.32;
-      const ry = Math.min(w, h) * 0.28;
+      // 设备节点位置（椭圆轨道，各中心距离不同）
+      const rx = Math.min(w, h) * 0.35;
+      const ry = Math.min(w, h) * 0.30;
 
       const devicePositions: Record<string, { x: number; y: number }> = {};
       DEVICES.forEach((dev) => {
         devicePositions[dev.id] = {
-          x: cx + rx * Math.cos(dev.angle),
-          y: cy + ry * Math.sin(dev.angle),
+          x: cx + rx * dev.distanceFactor * Math.cos(dev.angle),
+          y: cy + ry * dev.distanceFactor * Math.sin(dev.angle),
         };
       });
 
@@ -576,6 +645,51 @@ export default function AuraDataConvergence() {
         ctx.fillStyle = dev.color;
         ctx.fillText(dev.protocol, pos.x, tagY + tagH / 2);
         ctx.restore();
+
+        /* ── 子设备节点（星系效果，每设备 1~10 个点） ── */
+        // 最大扩散半径 = 设备到 EM-AI 中心的距离的一半
+        const dx = pos.x - cx;
+        const dy = pos.y - cy;
+        const distToCenter = Math.sqrt(dx * dx + dy * dy);
+        const maxOrbit = distToCenter * 0.75;
+        const subTime = time * 0.00015; // 极缓慢公转
+
+        const orbits = subOrbitsRef.current?.get(dev.id) ?? [];
+        orbits.forEach((sub, si) => {
+          const angle = sub.angleOffset + subTime;
+          const sx = pos.x + maxOrbit * sub.radiusRatio * Math.cos(angle);
+          const sy = pos.y + maxOrbit * sub.radiusRatio * Math.sin(angle);
+
+          // 到父设备的连线（远处点更淡，整体比之前稍明显）
+          const lineAlpha = Math.max(0.08, 0.28 * (1 - sub.radiusRatio));
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+          ctx.lineTo(sx, sy);
+          ctx.strokeStyle = dev.color + Math.floor(lineAlpha * 255).toString(16).padStart(2, '0');
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+          ctx.restore();
+
+          // 子设备光晕（远处略小）
+          const subPulse = 0.2 * Math.sin(time * 0.003 + si * 0.7) + 0.8;
+          ctx.save();
+          ctx.shadowColor = dev.color;
+          ctx.shadowBlur = 5;
+          ctx.beginPath();
+          ctx.arc(sx, sy, sub.size * subPulse * 0.85, 0, Math.PI * 2);
+          ctx.fillStyle = dev.color + '50';
+          ctx.fill();
+          ctx.restore();
+
+          // 子设备内圆
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(sx, sy, sub.size * 0.55, 0, Math.PI * 2);
+          ctx.fillStyle = dev.color + 'AA';
+          ctx.fill();
+          ctx.restore();
+        });
       });
     },
     [isCompact],
@@ -631,7 +745,7 @@ export default function AuraDataConvergence() {
     position: 'relative',
     overflow: 'hidden',
     borderRadius: 12,
-    border: '1px solid rgba(255,255,255,0.06)',
+    border: '1px solid #141838',
     background: '#070A1A',
   };
 
@@ -639,7 +753,7 @@ export default function AuraDataConvergence() {
     width: dashboardPanelWidth,
     flexShrink: 0,
     borderRadius: 12,
-    border: '1px solid rgba(255,255,255,0.06)',
+    border: '1px solid #141838',
     background: 'linear-gradient(180deg, #0E1230 0%, #0A0E27 100%)',
     display: 'flex',
     flexDirection: 'column',
@@ -649,13 +763,13 @@ export default function AuraDataConvergence() {
   const statCardStyle: React.CSSProperties = {
     padding: '10px 14px',
     borderRadius: 8,
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    background: 'rgba(20, 24, 56, 0.6)',
+    border: '1px solid #1E2A5E',
     textAlign: 'center',
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 12, background: '#070A1A' }}>
       {/* ─── 头部标题 ─── */}
       <div
         style={{
@@ -818,7 +932,7 @@ export default function AuraDataConvergence() {
           <div
             style={{
               padding: '12px 16px',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              borderBottom: '1px solid #141838',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -840,17 +954,14 @@ export default function AuraDataConvergence() {
                 实时数据接入
               </span>
             </div>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-              {dashboardData.length} 条
-            </span>
           </div>
 
-          {/* 看板列表 */}
+          {/* 看板列表（纯滚动显示，自动丢弃旧数据） */}
           <div
             ref={dashboardRef}
             style={{
               flex: 1,
-              overflow: 'auto',
+              overflow: 'hidden',
               padding: '4px 0',
             }}
           >
@@ -879,7 +990,7 @@ export default function AuraDataConvergence() {
                     fontSize: 11,
                     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                     transition: 'background 0.15s',
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    borderBottom: '1px solid rgba(20, 24, 56, 0.5)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
@@ -959,6 +1070,7 @@ export default function AuraDataConvergence() {
         canvas {
           animation: fadeInUp 0.6s ease-out;
         }
+
       `}</style>
     </div>
   );

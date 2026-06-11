@@ -26,6 +26,9 @@ interface AppState {
   aiSidebarOpen: boolean;
   setAISidebarOpen: (open: boolean) => void;
   toggleAISidebar: () => void;
+  // AURA 模态窗
+  auraModalOpen: boolean;
+  setAuraModalOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -89,4 +92,7 @@ export const useStore = create<AppState>((set) => ({
   aiSidebarOpen: false,
   setAISidebarOpen: (open) => set({ aiSidebarOpen: open }),
   toggleAISidebar: () => set((s) => ({ aiSidebarOpen: !s.aiSidebarOpen })),
+  // AURA 模态窗
+  auraModalOpen: false,
+  setAuraModalOpen: (open) => set({ auraModalOpen: open }),
 }));
