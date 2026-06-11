@@ -291,7 +291,7 @@ export default function AISidebar() {
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 700, color: Colors.gray800, lineHeight: 1.3 }}>
-                AURA
+                Uantek Aura
               </div>
               <div style={{ fontSize: 11, color: Colors.gray400, lineHeight: 1.3 }}>
                 AI Unified Resource Assistant

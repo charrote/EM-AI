@@ -14,7 +14,7 @@ interface AppState {
   setRole: (role: UserRole) => void;
   // 认证
   isAuthenticated: boolean;
-  login: (username: string, password: string) => boolean;
+  setAuth: (token: string, user: User) => void;
   logout: () => void;
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
@@ -36,8 +36,21 @@ const roleInfo: Record<UserRole, { name: string }> = {
   admin: { name: '系统管理员' },
 };
 
-const VALID_USERNAME = 'admin';
-const VALID_PASSWORD = 'admin';
+const TOKEN_KEY = 'demo_token';
+const TOKEN_EXPIRY_KEY = 'demo_token_expiry';
+
+function getStoredAuth(): boolean {
+  const token = localStorage.getItem(TOKEN_KEY);
+  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  if (token && expiry) {
+    if (Date.now() < Number(expiry)) {
+      return true;
+    }
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+  }
+  return false;
+}
 
 export const useStore = create<AppState>((set) => ({
   user: {
@@ -55,15 +68,17 @@ export const useStore = create<AppState>((set) => ({
       },
     }),
   // 认证
-  isAuthenticated: false,
-  login: (username, password) => {
-    if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-      set({ isAuthenticated: true });
-      return true;
-    }
-    return false;
+  isAuthenticated: getStoredAuth(),
+  setAuth: (token, user) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(TOKEN_EXPIRY_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
+    set({ isAuthenticated: true, user });
   },
-  logout: () => set({ isAuthenticated: false }),
+  logout: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    set({ isAuthenticated: false });
+  },
   sidebarCollapsed: false,
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   selectedOrganizationId: null,

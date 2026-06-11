@@ -3,28 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { Form, Input, Button, Typography, message, Space } from 'antd';
 import { UserOutlined, LockOutlined, ToolOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
+import api from '../services/api';
 import { Colors } from '../styles/theme';
 
 const { Title, Text } = Typography;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const login = useStore((s) => s.login);
+  const setAuth = useStore((s) => s.setAuth);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (values: { username: string; password: string }) => {
+  const handleSubmit = async (values: { username: string; password: string }) => {
     setLoading(true);
-    // 模拟短暂延迟，让登录有"递交感"
-    setTimeout(() => {
-      const success = login(values.username, values.password);
+    try {
+      const res = await api.post('/auth/login', values);
+      const { token, user } = res.data;
+      setAuth(token, user);
+      message.success('登录成功，欢迎回来！');
+      navigate('/', { replace: true });
+    } catch {
+      message.error('用户名或密码错误');
+    } finally {
       setLoading(false);
-      if (success) {
-        message.success('登录成功，欢迎回来！');
-        navigate('/', { replace: true });
-      } else {
-        message.error('用户名或密码错误');
-      }
-    }, 400);
+    }
   };
 
   return (
@@ -98,7 +99,7 @@ export default function LoginPage() {
             <ToolOutlined />
           </div>
           <Title level={3} style={{ margin: 0, fontWeight: 700, color: Colors.gray900 }}>
-            EM-AI
+            UantekEM-AI
           </Title>
           <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
             AI 智能设备管理系统
