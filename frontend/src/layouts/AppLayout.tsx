@@ -12,6 +12,7 @@ import {
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -63,6 +64,15 @@ const scenarioGroups: ScenarioGroup[] = [
       { key: 'device-manage', icon: <DatabaseOutlined />, label: '设备基础数据', roles: ['supervisor', 'admin'] },
       { key: 'teams', icon: <TeamOutlined />, label: '班组管理', roles: ['supervisor', 'admin'] },
       { key: 'work-calendar', icon: <CalendarOutlined />, label: '工作日历', roles: ['supervisor', 'admin'] },
+    ],
+  },
+  {
+    key: 'scenario-aura',
+    icon: <ThunderboltOutlined />,
+    label: 'AURA 智能',
+    roles: ['supervisor', 'executive', 'admin'],
+    children: [
+      { key: 'aura-data-convergence', icon: <NodeIndexOutlined />, label: '多元数据汇聚', roles: ['supervisor', 'executive', 'admin'] },
     ],
   },
   {
@@ -271,7 +281,12 @@ export default function AppLayout() {
 
   // 菜单点击处理
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    navigate('/' + key);
+    // AURA 独立路由映射（@see App.tsx 中 /aura/* 路由组）
+    if (key === 'aura-data-convergence') {
+      navigate('/aura/data-convergence');
+    } else {
+      navigate('/' + key);
+    }
     if (isMobile) {
       setDrawerOpen(false);
     }

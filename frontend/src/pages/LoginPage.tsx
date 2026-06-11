@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Form, Input, Button, Typography, message, Space } from 'antd';
 import { UserOutlined, LockOutlined, ToolOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
@@ -9,8 +9,12 @@ const { Title, Text } = Typography;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useStore((s) => s.login);
   const [loading, setLoading] = useState(false);
+
+  // 获取登录前尝试访问的页面路径（来自 AuthGuard 的 state）
+  const from = (location.state as { from?: string })?.from || '/';
 
   const handleSubmit = (values: { username: string; password: string }) => {
     setLoading(true);
@@ -20,7 +24,7 @@ export default function LoginPage() {
       setLoading(false);
       if (success) {
         message.success('登录成功，欢迎回来！');
-        navigate('/', { replace: true });
+        navigate(from, { replace: true });
       } else {
         message.error('用户名或密码错误');
       }

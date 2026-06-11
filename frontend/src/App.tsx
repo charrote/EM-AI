@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './layouts/AppLayout';
@@ -31,6 +31,7 @@ const MaintenanceExecute = lazy(() => import('./pages/MaintenanceExecute'));
 const AndonBoard = lazy(() => import('./pages/AndonBoard'));
 const ToolingList = lazy(() => import('./pages/ToolingList'));
 const ToolingMaintenance = lazy(() => import('./pages/ToolingMaintenance'));
+const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
 
 function PageLoading() {
   return (
@@ -40,11 +41,13 @@ function PageLoading() {
   );
 }
 
-/** 认证守卫：未登录 → 跳转 /login */
+/** 认证守卫：未登录 → 跳转 /login，并保留原始路径用于登录后回跳 */
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore((s) => s.isAuthenticated);
+  const location = useLocation();
+
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location.pathname + location.search }} replace />;
   }
   return <>{children}</>;
 }
@@ -86,6 +89,16 @@ function App() {
         <Routes>
           {/* 登录页（独立布局，无侧栏） */}
           <Route path="/login" element={<LoginPage />} />
+
+          {/* ─── AURA 独立路由（无 EM-AI 侧栏/顶栏，方便独立部署与跨系统集成）─── */}
+          <Route
+            path="/aura/data-convergence"
+            element={
+              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
+                <AuraDataConvergence />
+              </div>
+            }
+          />
 
           {/* 受保护的主应用 */}
           <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>

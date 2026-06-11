@@ -15,6 +15,7 @@ import {
   MinusCircleFilled,
 } from '@ant-design/icons';
 import { Input, Badge, Tooltip } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
@@ -27,6 +28,8 @@ interface SubFeature {
   label: string;
   desc: string;
   status: FeatureStatus;
+  /** 可选的路由路径，点击后导航到对应页面 */
+  route?: string;
 }
 
 interface AICategory {
@@ -68,7 +71,7 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'The Eyes',
     color: '#3B82F6',
     children: [
-      { key: 'data-collection', label: '多源数据汇聚', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing' },
+      { key: 'data-collection', label: '多源数据汇聚', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing', route: '/aura/data-convergence' },
       { key: 'data-cleaning', label: 'AI 数据清洗', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'planned' },
       { key: 'health-baseline', label: '设备健康基线', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'planned' },
       { key: 'device-profile', label: '设备全景画像', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'planned' },
@@ -133,6 +136,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
+  const navigate = useNavigate();
   const { aiSidebarOpen, setAISidebarOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
@@ -412,13 +416,19 @@ export default function AISidebar() {
                           mouseEnterDelay={0.5}
                         >
                           <div
+                            onClick={() => {
+                              if (child.route) {
+                                navigate(child.route);
+                                setAISidebarOpen(false);
+                              }
+                            }}
                             style={{
                               display: 'flex',
                               alignItems: 'flex-start',
                               gap: 8,
                               padding: '8px 8px',
                               borderRadius: 6,
-                              cursor: 'pointer',
+                              cursor: child.route ? 'pointer' : 'default',
                               transition: 'background 0.15s',
                             }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray50; }}
