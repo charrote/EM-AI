@@ -4,7 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="//uantekemai.frp.ywapi.com" />
     <title>EM-AI 设备智能管理系统</title>
+    <style>
+      body { background: #f0f2f5; }
+      #root:empty::after {
+        content: '加载中...';
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: #999;
+        font-family: sans-serif;
+        font-size: 16px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

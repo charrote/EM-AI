@@ -1,38 +1,42 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './layouts/AppLayout';
 import { Colors } from './styles/theme';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// ── 已实现页面 ───────────────────────────────
-import DeviceList from './pages/DeviceList';
-import DeviceDetail from './pages/DeviceDetail';
-import WorkOrderList from './pages/WorkOrderList';
-import WorkOrderDetail from './pages/WorkOrderDetail';
-import InspectionPage from './pages/InspectionPage';
-import OEEDashboard from './pages/OEEDashboard';
-import LossAnalysis from './pages/LossAnalysis';
-import ImprovementProjects from './pages/ImprovementProjects';
-import KnowledgeBase from './pages/KnowledgeBase';
-import ExecutiveDashboard from './pages/ExecutiveDashboard';
-import ReportFault from './pages/ReportFault';
+const DeviceList = lazy(() => import('./pages/DeviceList'));
+const DeviceDetail = lazy(() => import('./pages/DeviceDetail'));
+const WorkOrderList = lazy(() => import('./pages/WorkOrderList'));
+const WorkOrderDetail = lazy(() => import('./pages/WorkOrderDetail'));
+const InspectionPage = lazy(() => import('./pages/InspectionPage'));
+const OEEDashboard = lazy(() => import('./pages/OEEDashboard'));
+const LossAnalysis = lazy(() => import('./pages/LossAnalysis'));
+const ImprovementProjects = lazy(() => import('./pages/ImprovementProjects'));
+const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
+const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'));
+const ReportFault = lazy(() => import('./pages/ReportFault'));
+const OrganizationPage = lazy(() => import('./pages/OrganizationPage'));
+const DeviceTypePage = lazy(() => import('./pages/DeviceTypePage'));
+const DeviceManagePage = lazy(() => import('./pages/DeviceManagePage'));
+const TeamPage = lazy(() => import('./pages/TeamPage'));
+const WorkCalendar = lazy(() => import('./pages/WorkCalendar'));
+const RcaAnalysis = lazy(() => import('./pages/RcaAnalysis'));
+const InspectionPlans = lazy(() => import('./pages/InspectionPlans'));
+const MaintenancePlans = lazy(() => import('./pages/MaintenancePlans'));
+const MaintenanceExecute = lazy(() => import('./pages/MaintenanceExecute'));
+const AndonBoard = lazy(() => import('./pages/AndonBoard'));
+const ToolingList = lazy(() => import('./pages/ToolingList'));
+const ToolingMaintenance = lazy(() => import('./pages/ToolingMaintenance'));
 
-// ── 基础数据 ──────────────────────────────────
-import OrganizationPage from './pages/OrganizationPage';
-import DeviceTypePage from './pages/DeviceTypePage';
-import DeviceManagePage from './pages/DeviceManagePage';
-import TeamPage from './pages/TeamPage';
-import WorkCalendar from './pages/WorkCalendar';
-
-// ── 待开发占位页面 ────────────────────────────
-import RcaAnalysis from './pages/RcaAnalysis';
-import InspectionPlans from './pages/InspectionPlans';
-import MaintenancePlans from './pages/MaintenancePlans';
-import MaintenanceExecute from './pages/MaintenanceExecute';
-import AndonBoard from './pages/AndonBoard';
-import ToolingList from './pages/ToolingList';
-import ToolingMaintenance from './pages/ToolingMaintenance';
+function PageLoading() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+      <Spin size="large" />
+    </div>
+  );
+}
 
 function App() {
   return (
@@ -67,6 +71,7 @@ function App() {
       }}
     >
       <BrowserRouter>
+        <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route path="/" element={<AppLayout />}>
             {/* 首页 = 决策仪表盘 */}
@@ -106,6 +111,7 @@ function App() {
             <Route path="work-calendar" element={<WorkCalendar />} />
           </Route>
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </ConfigProvider>
   );

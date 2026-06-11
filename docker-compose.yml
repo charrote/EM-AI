@@ -12,17 +12,17 @@ services:
     container_name: emai-backend
     environment:
       - NODE_ENV=production
-      - PORT=8080
+      - PORT=5273
       - DATABASE_URL=file:/app/data/dev.db
     ports:
-      - "8080:8080"
+      - "5273:5273"
     volumes:
       # Persistent SQLite database
       - emai_data:/app/data
       # Demo data directory (simulator snapshots)
       - emai_demo_data:/app/demo-data
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5273/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5

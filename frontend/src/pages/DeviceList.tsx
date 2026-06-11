@@ -28,19 +28,17 @@ function DeviceCard({ device, onClick }: { device: any; onClick: () => void }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'; e.currentTarget.style.borderColor = '#3B82F6'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.borderColor = '#E5E7EB'; }}
     >
-      {/* Row 1: icon + name + status */}
+      {/* Row 1: name + status badge (icon + label) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
-          <span style={{ fontSize: 14 }}>{cfg.icon}</span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {device.name}
-          </span>
-        </div>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#1F2937', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {device.name}
+        </span>
         <span style={{
           background: cfg.color, color: '#fff', borderRadius: 3, padding: '0 8px',
           fontSize: 10, lineHeight: '18px', fontWeight: 500, flexShrink: 0,
+          display: 'inline-flex', alignItems: 'center', gap: 4,
         }}>
-          {cfg.label}
+          {cfg.icon}{cfg.label}
         </span>
       </div>
 
@@ -201,12 +199,19 @@ export default function DeviceList() {
       ) : filteredAreas.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#9CA3AF', fontSize: 16 }}>没有匹配的设备</div>
       ) : (
-        filteredAreas.map(group => (
+        filteredAreas.map(group => {
+          const avgOEE = group.devices.reduce((s: number, d: any) => s + (d.oee || 0), 0) / (group.devices.length || 1);
+          const avgOeeRounded = Math.round(avgOEE * 10) / 10;
+          const oeeColor = avgOeeRounded >= 85 ? '#22C55E' : avgOeeRounded >= 75 ? '#F59E0B' : '#EF4444';
+          return (
           <div key={group.area} style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingLeft: 4, flexWrap: 'wrap', gap: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#1F2937' }}>{group.area}</h3>
                 <span style={{ background: '#F3F4F6', borderRadius: 10, padding: '0 10px', fontSize: 12, color: '#6B7280' }}>{group.total} 台</span>
+                <span style={{ background: `${oeeColor}20`, borderRadius: 10, padding: '0 10px', fontSize: 12, fontWeight: 600, color: oeeColor }}>
+                  综合OEE {avgOeeRounded}%
+                </span>
               </div>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {Object.entries(group.statusCounts).map(([status, count]) => {
@@ -229,7 +234,8 @@ export default function DeviceList() {
               ))}
             </div>
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );

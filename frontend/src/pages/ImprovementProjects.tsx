@@ -179,7 +179,7 @@ export default function ImprovementProjects() {
                       {!pdca.do?.completed && (
                         <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => {
                           const newPdca = { ...pdca, do: { ...pdca.do, completed: true } };
-                          updateProject(selectedProject.id, { pdcaData: newPdca, progress: 75 });
+                          updateProject(selectedProject.id, { effectData: { pdca: newPdca }, progress: 75 });
                         }}>完成执行阶段</Button>
                       )}
                     </Space>
@@ -211,7 +211,7 @@ export default function ImprovementProjects() {
                       {!pdca.check?.completed && (
                         <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => {
                           const newPdca = { ...pdca, check: { ...pdca.check, completed: true } };
-                          updateProject(selectedProject.id, { pdcaData: newPdca, progress: 90 });
+                          updateProject(selectedProject.id, { effectData: { pdca: newPdca }, progress: 90 });
                         }}>完成检查阶段</Button>
                       )}
                     </Space>
@@ -231,7 +231,7 @@ export default function ImprovementProjects() {
                       {!pdca.act?.completed && (
                         <Button type="primary" size="small" icon={<CheckCircleOutlined />} onClick={() => {
                           const newPdca = { ...pdca, act: { ...pdca.act, completed: true } };
-                          updateProject(selectedProject.id, { pdcaData: newPdca, progress: 100, status: 'completed' });
+                          updateProject(selectedProject.id, { effectData: { pdca: newPdca }, progress: 100, status: 'completed' });
                           message.success('改善项目已完成!');
                         }}>完成项目</Button>
                       )}

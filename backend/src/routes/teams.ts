@@ -23,7 +23,19 @@ router.get('/', async (req: Request, res: Response) => {
       orderBy: [{ workshopId: 'asc' }, { code: 'asc' }],
     });
 
-    res.json({ data: teams, total: teams.length });
+    // Enrich with workshop name
+    const orgIds = teams.map(t => t.workshopId).filter(Boolean) as string[];
+    const orgs = orgIds.length > 0
+      ? await prisma.organization.findMany({ where: { id: { in: orgIds } }, select: { id: true, name: true } })
+      : [];
+    const orgMap = Object.fromEntries(orgs.map(o => [o.id, o.name]));
+
+    const enriched = teams.map(t => ({
+      ...t,
+      workshopName: t.workshopId ? orgMap[t.workshopId] || null : null,
+    }));
+
+    res.json({ data: enriched, total: enriched.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

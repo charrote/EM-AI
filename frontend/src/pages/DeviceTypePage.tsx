@@ -296,7 +296,7 @@ export default function DeviceTypePage() {
           dataSource={types}
           rowKey="id"
           loading={loading}
-          scroll={{ x: isMobile ? 500 : 900 }}
+          scroll={{ x: 'max-content' }}
           size="small"
           pagination={false}
           locale={{ emptyText: <Empty description="暂无设备类型" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}

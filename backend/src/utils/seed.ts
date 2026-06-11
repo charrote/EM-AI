@@ -87,6 +87,7 @@ export async function seedDemoData() {
   await prisma.improvementProject.deleteMany();
   await prisma.knowledgeEntry.deleteMany();
   await prisma.rcaAnalysis.deleteMany();
+  await prisma.team.deleteMany();
   await prisma.organization.deleteMany();
   await prisma.device.deleteMany();
   await prisma.deviceType.deleteMany();
@@ -285,15 +286,78 @@ export async function seedDemoData() {
   }
   console.log(`   RCA 分析: ${rcaData.length} 条`);
 
-  // ── 改善项目 3 ──────────────────────────────
+  // ── 改善项目 6 个（含PDCA数据） ──────────────
   await prisma.improvementProject.createMany({
     data: [
-      { title: 'SMED 换型优化 - 注塑区', lossType: '换型/调整', currentValue: 45, targetValue: 20, unit: 'min', assignee: '张三', deadline: new Date('2026-06-30'), status: 'active', progress: 60, description: '通过快速换模工装和标准化操作流程，将注塑机换型时间从45分钟缩短至20分钟' },
-      { title: 'CNC 加工区主轴精度恢复计划', lossType: '设备故障', currentValue: 12, targetValue: 3, unit: '次/月', assignee: '李四', deadline: new Date('2026-07-15'), status: 'active', progress: 30, description: '针对CNC加工区频繁主轴故障，实施预知性维护策略' },
-      { title: 'TPM 点检体系优化', lossType: '设备故障', currentValue: 18, targetValue: 10, unit: '次/月', assignee: '王五', deadline: new Date('2026-06-20'), status: 'completed', progress: 100, description: '优化点检标准和频率，基于数据分析淘汰无效点检项' },
+      {
+        title: 'SMED 换型优化 - 注塑区', lossType: '换型/调整', currentValue: 45, targetValue: 20, unit: 'min', assignee: '张三', deadline: new Date('2026-06-30'), status: 'active', progress: 60, description: '通过快速换模工装和标准化操作流程，将注塑机换型时间从45分钟缩短至20分钟',
+        effectData: {
+          pdca: {
+            plan: { analysis: '当前换型平均45分钟，其中80%为模具搬运和调整时间，主要原因为工具摆放杂乱、无标准化流程', target: '将换型时间缩短至20分钟以内，减少停机损失', actionPlan: '1. 设计快换工装 2. 制定标准化操作卡 3. 培训操作员 4. 试行优化', completed: true },
+            do: { execution: '已完成快换工装制作和安装，编制了标准操作流程，组织了3次培训', issues: '工装首次试用时发现定位精度不足，已调整优化', completed: true },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
+      {
+        title: 'CNC 加工区主轴精度恢复计划', lossType: '设备故障', currentValue: 12, targetValue: 3, unit: '次/月', assignee: '李四', deadline: new Date('2026-07-15'), status: 'active', progress: 30, description: '针对CNC加工区频繁主轴故障，实施预知性维护策略',
+        effectData: {
+          pdca: {
+            plan: { analysis: 'CNC加工区近3个月每月平均发生12起主轴相关故障，占设备总故障的35%', target: '将主轴故障率降低至每月3次以下', actionPlan: '1. 建立主轴振动监测 2. 制定定期保养计划 3. 建立维修历史数据库', completed: true },
+            do: { execution: '已完成振动传感器安装，正在采集基线数据', issues: '传感器选型时遇到信号干扰问题，已更换屏蔽线缆', completed: false },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
+      {
+        title: 'TPM 点检体系优化', lossType: '设备故障', currentValue: 18, targetValue: 10, unit: '次/月', assignee: '王五', deadline: new Date('2026-06-20'), status: 'completed', progress: 100, description: '优化点检标准和频率，基于数据分析淘汰无效点检项',
+        effectData: {
+          pdca: {
+            plan: { analysis: '现有点检项目150项，经分析其中40%从未发现问题，属于无效点检', target: '通过优化点检项目，减少无效点检30%，同时确保漏检率<2%', actionPlan: '1. 统计分析历史点检数据 2. 识别无效点检项 3. 优化点检标准 4. 验证效果', completed: true },
+            do: { execution: '已完成历史数据分析和点检项目优化，优化后点检项从150项精简至98项', issues: '一线员工对新标准适应需要时间，已安排培训', completed: true },
+            check: { result: '优化后运行2个月，设备故障率从月均18次降至10次，漏检率1.5%', completed: true },
+            act: { standardization: '将优化后的点检标准纳入质量管理体系文件，建立半年一次的点检标准评审机制', promotion: '已在CNC加工区试点成功，计划推广至全厂', completed: true },
+          },
+        },
+      },
+      {
+        title: '冷墩机 LD-005 模具寿命提升', lossType: '速度降低', currentValue: 85000, targetValue: 120000, unit: '件', assignee: '赵六', deadline: new Date('2026-08-01'), status: 'active', progress: 20, description: '通过模具表面处理工艺改进和冷却优化，将模具寿命从8.5万件提升至12万件',
+        effectData: {
+          pdca: {
+            plan: { analysis: 'LD-005模具平均寿命8.5万件，低于行业标杆的15万件，主要磨损形式为热疲劳开裂', target: '模具寿命提升至12万件以上', actionPlan: '1. 评估模具材料 2. 优化热处理工艺 3. 改进冷却方案 4. 试模验证', completed: true },
+            do: { execution: '已完成材料评估，正在与供应商沟通新型模具钢方案', issues: '材料交期较长，预计延迟2周', completed: false },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
+      {
+        title: '包装区效率提升 - 自动装箱', lossType: '短暂停机', currentValue: 25, targetValue: 10, unit: 'min/次', assignee: '孙七', deadline: new Date('2026-07-30'), status: 'active', progress: 10, description: '通过引入自动装箱装置减少包装区频繁停机',
+        effectData: {
+          pdca: {
+            plan: { analysis: '包装区因人工装箱速度慢，每月累计等待停机约250分钟，平均每次25分钟', target: '将每次停机等待时间缩短至10分钟内', actionPlan: '1. 评估自动装箱方案 2. 选型采购 3. 安装调试 4. 培训操作员', completed: false },
+            do: { execution: '', issues: '', completed: false },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
+      {
+        title: '废品率降低 - 注塑成型参数优化', lossType: '废品/返工', currentValue: 5.2, targetValue: 2.0, unit: '%', assignee: '周八', deadline: new Date('2026-09-15'), status: 'active', progress: 45, description: '通过DOE实验设计和注塑参数优化，将废品率从5.2%降低至2%',
+        effectData: {
+          pdca: {
+            plan: { analysis: '注塑区废品率5.2%，高于行业平均3%的目标，主要废品种类为缩水和飞边', target: '废品率降低至2%以下', actionPlan: '1. DOE实验设计 2. 参数优化验证 3. 制定标准参数表 4. 培训推广', completed: true },
+            do: { execution: '已完成DOE实验和关键参数确定，正在验证最优参数组合的稳定性', issues: '部分模具因磨损影响参数稳定性，需同步修模', completed: true },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
     ],
   });
-  console.log(`   改善项目: 3 个`);
+  console.log(`   改善项目: 6 个（含PDCA数据）`);
 
   // ═══════════════════════════════════════════════
   // 企业层级 Demo 数据
@@ -374,6 +438,22 @@ export async function seedDemoData() {
   const metalCount = allDevices.filter(d => d.scenario === SCENARIO_METAL).length;
   const capCount = allDevices.filter(d => d.scenario === SCENARIO_CAPACITOR).length;
   console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, 6 knowledge entries, 8 RCA, 3 projects`);
+  // ── 班组 8 个 ────────────────────────────────
+  const teamData = [
+    { code: 'TEAM-MA', name: '金属甲班', leader: '张伟', memberCount: 12, shift: '早班', workshopId: workshopMetal.id },
+    { code: 'TEAM-MB', name: '金属乙班', leader: '李强', memberCount: 10, shift: '中班', workshopId: workshopMetal.id },
+    { code: 'TEAM-MC', name: '金属丙班', leader: '王磊', memberCount: 8, shift: '晚班', workshopId: workshopMetal.id },
+    { code: 'TEAM-CA', name: '电容甲班', leader: '陈明', memberCount: 11, shift: '早班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-CB', name: '电容乙班', leader: '刘洋', memberCount: 9, shift: '中班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-CC', name: '电容丙班', leader: '赵刚', memberCount: 7, shift: '晚班', workshopId: workshopCapacitor.id },
+    { code: 'TEAM-MNT', name: '维修班组', leader: '周浩', memberCount: 6, shift: '轮班', workshopId: workshopMetal.id },
+    { code: 'TEAM-QC', name: '质检班组', leader: '孙健', memberCount: 5, shift: '早班', workshopId: workshopCapacitor.id, description: '负责来料检验和过程巡检' },
+  ];
+  for (const t of teamData) {
+    await prisma.team.create({ data: t });
+  }
+  console.log(`   班组: ${teamData.length} 个`);
+
   console.log(`   金属加工: ${metalCount}台 · 电解电容: ${capCount}台`);
   console.log(`   🏗 企业层级: 1 集团 → 1 公司 → 2 车间 → ${allLines.length} 产线`);
 }

@@ -166,9 +166,9 @@ export default function ToolingMaintenance() {
           dataSource={data}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 900 }}
+          scroll={{ x: 'max-content' }}
           size="small"
-          pagination={{ pageSize: 20, showTotal: t => `共 ${t} 条` }}
+          pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: t => `共 ${t} 条` }}
         />
       </Card>
 

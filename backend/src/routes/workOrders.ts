@@ -12,7 +12,14 @@ router.get('/', async (req: Request, res: Response) => {
     const deviceId = req.query.deviceId as string | undefined;
     const limit = req.query.limit as string | undefined;
     const where: any = {};
-    if (status) where.status = status;
+    if (status) {
+      const statuses = (status as string).split(',').map(s => s.trim()).filter(Boolean);
+      if (statuses.length === 1) {
+        where.status = statuses[0];
+      } else {
+        where.status = { in: statuses };
+      }
+    }
     if (assignee) where.assigneeId = assignee;
     if (priority) where.priority = priority;
     if (deviceId) where.deviceId = deviceId;
