@@ -50,7 +50,7 @@ const AI_FEATURES: AICategory[] = [
       { key: 'data-collection', label: '多源数据汇聚', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing', route: '/aura/data-convergence' },
       { key: 'data-cleaning', label: 'AI 数据清洗', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'developing', route: '/aura/data-cleaning' },
       { key: 'health-baseline', label: '设备健康基线', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'developing', route: '/aura/device-health' },
-      { key: 'device-profile', label: '设备全景画像', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'planned' },
+      { key: 'device-profile', label: '设备全景画像', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'developing', route: '/aura/device-profile' },
     ],
   },
   {
@@ -112,7 +112,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -397,6 +397,8 @@ export default function AISidebar() {
                                   setTimeout(() => setDataCleaningModalOpen(true), 350);
                                 } else if (child.key === 'health-baseline') {
                                   setTimeout(() => setDeviceHealthModalOpen(true), 350);
+                                } else if (child.key === 'device-profile') {
+                                  setTimeout(() => setDeviceProfileModalOpen(true), 350);
                                 } else {
                                   setTimeout(() => setAuraModalOpen(true), 350);
                                 }

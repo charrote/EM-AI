@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, theme, Spin, Modal } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
@@ -35,6 +35,7 @@ const ToolingMaintenance = lazy(() => import('./pages/ToolingMaintenance'));
 const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
 const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
 const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
+const AuraDeviceProfile = lazy(() => import('./pages/AuraDeviceProfile'));
 
 function PageLoading() {
   return (
@@ -68,6 +69,30 @@ function App() {
     useStore((s) => s.deviceHealthModalOpen),
     useStore((s) => s.setDeviceHealthModalOpen),
   ];
+  const [deviceProfileModalOpen, setDeviceProfileModalOpen] = [
+    useStore((s) => s.deviceProfileModalOpen),
+    useStore((s) => s.setDeviceProfileModalOpen),
+  ];
+
+  // 监听设备全景画像的"穿透查询"，自动关闭画像模态窗并打开目标模态窗
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.path) return;
+      setDeviceProfileModalOpen(false);
+      setTimeout(() => {
+        if (detail.path === '/aura/data-cleaning') {
+          useStore.getState().setDataCleaningModalOpen(true);
+        } else if (detail.path === '/aura/device-health') {
+          useStore.getState().setDeviceHealthModalOpen(true);
+        } else if (detail.path === '/aura/data-convergence') {
+          useStore.getState().setAuraModalOpen(true);
+        }
+      }, 350);
+    };
+    window.addEventListener('aura-drill', handler);
+    return () => window.removeEventListener('aura-drill', handler);
+  }, []);
 
   return (
     <ConfigProvider
@@ -263,6 +288,32 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDeviceHealth />
+        </div>
+      </Modal>
+      {/* ─── AURA 设备全景画像模态窗 ─── */}
+      <Modal
+        open={deviceProfileModalOpen}
+        onCancel={() => setDeviceProfileModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        style={{ padding: 0, margin: 0 }}
+        classNames={{
+          content: 'aura-modal-content',
+          body: 'aura-modal-body',
+          mask: 'aura-modal-mask',
+        }}
+        styles={{
+          body: { height: '90vh', padding: 0, margin: 0 },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraDeviceProfile />
         </div>
       </Modal>
       </ConfigProvider>

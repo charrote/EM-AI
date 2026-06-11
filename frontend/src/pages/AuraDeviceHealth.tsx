@@ -89,25 +89,25 @@ const WORKING_CONDITIONS: Record<WorkingCondition, WorkingConditionConfig> = {
   'idle': {
     key: 'idle', label: '空载', desc: '设备启动/待机，振动幅值低', color: '#3B82F6',
     baseAmplitude: 25, envelopeWidth95: 6, envelopeWidth99: 10,
-    dimensionFactors: { 振动: 0.4, 温度: 0.7, 电流: 0.3, 电压: 0.95, 转速: 0.1, 功率: 0.1 },
+    dimensionFactors: { 振动: 0.4, 温度: 0.7, 电流: 0.3, 电压: 0.95, 转速: 0.1, 油压: 0.2 },
     sim: { noiseScale: 0.05, driftGain: 0.02, driftBias: 0, outlierProb: 0, outlierMag: 0 },
   },
   'normal': {
     key: 'normal', label: '正常运行', desc: '稳态生产，基线基于历史 P95/P99 分位数', color: '#22C55E',
     baseAmplitude: 50, envelopeWidth95: 12, envelopeWidth99: 20,
-    dimensionFactors: { 振动: 1.0, 温度: 1.0, 电流: 1.0, 电压: 1.0, 转速: 1.0, 功率: 1.0 },
+    dimensionFactors: { 振动: 1.0, 温度: 1.0, 电流: 1.0, 电压: 1.0, 转速: 1.0, 油压: 1.0 },
     sim: { noiseScale: 0.08, driftGain: 0.03, driftBias: 0, outlierProb: 0.0005, outlierMag: 0.58 },
   },
   'full-load': {
     key: 'full-load', label: '满载运行', desc: '高负载工况，基线幅值升高', color: '#F59E0B',
     baseAmplitude: 70, envelopeWidth95: 16, envelopeWidth99: 26,
-    dimensionFactors: { 振动: 1.6, 温度: 1.3, 电流: 1.8, 电压: 0.98, 转速: 1.0, 功率: 2.0 },
+    dimensionFactors: { 振动: 1.6, 温度: 1.3, 电流: 1.8, 电压: 0.98, 转速: 1.0, 油压: 1.4 },
     sim: { noiseScale: 1.0, driftGain: 0.28, driftBias: 0, outlierProb: 0.01, outlierMag: 1.6 },
   },
   'high-speed': {
     key: 'high-speed', label: '高速运转', desc: '高转速工况，振动频率升高', color: '#8B5CF6',
     baseAmplitude: 60, envelopeWidth95: 18, envelopeWidth99: 28,
-    dimensionFactors: { 振动: 1.4, 温度: 1.1, 电流: 1.3, 电压: 0.96, 转速: 1.8, 功率: 1.5 },
+    dimensionFactors: { 振动: 1.4, 温度: 1.1, 电流: 1.3, 电压: 0.96, 转速: 1.8, 油压: 1.2 },
     sim: { noiseScale: 1.2, driftGain: 0.5, driftBias: 0.65, outlierProb: 0.12, outlierMag: 2.0 },
   },
 };
@@ -351,12 +351,12 @@ function generateRadarData(
     电流: { value: Math.round(15.6 * deviceDimFactor * 10) / 10, unit: 'A' },
     电压: { value: 380, unit: 'V' },
     转速: { value: 1450, unit: 'rpm' },
-    功率: { value: Math.round(7.5 * deviceDimFactor * 10) / 10, unit: 'kW' },
+     油压: { value: Math.round(0.5 * deviceDimFactor * 10) / 10, unit: 'MPa' },
   };
 
   // 各维度受漂移影响的敏感度（仅振动高敏感，其余真实环境下变动极小）
   const dimSensitivity: Record<string, number> = {
-    振动: 1.0, 温度: 0.18, 电流: 0.08, 电压: 0.03, 转速: 0.06, 功率: 0.15,
+    振动: 1.0, 温度: 0.18, 电流: 0.08, 电压: 0.03, 转速: 0.06, 油压: 0.1,
   };
 
   return Object.entries(baseDimensions).map(([name, info]) => {
@@ -959,9 +959,23 @@ export default function AuraDeviceHealth() {
      图表: 多维雷达图
      ═════════════════════════════════════════════════ */
 
+  // PHM 综合健康得分（0~100）：基于各维度偏离度的加权聚合
+  const healthScore = useMemo(() => {
+    if (radarData.length === 0) return 100;
+    // 维度权重：振动最重要，其余均等
+    const weights: Record<string, number> = { 振动: 0.25, 温度: 0.15, 电流: 0.15, 电压: 0.15, 转速: 0.15, 油压: 0.15 };
+    const totalDev = radarData.reduce((s, d) => {
+      const w = weights[d.name] || (1 / radarData.length);
+      return s + d.deviation * w;
+    }, 0);
+    // 加权偏离度映射到 0~100 分（100=完美）
+    return Math.max(10, Math.min(100, Math.round(100 - totalDev)));
+  }, [radarData]);
+
   const radarOption = useMemo(() => {
+    // 外圈标注基线标准值：轴名显示维度 + 基线值 + 单位
     const indicator = radarData.map((dim) => ({
-      name: `${dim.name}\n(${dim.unit})`,
+      name: `${dim.name}\n${dim.baseline} ${dim.unit}`,
       max: dim.baseline * 1.8,
     }));
 
@@ -985,9 +999,9 @@ export default function AuraDeviceHealth() {
           if (!dim) return '';
           return `
             <div style="font-size:12px;font-weight:600;margin-bottom:4px;">${dim.name}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.6);">基线值: ${dim.baseline} ${dim.unit}</div>
-            <div style="font-size:11px;color:${getDeviationColor(dim.deviation)};">实时值: ${dim.current} ${dim.unit}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,0.4);">偏离度: ${dim.deviation}%</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);">基线标准值: ${dim.baseline} ${dim.unit}</div>
+            <div style="font-size:11px;color:${getDeviationColor(dim.deviation)};">实时测量值: ${dim.current} ${dim.unit}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.4);">偏离系数: ${dim.deviation}%</div>
           `;
         },
       },
@@ -1016,14 +1030,14 @@ export default function AuraDeviceHealth() {
           data: [
             {
               value: baselineValues,
-              name: '基线',
-              lineStyle: { color: 'rgba(255,255,255,0.3)', width: 1.5, type: 'dashed' },
-              areaStyle: { color: 'rgba(255,255,255,0.04)' },
-              itemStyle: { color: 'rgba(255,255,255,0.3)' },
+              name: '基线标准值',
+              lineStyle: { color: 'rgba(255,255,255,0.25)', width: 1.5, type: 'dashed' },
+              areaStyle: { color: 'rgba(255,255,255,0.03)' },
+              itemStyle: { color: 'rgba(255,255,255,0.25)' },
             },
             {
               value: currentValues,
-              name: '实时',
+              name: '实时值',
               lineStyle: { color: radarFillColor, width: 2.5 },
               areaStyle: { color: radarFillColor + '30' },
               itemStyle: { color: radarFillColor },
@@ -1433,11 +1447,11 @@ export default function AuraDeviceHealth() {
         />
         <StatCard
           icon={<ApiOutlined />}
-          iconColor="#22C55E"
-          label="监测维度"
-          value={String(radarData.length)}
-          unit="个"
-          valueColor="#22C55E"
+          iconColor={healthScore >= 90 ? '#22C55E' : healthScore >= 70 ? '#F59E0B' : '#EF4444'}
+          label="综合健康得分"
+          value={String(healthScore)}
+          unit="分"
+          valueColor={healthScore >= 90 ? '#22C55E' : healthScore >= 70 ? '#F59E0B' : '#EF4444'}
           subLabel={`${radarData.filter(d => d.status === 'normal').length} 正常 · ${radarData.filter(d => d.status === 'warning').length} 注意 · ${radarData.filter(d => d.status === 'critical').length} 异常`}
         />
         <StatCard

@@ -35,6 +35,9 @@ interface AppState {
   // 设备健康基线模态窗
   deviceHealthModalOpen: boolean;
   setDeviceHealthModalOpen: (open: boolean) => void;
+  // 设备全景画像模态窗
+  deviceProfileModalOpen: boolean;
+  setDeviceProfileModalOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -107,4 +110,7 @@ export const useStore = create<AppState>((set) => ({
   // 设备健康基线模态窗
   deviceHealthModalOpen: false,
   setDeviceHealthModalOpen: (open) => set({ deviceHealthModalOpen: open }),
+  // 设备全景画像模态窗
+  deviceProfileModalOpen: false,
+  setDeviceProfileModalOpen: (open) => set({ deviceProfileModalOpen: open }),
 }));
