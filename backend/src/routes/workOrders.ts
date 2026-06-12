@@ -119,9 +119,22 @@ router.put('/:id/status', async (req: Request, res: Response) => {
     }
 
     const updateData: any = { status };
-    if (status === 'accepted') updateData.respondedAt = new Date();
-    if (status === 'diagnosing') updateData.actualStartAt = new Date();
-    if (status === 'completed') updateData.actualEndAt = new Date();
+    if (status === 'accepted') {
+      updateData.respondedAt = new Date();
+      updateData.assigneeId = req.body.assigneeId || 'demo-repair';
+    }
+    if (status === 'diagnosing') {
+      updateData.actualStartAt = new Date();
+      updateData.handlerId = req.body.handlerId || 'demo-repair';
+    }
+    if (status === 'verifying') {
+      updateData.verifiedAt = new Date();
+      updateData.reviewerId = req.body.reviewerId || 'demo-repair';
+    }
+    if (status === 'completed') {
+      updateData.actualEndAt = new Date();
+      updateData.completedBy = req.body.completedBy || 'demo-repair';
+    }
 
     const wo = await prisma.workOrder.update({
       where: { id: req.params.id as string },

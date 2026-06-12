@@ -108,12 +108,16 @@ model WorkOrder {
   description     String?
   aiRecommendation Json?   @map("ai_recommendation")
   assigneeId      String?  @map("assignee_id")
+  handlerId       String?  @map("handler_id")
+  reviewerId      String?  @map("reviewer_id")
+  completedBy     String?  @map("completed_by")
   teamId          String?  @map("team_id")
   slaResponseMin  Int?     @map("sla_response_min")
   slaRepairMin    Int?     @map("sla_repair_min")
   slaDeadline     DateTime? @map("sla_deadline")
   respondedAt     DateTime? @map("responded_at")
   actualStartAt   DateTime? @map("actual_start_at")
+  verifiedAt      DateTime? @map("verified_at")
   actualEndAt     DateTime? @map("actual_end_at")
   rootCause       String?  @map("root_cause")
   resolution      String?

@@ -121,7 +121,7 @@ export async function seedDemoData() {
   );
 
   // ── 工单 50 条 ──────────────────────────────
-  const statusOptions = ['pending', 'accepted', 'diagnosing', 'repairing', 'completed', 'completed', 'completed'];
+  const statusOptions = ['pending', 'accepted', 'diagnosing', 'repairing', 'verifying', 'completed', 'completed'];
   const priorityOptions = ['P0', 'P1', 'P1', 'P2', 'P2', 'P3'];
   const faultTypes = ['机械', '电气', '液压', '气动', '软件', '机械', '电气'];
   const descriptions = [
@@ -158,6 +158,8 @@ export async function seedDemoData() {
     const priority = priorityOptions[i % priorityOptions.length];
     const slaMin = { P0: 30, P1: 60, P2: 240, P3: 480 }[priority] || 240;
     const assignee = status !== 'pending' ? repairers[i % repairers.length] : null;
+    const handler = ['diagnosing', 'repairing', 'verifying', 'completed'].includes(status) ? repairers[(i + 1) % repairers.length] : null;
+    const reviewer = ['verifying', 'completed'].includes(status) ? repairers[(i + 2) % repairers.length] : null;
 
     await prisma.workOrder.create({
       data: {
@@ -170,12 +172,17 @@ export async function seedDemoData() {
         faultType: faultTypes[i % faultTypes.length],
         description: descriptions[i % descriptions.length],
         assigneeId: assignee,
+        handlerId: handler,
+        reviewerId: reviewer,
+        completedBy: status === 'completed' ? repairers[i % repairers.length] : null,
         slaResponseMin: 15,
         slaRepairMin: slaMin,
         slaDeadline: new Date(createdAt.getTime() + slaMin * 60 * 1000),
         respondedAt: status !== 'pending' ? new Date(createdAt.getTime() + 5 * 60 * 1000) : null,
-        actualStartAt: ['diagnosing', 'repairing', 'completed'].includes(status)
+        actualStartAt: ['diagnosing', 'repairing', 'verifying', 'completed'].includes(status)
           ? new Date(createdAt.getTime() + 15 * 60 * 1000) : null,
+        verifiedAt: ['verifying', 'completed'].includes(status)
+          ? new Date(createdAt.getTime() + 45 * 60 * 1000) : null,
         actualEndAt: status === 'completed' ? new Date(createdAt.getTime() + (60 + Math.random() * 180) * 60 * 1000) : null,
         rootCause: status === 'completed' ? rootCauses[i % rootCauses.length] : null,
         resolution: status === 'completed' ? resolutions[i % resolutions.length] : null,

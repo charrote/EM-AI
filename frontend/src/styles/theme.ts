@@ -65,7 +65,7 @@ export const WorkOrderStatusLabels: Record<string, string> = {
   accepted: '已接单',
   diagnosing: '诊断中',
   repairing: '维修中',
-  verifying: '验证中',
+  verifying: '待审核',
   completed: '已完成',
   cancelled: '已取消',
 };

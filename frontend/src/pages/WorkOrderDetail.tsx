@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Descriptions, Tag, Button, Steps, Timeline, List, Spin, message,
-  Modal, Input, Rate, Space, Divider,
+  Descriptions, Tag, Button, Timeline, List, Spin, message,
+  Modal, Input, Rate, Space, Divider, Card,
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ToolOutlined,
   RobotOutlined, BookOutlined, FileTextOutlined,
+  RightOutlined, DownOutlined,
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../services/api';
@@ -68,15 +69,27 @@ export default function WorkOrderDetail() {
   if (loading) return <Spin size="large" style={{ display: 'block', margin: '100px auto' }} />;
   if (!wo) return <div style={{ textAlign: 'center', padding: 40, color: Colors.gray500 }}>工单未找到</div>;
 
-  const statusSteps = ['pending', 'accepted', 'diagnosing', 'repairing', 'verifying', 'completed'];
-  const currentStep = statusSteps.indexOf(wo.status);
+  const flowSteps = [
+    { title: '接单', key: 'accepted' as const },
+    { title: '处理', key: 'diagnosing' as const },
+    { title: '审核', key: 'verifying' as const },
+    { title: '完成', key: 'completed' as const },
+  ];
+  const getStepIndex = (status: string) => {
+    if (['accepted', 'diagnosing', 'repairing'].includes(status)) return 1;
+    if (status === 'verifying') return 2;
+    if (status === 'completed') return 3;
+    return 0;
+  };
+  const currentStep = getStepIndex(wo.status);
 
   const nextAction = () => {
     switch (wo.status) {
       case 'pending': return { label: '接单', action: () => handleStatus('accepted'), icon: <CheckCircleOutlined /> };
       case 'accepted': return { label: '开始诊断', action: () => handleStatus('diagnosing'), icon: <ToolOutlined /> };
       case 'diagnosing': return { label: '开始维修', action: () => handleStatus('repairing'), icon: <ToolOutlined /> };
-      case 'repairing': return { label: '维修完成', action: () => setCompleteModal(true), icon: <CheckCircleOutlined /> };
+      case 'repairing': return { label: '提交审核', action: () => handleStatus('verifying'), icon: <CheckCircleOutlined /> };
+      case 'verifying': return { label: '确认完成', action: () => setCompleteModal(true), icon: <CheckCircleOutlined /> };
       default: return null;
     }
   };
@@ -120,17 +133,75 @@ export default function WorkOrderDetail() {
           </Space>
         </div>
 
-        {/* Steps — 移动端用简化的 Steps */}
-        <Steps
-          current={currentStep}
-          size={isMobile ? 'small' : 'small'}
-          style={{ marginBottom: isMobile ? 12 : 20 }}
-          labelPlacement={isMobile ? 'vertical' : 'horizontal'}
-        >
-          {statusSteps.map((s) => (
-            <Steps.Step key={s} title={WorkOrderStatusLabels[s]} />
-          ))}
-        </Steps>
+        {/* 4步流程：接单→处理→审核→完成 */}
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row' as any,
+          alignItems: isMobile ? 'stretch' : 'center',
+          marginBottom: isMobile ? 12 : 20,
+        }}>
+          {flowSteps.map((step, idx) => {
+            let user = '';
+            let time = '';
+            if (step.key === 'accepted') { user = wo.assigneeId; time = wo.respondedAt; }
+            if (step.key === 'diagnosing') { user = wo.handlerId; time = wo.actualStartAt; }
+            if (step.key === 'verifying') { user = wo.reviewerId; time = wo.verifiedAt; }
+            if (step.key === 'completed') { user = wo.completedBy; time = wo.actualEndAt; }
+            const hasData = !!(user || time);
+            const isDone = idx < currentStep;
+            const isCurrent = idx === currentStep;
+            const borderColor = isDone ? Colors.success : isCurrent ? Colors.primary : Colors.gray300;
+            const bgColor = isDone ? '#F0FFF4' : isCurrent ? '#EFF6FF' : Colors.gray50;
+            const titleColor = isDone ? Colors.success : isCurrent ? Colors.primary : Colors.gray400;
+            return (
+              <div key={step.key} style={{
+                flex: isMobile ? 'none' : 1,
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row' as any,
+                alignItems: 'center',
+                width: isMobile ? '100%' : 'auto',
+              }}>
+                <div style={{
+                  flex: 1,
+                  width: '100%',
+                  height: 78,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  border: `2px solid ${borderColor}`,
+                  borderRadius: 8,
+                  padding: '10px 14px',
+                  background: bgColor,
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontWeight: 600, color: titleColor, fontSize: 14, marginBottom: hasData ? 4 : 0 }}>
+                    {step.title}
+                  </div>
+                  {hasData && (
+                    <div style={{ fontSize: 12, color: Colors.gray500, lineHeight: 1.5 }}>
+                      <div>{user || '-'}</div>
+                      <div>{time ? new Date(time).toLocaleString() : '-'}</div>
+                    </div>
+                  )}
+                  {!hasData && !isDone && !isCurrent && (
+                    <div style={{ fontSize: 12, color: Colors.gray400, lineHeight: 1.5 }}>等待中</div>
+                  )}
+                </div>
+                {idx < flowSteps.length - 1 && (
+                  <div style={{
+                    color: Colors.gray400,
+                    fontSize: 16,
+                    padding: isMobile ? '4px 0' : '0 6px',
+                    lineHeight: 1,
+                    flexShrink: 0,
+                  }}>
+                    {isMobile ? <DownOutlined /> : <RightOutlined />}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Details — 移动端1列 */}
         <Descriptions column={isMobile ? 1 : 2} bordered size="small">

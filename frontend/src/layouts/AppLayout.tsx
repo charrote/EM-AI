@@ -7,12 +7,12 @@ import {
   BarChartOutlined, BulbOutlined, BugOutlined,
   WarningOutlined, BookOutlined,
   UserOutlined, SettingOutlined, LogoutOutlined,
-  RobotOutlined, NodeIndexOutlined, CalendarOutlined,
+  RobotOutlined,   NodeIndexOutlined, CalendarOutlined,
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
-  ThunderboltOutlined,
+  ThunderboltOutlined, SoundOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -74,6 +74,7 @@ const scenarioGroups: ScenarioGroup[] = [
     children: [
       { key: 'aura-data-convergence', icon: <NodeIndexOutlined />, label: '多元数据汇聚', roles: ['supervisor', 'executive', 'admin'] },
       { key: 'aura-device-health', icon: <MonitorOutlined />, label: '设备健康基线', roles: ['supervisor', 'executive', 'admin'] },
+      { key: 'nlr-demo', icon: <SoundOutlined />, label: '自然语言报修', roles: ['operator', 'repair', 'supervisor', 'admin'] },
     ],
   },
   {

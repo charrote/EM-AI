@@ -38,6 +38,9 @@ interface AppState {
   // 设备全景画像模态窗
   deviceProfileModalOpen: boolean;
   setDeviceProfileModalOpen: (open: boolean) => void;
+  // NLP 自然语言报修模态窗
+  nlrModalOpen: boolean;
+  setNlrModalOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -113,4 +116,7 @@ export const useStore = create<AppState>((set) => ({
   // 设备全景画像模态窗
   deviceProfileModalOpen: false,
   setDeviceProfileModalOpen: (open) => set({ deviceProfileModalOpen: open }),
+  // NLP 自然语言报修模态窗
+  nlrModalOpen: false,
+  setNlrModalOpen: (open) => set({ nlrModalOpen: open }),
 }));

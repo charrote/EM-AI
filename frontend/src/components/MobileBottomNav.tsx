@@ -1,126 +1,137 @@
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Colors } from '../styles/theme';
-import { useStore } from '../store/useStore';
-import { useMemo } from 'react';
+import { Modal } from 'antd';
 import {
-  WarningOutlined, DashboardOutlined, CheckCircleOutlined,
-  BarChartOutlined, BugOutlined, BuildOutlined,
-  HomeOutlined, OrderedListOutlined, UserOutlined,
-  SafetyCertificateOutlined,
+  BarChartOutlined, DashboardOutlined, OrderedListOutlined,
+  BugOutlined, SafetyCertificateOutlined,
+  CheckCircleOutlined, ToolOutlined,
 } from '@ant-design/icons';
-
-interface NavItem {
-  key: string;
-  icon: React.ReactNode;
-  label: string;
-  path: string;
-}
-
-/**
- * 移动端底部导航栏 — 最多显示 5 个入口
- * 根据角色显示不同的默认页面
- */
-const roleDefaultRoutes: Record<string, string> = {
-  operator: '/report-fault',
-  repair: '/work-orders',
-  supervisor: '/oee',
-  executive: '/executive',
-  admin: '/devices',
-};
+import { Colors } from '../styles/theme';
 
 export default function MobileBottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useStore();
+  const [maintOpen, setMaintOpen] = useState(false);
 
-  const navItems: NavItem[] = useMemo(() => {
-    const role = user.role;
-    const items: NavItem[] = [];
+  const navItems = [
+    { key: 'oee', icon: <BarChartOutlined />, label: 'OEE', path: '/oee' },
+    { key: 'devices', icon: <DashboardOutlined />, label: '设备', path: '/devices' },
+    { key: 'work-orders', icon: <OrderedListOutlined />, label: '工单', path: '/work-orders' },
+    { key: 'report-fault', icon: <BugOutlined />, label: '报修', path: '/report-fault' },
+    { key: 'maintenance', icon: <SafetyCertificateOutlined />, label: '维保', path: '' },
+  ];
 
-    // 根据角色显示不同的底部导航（最多 5 项）
-    if (role === 'operator') {
-      items.push(
-        { key: 'home', icon: <HomeOutlined />, label: '首页', path: roleDefaultRoutes[role] },
-        { key: 'report-fault', icon: <BugOutlined />, label: '快捷报修', path: '/report-fault' },
-        { key: 'devices', icon: <DashboardOutlined />, label: '设备', path: '/devices' },
-        { key: 'work-orders', icon: <OrderedListOutlined />, label: '工单', path: '/work-orders' },
-        { key: 'profile', icon: <UserOutlined />, label: '我的', path: '/' },
-      );
-    } else if (role === 'repair') {
-      items.push(
-        { key: 'home', icon: <HomeOutlined />, label: '首页', path: roleDefaultRoutes[role] },
-        { key: 'work-orders', icon: <OrderedListOutlined />, label: '工单', path: '/work-orders' },
-        { key: 'devices', icon: <DashboardOutlined />, label: '设备', path: '/devices' },
-        { key: 'inspections', icon: <CheckCircleOutlined />, label: '点检', path: '/inspections' },
-        { key: 'profile', icon: <UserOutlined />, label: '我的', path: '/' },
-      );
-    } else if (role === 'supervisor' || role === 'executive') {
-      items.push(
-        { key: 'home', icon: <HomeOutlined />, label: '首页', path: roleDefaultRoutes[role] },
-        { key: 'oee', icon: <BarChartOutlined />, label: 'OEE', path: '/oee' },
-        { key: 'devices', icon: <DashboardOutlined />, label: '设备', path: '/devices' },
-        { key: 'work-orders', icon: <OrderedListOutlined />, label: '工单', path: '/work-orders' },
-        { key: 'inspections', icon: <SafetyCertificateOutlined />, label: '预防', path: '/inspections' },
-      );
-    } else {
-      // admin
-      items.push(
-        { key: 'home', icon: <HomeOutlined />, label: '首页', path: roleDefaultRoutes[role] },
-        { key: 'devices', icon: <DashboardOutlined />, label: '设备', path: '/devices' },
-        { key: 'work-orders', icon: <OrderedListOutlined />, label: '工单', path: '/work-orders' },
-        { key: 'oee', icon: <BarChartOutlined />, label: 'OEE', path: '/oee' },
-        { key: 'report-fault', icon: <BugOutlined />, label: '报修', path: '/report-fault' },
-      );
+  const currentBase = '/' + location.pathname.split('/')[1];
+
+  const isActive = (item: typeof navItems[0]) => {
+    if (item.key === 'maintenance') {
+      return location.pathname.startsWith('/inspections') || location.pathname.startsWith('/maintenance-execute');
     }
-
-    return items;
-  }, [user.role]);
-
-  const currentPath = '/' + location.pathname.split('/')[1];
+    return currentBase === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+  };
 
   return (
-    <div className="mobile-bottom-nav" style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-around',
-      height: 56,
-      paddingBottom: 'env(safe-area-inset-bottom, 0)',
-    }}>
-      {navItems.map((item) => {
-        // 根路径（/）高亮首页按钮；其他路径按常规匹配
-        const isActive = location.pathname === '/'
-          ? item.key === 'home'
-          : currentPath === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-        return (
+    <>
+      <div className="mobile-bottom-nav" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        height: 56,
+        paddingBottom: 'env(safe-area-inset-bottom, 0)',
+      }}>
+        {navItems.map((item) => {
+          const active = isActive(item);
+          return (
+            <div
+              key={item.key}
+              onClick={() => {
+                if (item.key === 'maintenance') {
+                  setMaintOpen(true);
+                } else {
+                  navigate(item.path);
+                }
+              }}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 2,
+                padding: '4px 8px',
+                cursor: 'pointer',
+                color: active ? Colors.primary : Colors.gray400,
+                transition: 'color 0.2s',
+                minWidth: 48,
+              }}
+            >
+              <span style={{ fontSize: 20, lineHeight: 1 }}>
+                {item.icon}
+              </span>
+              <span style={{
+                fontSize: 10,
+                fontWeight: active ? 600 : 400,
+                lineHeight: 1.2,
+              }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <Modal
+        open={maintOpen}
+        onCancel={() => setMaintOpen(false)}
+        footer={null}
+        width={320}
+        closable={false}
+        centered
+        destroyOnClose
+      >
+        <div style={{ textAlign: 'center', marginBottom: 20, fontSize: 16, fontWeight: 600, color: Colors.gray800 }}>
+          选择维保类型
+        </div>
+        <div style={{ display: 'flex', gap: 16 }}>
           <div
-            key={item.key}
-            onClick={() => navigate(item.path)}
+            onClick={() => { setMaintOpen(false); navigate('/inspections'); }}
             style={{
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              padding: '4px 8px',
+              gap: 10,
+              padding: '24px 16px',
+              borderRadius: 12,
+              border: `1px solid ${Colors.gray200}`,
               cursor: 'pointer',
-              color: isActive ? Colors.primary : Colors.gray400,
-              transition: 'color 0.2s',
-              minWidth: 48,
+              background: '#F0F9FF',
+              transition: 'all 0.2s',
             }}
           >
-            <span style={{ fontSize: 20, lineHeight: 1 }}>
-              {item.icon}
-            </span>
-            <span style={{
-              fontSize: 10,
-              fontWeight: isActive ? 600 : 400,
-              lineHeight: 1.2,
-            }}>
-              {item.label}
-            </span>
+            <CheckCircleOutlined style={{ fontSize: 32, color: Colors.primary }} />
+            <span style={{ fontSize: 15, fontWeight: 600, color: Colors.gray800 }}>点检</span>
           </div>
-        );
-      })}
-    </div>
+          <div
+            onClick={() => { setMaintOpen(false); navigate('/maintenance-execute'); }}
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 10,
+              padding: '24px 16px',
+              borderRadius: 12,
+              border: `1px solid ${Colors.gray200}`,
+              cursor: 'pointer',
+              background: '#FFF7ED',
+              transition: 'all 0.2s',
+            }}
+          >
+            <ToolOutlined style={{ fontSize: 32, color: Colors.warning }} />
+            <span style={{ fontSize: 15, fontWeight: 600, color: Colors.gray800 }}>保养</span>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, theme, Spin, Modal } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
@@ -20,6 +21,7 @@ const ImprovementProjects = lazy(() => import('./pages/ImprovementProjects'));
 const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
 const ExecutiveDashboard = lazy(() => import('./pages/ExecutiveDashboard'));
 const ReportFault = lazy(() => import('./pages/ReportFault'));
+import NlrDemo from './pages/NlrDemo';
 const OrganizationPage = lazy(() => import('./pages/OrganizationPage'));
 const DeviceTypePage = lazy(() => import('./pages/DeviceTypePage'));
 const DeviceManagePage = lazy(() => import('./pages/DeviceManagePage'));
@@ -73,6 +75,10 @@ function App() {
     useStore((s) => s.deviceProfileModalOpen),
     useStore((s) => s.setDeviceProfileModalOpen),
   ];
+  const [nlrModalOpen, setNlrModalOpen] = [
+    useStore((s) => s.nlrModalOpen),
+    useStore((s) => s.setNlrModalOpen),
+  ];
 
   // 监听设备全景画像的"穿透查询"，自动关闭画像模态窗并打开目标模态窗
   useEffect(() => {
@@ -95,6 +101,7 @@ function App() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <ConfigProvider
       locale={zhCN}
       theme={{
@@ -126,6 +133,7 @@ function App() {
       }}
     >
       <BrowserRouter>
+        <ErrorBoundary>
         <Suspense fallback={<PageLoading />}>
         <Routes>
           {/* 登录页（独立布局，无侧栏） */}
@@ -164,6 +172,7 @@ function App() {
 
             {/* ─── 故障管理 ─── */}
             <Route path="report-fault" element={<ReportFault />} />
+            <Route path="nlr-demo" element={<ErrorBoundary><NlrDemo /></ErrorBoundary>} />
             <Route path="devices" element={<DeviceList />} />
             <Route path="devices/:id" element={<DeviceDetail />} />
             <Route path="work-orders" element={<WorkOrderList />} />
@@ -200,6 +209,7 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
         </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
 
       {/* ─── AURA 多元数据汇聚模态窗 ─── */}
@@ -316,6 +326,28 @@ function App() {
           <AuraDeviceProfile />
         </div>
       </Modal>
+      {/* ─── NLP 自然语言报修 — 纯 DOM 覆盖层（替换 Modal）─── */}
+      {nlrModalOpen && createPortal(
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1050,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            style={{
+              width: '94vw', maxWidth: 680, height: '90vh',
+              background: '#FFFFFF', borderRadius: 12,
+              display: 'flex', flexDirection: 'column',
+              overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+            }}
+          >
+            <ErrorBoundary><NlrDemo /></ErrorBoundary>
+          </div>
+        </div>,
+        document.body,
+      )}
       </ConfigProvider>
 
       <style>{`
@@ -336,6 +368,7 @@ function App() {
         }
       `}</style>
     </ConfigProvider>
+      </ErrorBoundary>
   );
 }
 

@@ -11,7 +11,7 @@ import {
   RightOutlined,
   DownOutlined,
 } from '@ant-design/icons';
-import { Input, Tooltip } from 'antd';
+import { Input } from 'antd';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
@@ -60,7 +60,7 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'The Brain',
     color: '#8B5CF6',
     children: [
-      { key: 'nlr', label: '自然语言报修', desc: '支持语音/文字描述故障，自动提取设备、部位、现象等关键信息', status: 'developing' },
+      { key: 'nlr', label: '自然语言报修', desc: '支持语音/文字描述故障，自动提取设备、部位、现象等关键信息', status: 'developing', route: '/nlr-demo' },
       { key: 'ai-diagnosis', label: 'AI 辅助诊断', desc: '基于报修信息与实时数据，给出故障原因 TOP-3 及排查步骤', status: 'planned' },
       { key: 'knowledge-mining', label: '知识自动沉淀', desc: '维修完成后自动提取 "故障-原因-方案" 三元组', status: 'planned' },
       { key: 'qa', label: '智能问答', desc: '通过自然语言实时检索设备手册、故障代码及处理经验', status: 'developing' },
@@ -112,10 +112,25 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  const handleFeatureClick = useCallback((key: string, route: string) => {
+    setAISidebarOpen(false);
+    if (key === 'data-cleaning') {
+      setDataCleaningModalOpen(true);
+    } else if (key === 'health-baseline') {
+      setDeviceHealthModalOpen(true);
+    } else if (key === 'device-profile') {
+      setDeviceProfileModalOpen(true);
+    } else if (key === 'nlr') {
+      setNlrModalOpen(true);
+    } else if (key === 'data-collection' || key === 'qa') {
+      setAuraModalOpen(true);
+    }
+  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen]);
   const inputRef = useRef<any>(null);
 
   // 边栏打开时自动聚焦搜索框
@@ -383,60 +398,46 @@ export default function AISidebar() {
                   <div style={{ paddingLeft: 38, paddingRight: 4 }}>
                     {category.children.map((child) => {
                       return (
-                        <Tooltip
+                        <div
                           key={child.key}
-                          title={child.desc}
-                          placement="left"
-                          mouseEnterDelay={0.5}
+                          onClick={() => {
+                            if (child.key === 'nlr') {
+                              setAISidebarOpen(false);
+                              setNlrModalOpen(true);
+                            } else if (child.route) {
+                              handleFeatureClick(child.key, child.route);
+                            }
+                          }}
+                          data-testid={child.key}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 8,
+                            padding: '8px 8px',
+                            borderRadius: 6,
+                            cursor: child.route ? 'pointer' : 'default',
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray50; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
                           <div
-                            onClick={() => {
-                              if (child.route) {
-                                setAISidebarOpen(false);
-                                if (child.key === 'data-cleaning') {
-                                  setTimeout(() => setDataCleaningModalOpen(true), 350);
-                                } else if (child.key === 'health-baseline') {
-                                  setTimeout(() => setDeviceHealthModalOpen(true), 350);
-                                } else if (child.key === 'device-profile') {
-                                  setTimeout(() => setDeviceProfileModalOpen(true), 350);
-                                } else {
-                                  setTimeout(() => setAuraModalOpen(true), 350);
-                                }
-                              }
-                            }}
                             style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 8,
-                              padding: '8px 8px',
-                              borderRadius: 6,
-                              cursor: child.route ? 'pointer' : 'default',
-                              transition: 'background 0.15s',
+                              width: 6,
+                              height: 6,
+                              borderRadius: '50%',
+                              background: category.color,
+                              marginTop: 6,
+                              flexShrink: 0,
+                              opacity: 0.5,
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray50; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <div
-                              style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: category.color,
-                                marginTop: 6,
-                                flexShrink: 0,
-                                opacity: 0.5,
-                              }}
-                            />
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 12, fontWeight: 500, color: Colors.gray700 }}>
-                                {child.label}
-                              </div>
-                              <div style={{ fontSize: 11, color: Colors.gray400, marginTop: 1, lineHeight: 1.4 }}>
-                                {child.desc}
-                              </div>
+                          />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: Colors.gray700 }}>
+                              {child.label}
                             </div>
                           </div>
-                        </Tooltip>
+                        </div>
                       );
                     })}
                   </div>
