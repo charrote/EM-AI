@@ -6,7 +6,7 @@ import {
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
   ReloadOutlined, QrcodeOutlined, SwapOutlined, BuildOutlined,
-  ToolOutlined, InboxOutlined,
+  ToolOutlined, InboxOutlined, PrinterOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
@@ -65,6 +65,22 @@ export default function ToolingList() {
   // Detail modal
   const [detailTarget, setDetailTarget] = useState<Tooling | null>(null);
   const [detailModal, setDetailModal] = useState(false);
+
+  // Print label
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [selectedPrintIds, setSelectedPrintIds] = useState<string[]>([]);
+
+  const handlePrintLabel = () => {
+    if (selectedPrintIds.length === 0) {
+      message.warning('请至少选择一个工治具');
+      return;
+    }
+    const items = data.filter(d => selectedPrintIds.includes(d.id));
+    const labelText = items.map(i => `[${i.code}] ${i.name} (${i.type})`).join('\n');
+    message.success(`已打印 ${items.length} 张标签\n${labelText}`);
+    setPrintModalOpen(false);
+    setSelectedPrintIds([]);
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -275,9 +291,14 @@ export default function ToolingList() {
             </Space>
           </Col>
           <Col xs={24} sm={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-              新增工治具
-            </Button>
+            <Space>
+              <Button icon={<PrinterOutlined />} onClick={() => setPrintModalOpen(true)}>
+                打印标签
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                新增工治具
+              </Button>
+            </Space>
           </Col>
         </Row>
       </Card>
@@ -421,6 +442,39 @@ export default function ToolingList() {
             <Descriptions.Item label="关联设备">{detailTarget.device?.name || '-'}</Descriptions.Item>
           </Descriptions>
         )}
+      </Modal>
+
+      {/* ─── 打印标签 Modal ─── */}
+      <Modal
+        title={<Space><PrinterOutlined /> 打印标签</Space>}
+        open={printModalOpen}
+        onCancel={() => { setPrintModalOpen(false); setSelectedPrintIds([]); }}
+        onOk={handlePrintLabel}
+        okText="打印"
+        width={600}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text type="secondary">请选择需要打印标签的工治具：</Text>
+        </div>
+        <Table
+          rowSelection={{
+            type: 'checkbox',
+            selectedRowKeys: selectedPrintIds,
+            onChange: (keys) => setSelectedPrintIds(keys as string[]),
+          }}
+          columns={[
+            { title: '编码', dataIndex: 'code', width: 140, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+            { title: '名称', dataIndex: 'name', width: 160, ellipsis: true },
+            { title: '类型', dataIndex: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
+            { title: '储位', dataIndex: 'location', width: 120, render: (v: string | null) => v || '-' },
+          ]}
+          dataSource={data}
+          rowKey="id"
+          size="small"
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          scroll={{ y: 300 }}
+        />
       </Modal>
     </div>
   );

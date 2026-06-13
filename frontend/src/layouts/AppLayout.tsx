@@ -12,7 +12,7 @@ import {
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
-  ThunderboltOutlined,
+  ThunderboltOutlined, ArrowUpOutlined, ArrowDownOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -110,6 +110,8 @@ const scenarioGroups: ScenarioGroup[] = [
     roles: ['repair', 'supervisor', 'admin'],
     children: [
       { key: 'toolings', icon: <BuildOutlined />, label: '工治具档案', roles: ['repair', 'supervisor', 'admin'] },
+      { key: 'tooling-mount', icon: <ArrowUpOutlined />, label: '工治具上机', roles: ['repair', 'supervisor', 'admin'] },
+      { key: 'tooling-dismount', icon: <ArrowDownOutlined />, label: '工治具下机', roles: ['repair', 'supervisor', 'admin'] },
       { key: 'tooling-maintenance', icon: <SafetyOutlined />, label: '工治具保养', roles: ['repair', 'supervisor', 'admin'] },
     ],
   },
