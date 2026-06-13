@@ -15,7 +15,8 @@ import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { StatCol } from '../styles/responsive';
 
-const { Text, TextArea } = Typography;
+const { Text } = Typography;
+const { TextArea } = Input;
 
 const PDCA_STEPS = ['plan', 'do', 'check', 'act'];
 const PDCA_LABELS: Record<string, string> = {
