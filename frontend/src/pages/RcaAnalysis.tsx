@@ -65,6 +65,7 @@ export default function RcaAnalysis() {
   // Fishbone
   const [fishboneData, setFishboneData] = useState<Record<string, string[]>>({});
   const [fishboneInputs, setFishboneInputs] = useState<Record<string, string>>({});
+  const [step, setStep] = useState<'why' | 'fishbone' | 'result'>('why');
 
   // Result
   const [rootCause, setRootCause] = useState('');
@@ -98,6 +99,7 @@ export default function RcaAnalysis() {
     setRootCause('');
     setImprovement('');
     setRcaId(null);
+    setStep('why');
   };
 
   const handleStartAnalysis = async () => {
@@ -144,7 +146,7 @@ export default function RcaAnalysis() {
   };
 
   const handleCompleteWhy = () => {
-    setActiveTab('fishbone');
+    setStep('fishbone');
   };
 
   // ── 鱼骨图 ────────────────────────────────────
@@ -316,10 +318,11 @@ export default function RcaAnalysis() {
     });
 
     return {
-      graphic: { elements },
+      graphic: { elements, $action: 'replace' },
       xAxis: { show: false, min: 0, max: w },
       yAxis: { show: false, min: 0, max: h },
       grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      series: [{ type: 'scatter', data: [] }],
       tooltip: {
         formatter: () => {
           let html = '<b>鱼骨图分析</b><br/>';
@@ -444,10 +447,11 @@ export default function RcaAnalysis() {
     });
 
     return {
-      graphic: { elements },
+      graphic: { elements, $action: 'replace' },
       xAxis: { show: false, min: 0, max: w },
       yAxis: { show: false, min: 0, max: h },
       grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      series: [{ type: 'scatter', data: [] }],
       tooltip: {
         formatter: () => {
           let html = '<b>鱼骨图分析</b><br/>';
@@ -592,14 +596,14 @@ export default function RcaAnalysis() {
                   )}
 
                   {/* Step 1b: All 5 whys done */}
-                  {rcaId && whyChain.length >= 5 && activeTab === 'new' && (
+                  {rcaId && whyChain.length >= 5 && step === 'why' && (
                     <div>
                       <Result
                         status="success"
                         title="5-Why 分析完成"
                         subTitle="现在进行鱼骨图分析，从多维度查找根因"
                         extra={
-                          <Button type="primary" onClick={() => setActiveTab('fishbone')}>
+                          <Button type="primary" onClick={() => setStep('fishbone')}>
                             进入鱼骨图分析
                           </Button>
                         }
@@ -617,8 +621,8 @@ export default function RcaAnalysis() {
                     </div>
                   )}
 
-                  {/* Fishbone section - shown via tab */}
-                  {rcaId && activeTab === 'fishbone' && (
+                  {/* Fishbone section */}
+                  {rcaId && step === 'fishbone' && (
                     <div>
                       <Title level={5} style={{ marginBottom: 16 }}>
                         <BarChartOutlined /> 鱼骨图分析 (Ishikawa)
@@ -629,7 +633,7 @@ export default function RcaAnalysis() {
 
                       {/* Visual Fishbone Chart */}
                       <Card size="small" style={{ marginBottom: 16, background: Colors.gray50 }}>
-                        <ReactECharts option={fishboneChartOption} style={{ height: isMobile ? 320 : 420 }} />
+                        <ReactECharts option={fishboneChartOption} notMerge style={{ height: isMobile ? 320 : 420 }} />
                       </Card>
 
                       {/* Input cards */}
@@ -678,7 +682,7 @@ export default function RcaAnalysis() {
                       <div style={{ textAlign: 'center' }}>
                         <Button
                           type="primary"
-                          onClick={() => setActiveTab('result')}
+                          onClick={() => setStep('result')}
                           icon={<CheckCircleOutlined />}
                         >
                           完成根因分析，制定改善对策
@@ -688,7 +692,7 @@ export default function RcaAnalysis() {
                   )}
 
                   {/* Result section */}
-                  {rcaId && activeTab === 'result' && (
+                  {rcaId && step === 'result' && (
                     <div>
                       <Title level={5}>总结与改善</Title>
                       <Form layout="vertical">
@@ -824,7 +828,7 @@ export default function RcaAnalysis() {
                       <>
                         <Divider>鱼骨图分析</Divider>
                         <Card size="small" style={{ marginBottom: 16, background: Colors.gray50 }}>
-                          <ReactECharts option={historyFishboneChartOption} style={{ height: isMobile ? 320 : 420 }} />
+                          <ReactECharts option={historyFishboneChartOption} notMerge style={{ height: isMobile ? 320 : 420 }} />
                         </Card>
                         {FISHBONE_CATEGORIES.map(cat => {
                           const items = (selectedAnalysis.fishboneData as Record<string, string[]>)[cat.key] || [];
