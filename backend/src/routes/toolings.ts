@@ -117,7 +117,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/toolings/:id/mount — 工治具上机（挂载到设备）
+// PUT /api/toolings/:id/mount — 单个工治具上机
 router.put('/:id/mount', async (req: Request, res: Response) => {
   try {
     const { deviceId } = req.body;
@@ -133,7 +133,26 @@ router.put('/:id/mount', async (req: Request, res: Response) => {
   }
 });
 
-// PUT /api/toolings/:id/dismount — 工治具下机
+// POST /api/toolings/batch-mount — 批量上机
+router.post('/batch-mount', async (req: Request, res: Response) => {
+  try {
+    const { deviceId, toolingIds } = req.body;
+    if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
+    if (!toolingIds || !Array.isArray(toolingIds) || toolingIds.length === 0) {
+      return res.status(400).json({ error: 'toolingIds must be a non-empty array' });
+    }
+
+    const result = await prisma.tooling.updateMany({
+      where: { id: { in: toolingIds } },
+      data: { status: 'in_use', deviceId },
+    });
+    res.json({ data: { count: result.count } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to batch mount toolings' });
+  }
+});
+
+// PUT /api/toolings/:id/dismount — 单个工治具下机
 router.put('/:id/dismount', async (req: Request, res: Response) => {
   try {
     const tooling = await prisma.tooling.update({
@@ -143,6 +162,24 @@ router.put('/:id/dismount', async (req: Request, res: Response) => {
     res.json({ data: tooling });
   } catch (err) {
     res.status(500).json({ error: 'Failed to dismount tooling' });
+  }
+});
+
+// POST /api/toolings/batch-dismount — 批量下机
+router.post('/batch-dismount', async (req: Request, res: Response) => {
+  try {
+    const { toolingIds } = req.body;
+    if (!toolingIds || !Array.isArray(toolingIds) || toolingIds.length === 0) {
+      return res.status(400).json({ error: 'toolingIds must be a non-empty array' });
+    }
+
+    const result = await prisma.tooling.updateMany({
+      where: { id: { in: toolingIds } },
+      data: { status: 'in_stock', deviceId: null },
+    });
+    res.json({ data: { count: result.count } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to batch dismount toolings' });
   }
 });
 

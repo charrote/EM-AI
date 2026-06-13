@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Form, Input, Select, message, Radio, Result, Row, Col, Descriptions, Tag, Badge, Table, Typography } from 'antd';
-import { ScanOutlined, DesktopOutlined, ToolOutlined, SwapOutlined } from '@ant-design/icons';
+import { Card, Button, Form, Input, Select, message, Radio, Row, Col, Descriptions, Tag, Badge, Table, Space, Typography } from 'antd';
+import { ScanOutlined, DesktopOutlined, ToolOutlined, SwapOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
@@ -42,6 +42,7 @@ export default function ToolingDismount() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [deviceToolings, setDeviceToolings] = useState<Tooling[]>([]);
   const [deviceToolingsLoading, setDeviceToolingsLoading] = useState(false);
+  const [selectedDismountIds, setSelectedDismountIds] = useState<string[]>([]);
 
   // Method 2: scan tooling → dismount
   const [toolingCode, setToolingCode] = useState('');
@@ -50,7 +51,6 @@ export default function ToolingDismount() {
   // Common
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // ── Method 1: Device search ─────────────────────────────
   const fetchDevices = useCallback(async () => {
@@ -72,6 +72,7 @@ export default function ToolingDismount() {
   const handleDeviceSelect = async (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
     setSelectedDevice(device || null);
+    setSelectedDismountIds([]);
     if (device) {
       setDeviceToolingsLoading(true);
       try {
@@ -109,7 +110,7 @@ export default function ToolingDismount() {
           onClick={() => handleDismount(r.id, r.code)}
           disabled={r.status !== 'in_use'}
         >
-          工治具下机
+          单个下机
         </Button>
       ),
     },
@@ -139,19 +140,50 @@ export default function ToolingDismount() {
   };
 
   // ── Dismount ────────────────────────────────────────────
+  const refreshDeviceToolings = async () => {
+    if (!selectedDevice) return;
+    try {
+      const res = await api.get(`/toolings/by-device/${selectedDevice.id}`);
+      setDeviceToolings(res.data.data || []);
+    } catch {
+      message.error('刷新设备工治具列表失败');
+    }
+  };
+
   const handleDismount = async (toolingId: string, toolingCode: string) => {
     setSubmitting(true);
     try {
       await api.put(`/toolings/${toolingId}/dismount`);
-      setResult({ success: true, message: `工治具 ${toolingCode} 已成功下机` });
+      message.success(`工治具 ${toolingCode} 已成功下机`);
+      await refreshDeviceToolings();
+      setSelectedDismountIds(prev => prev.filter(id => id !== toolingId));
     } catch {
-      setResult({ success: false, message: '下机操作失败，请重试' });
+      message.error('下机操作失败，请重试');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleMethod2Dismount = () => {
+  const handleBatchDismount = async () => {
+    if (selectedDismountIds.length === 0) {
+      message.warning('请至少选择一个工治具');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await api.post('/toolings/batch-dismount', { toolingIds: selectedDismountIds });
+      const count = res.data.data?.count || selectedDismountIds.length;
+      message.success(`${count} 个工治具已成功下机`);
+      await refreshDeviceToolings();
+      setSelectedDismountIds([]);
+    } catch {
+      message.error('批量下机操作失败，请重试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleMethod2Dismount = async () => {
     if (!scannedTooling) {
       message.warning('请先扫描工治具');
       return;
@@ -160,46 +192,39 @@ export default function ToolingDismount() {
       message.warning('该工治具不在使用中，无需下机');
       return;
     }
-    handleDismount(scannedTooling.id, scannedTooling.code);
+    setSubmitting(true);
+    try {
+      await api.put(`/toolings/${scannedTooling.id}/dismount`);
+      message.success(`工治具 ${scannedTooling.code} 已成功下机`);
+      setScannedTooling(null);
+      setToolingCode('');
+    } catch {
+      message.error('下机操作失败，请重试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
-    setResult(null);
     setSelectedDevice(null);
     setDeviceToolings([]);
     setDeviceSearch('');
     setToolingCode('');
     setScannedTooling(null);
+    setSelectedDismountIds([]);
   };
-
-  if (result) {
-    return (
-      <Card>
-        <Result
-          status={result.success ? 'success' : 'error'}
-          title={result.success ? '下机成功' : '下机失败'}
-          subTitle={result.message}
-          extra={[
-            <Button type="primary" key="again" onClick={handleReset}>
-              继续下机
-            </Button>,
-          ]}
-        />
-      </Card>
-    );
-  }
 
   return (
     <div>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Radio.Group
           value={method}
-          onChange={e => { setMethod(e.target.value); setSelectedDevice(null); setDeviceToolings([]); setScannedTooling(null); setToolingCode(''); }}
+          onChange={e => { setMethod(e.target.value); setSelectedDevice(null); setDeviceToolings([]); setScannedTooling(null); setToolingCode(''); setSelectedDismountIds([]); }}
           optionType="button"
           buttonStyle="solid"
         >
-          <Radio.Button value="method1">方式一：扫描设备下机</Radio.Button>
-          <Radio.Button value="method2">方式二：扫描工治具下机</Radio.Button>
+          <Radio.Button value="method1">扫描设备下机</Radio.Button>
+          <Radio.Button value="method2">扫描工治具下机</Radio.Button>
         </Radio.Group>
       </Card>
 
@@ -207,7 +232,7 @@ export default function ToolingDismount() {
         <>
           <Card title={<span><DesktopOutlined /> 扫描设备</span>} size="small" style={{ marginBottom: 12 }}>
             <Row gutter={16}>
-              <Col span={12}>
+              <Col xs={24} sm={12}>
                 <Form layout="vertical">
                   <Form.Item label="设备编码 / 名称">
                     <Input
@@ -220,7 +245,7 @@ export default function ToolingDismount() {
                   </Form.Item>
                 </Form>
               </Col>
-              <Col span={12}>
+              <Col xs={24} sm={12}>
                 <Form layout="vertical">
                   <Form.Item label="选择设备">
                     <Select
@@ -250,16 +275,39 @@ export default function ToolingDismount() {
               title={<span><ToolOutlined /> {selectedDevice.name} - 设备上的工治具</span>}
               size="small"
               styles={{ body: { padding: 0 } }}
+              extra={
+                <Space>
+                  <Text style={{ color: Colors.gray500 }}>
+                    {selectedDismountIds.length > 0 ? `已选 ${selectedDismountIds.length} 个` : ''}
+                  </Text>
+                  <Button
+                    type="primary"
+                    icon={<DeleteOutlined />}
+                    onClick={handleBatchDismount}
+                    disabled={selectedDismountIds.length === 0}
+                    loading={submitting}
+                    size="small"
+                  >
+                    批量下机 ({selectedDismountIds.length})
+                  </Button>
+                </Space>
+              }
             >
               <Table
+                rowKey="id"
                 columns={columns}
                 dataSource={deviceToolings}
-                rowKey="id"
                 loading={deviceToolingsLoading}
                 size="small"
                 scroll={{ x: 'max-content' }}
                 pagination={false}
                 locale={{ emptyText: '该设备上暂无工治具' }}
+                rowSelection={{
+                  type: 'checkbox',
+                  selectedRowKeys: selectedDismountIds,
+                  onChange: (keys) => setSelectedDismountIds(keys as string[]),
+                  getCheckboxProps: (r: Tooling) => ({ disabled: r.status !== 'in_use' }),
+                }}
               />
             </Card>
           )}
@@ -269,7 +317,7 @@ export default function ToolingDismount() {
       {method === 'method2' && (
         <Card title={<span><ScanOutlined /> 扫描工治具</span>} size="small">
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form layout="vertical">
                 <Form.Item label="工治具编码">
                   <Input.Search

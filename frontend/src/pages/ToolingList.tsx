@@ -58,7 +58,7 @@ export default function ToolingList() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [statusTarget, setStatusTarget] = useState<Tooling | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
-  const { isMobile } = useResponsive();
+  const { isMobile, isDesktop } = useResponsive();
   const [form] = Form.useForm();
   const [statusForm] = Form.useForm();
 
@@ -175,28 +175,28 @@ export default function ToolingList() {
   // ── 表格列定义 ──────────────────────────────
   const columns: ColumnsType<Tooling> = [
     {
-      title: '编码', dataIndex: 'code', key: 'code', width: 140,
+      title: '编码', dataIndex: 'code', key: 'code', width: isDesktop ? 200 : 140,
       render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
     },
-    { title: '名称', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
+    { title: '名称', dataIndex: 'name', key: 'name', width: isDesktop ? 300 : 180, ellipsis: true },
     {
-      title: '类型', dataIndex: 'type', key: 'type', width: 80,
+      title: '类型', dataIndex: 'type', key: 'type', width: isDesktop ? 100 : 80,
       render: (v: string) => <Tag>{v}</Tag>,
     },
     {
-      title: '状态', dataIndex: 'status', key: 'status', width: 100,
+      title: '状态', dataIndex: 'status', key: 'status', width: isDesktop ? 120 : 100,
       render: (v: string) => {
         const cfg = STATUS_CONFIG[v];
         return <Badge color={cfg?.color} text={cfg?.label || v} />;
       },
     },
     {
-      title: '关联设备', key: 'device', width: 140, ellipsis: true,
+      title: '关联设备', key: 'device', width: isDesktop ? 240 : 140, ellipsis: true,
       render: (_: unknown, r: Tooling) => r.device ? <Text>{r.device.name}</Text> : <Text type="secondary">-</Text>,
     },
-    { title: '储位', dataIndex: 'location', key: 'location', width: 120, ellipsis: true },
+    { title: '储位', dataIndex: 'location', key: 'location', width: isDesktop ? 180 : 120, ellipsis: true },
     {
-      title: '寿命', key: 'life', width: 120,
+      title: '寿命', key: 'life', width: isDesktop ? 180 : 140,
       render: (_: unknown, r: Tooling) => {
         if (!r.theoreticalLife) return <Text type="secondary">-</Text>;
         const pct = r.lifeRemaining != null ? Math.round((r.lifeRemaining / r.theoreticalLife) * 100) : 100;
@@ -209,7 +209,7 @@ export default function ToolingList() {
       },
     },
     {
-      title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, ellipsis: true,
+      title: '供应商', dataIndex: 'supplier', key: 'supplier', width: isDesktop ? 200 : 120, ellipsis: true,
       render: (v: string | null) => v || <Text type="secondary">-</Text>,
     },
     {
@@ -231,44 +231,58 @@ export default function ToolingList() {
       ),
     },
   ];
+  const tableWidth = isDesktop ? 1700 : 1200;
 
   return (
-    <div>
+    <div style={{ maxWidth: isDesktop ? '100%' : undefined }}>
+      {/* ─── 页面标题 ─── */}
+      <div style={{
+        display: isDesktop ? 'flex' : 'none',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+      }}>
+        <div>
+          <Title level={4} style={{ margin: 0, fontWeight: 600 }}>工治具档案</Title>
+          <Text type="secondary" style={{ fontSize: 13 }}>管理所有工装、治具、刀具、量具的统一档案</Text>
+        </div>
+      </div>
+
       {/* ─── 统计卡片 ─── */}
-      <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+      <Row gutter={[isDesktop ? 16 : 12, 12]} style={{ marginBottom: isDesktop ? 20 : 16 }}>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-            <Statistic title="工治具总数" value={stats.total} prefix={<BuildOutlined />} valueStyle={{ fontSize: 22 }} />
+          <Card size="small" styles={{ body: { padding: isDesktop ? '16px 24px' : '12px 16px' } }}>
+            <Statistic title="工治具总数" value={stats.total} prefix={<BuildOutlined />} valueStyle={{ fontSize: isDesktop ? 26 : 22 }} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-            <Statistic title="在库" value={stats.inStock} prefix={<InboxOutlined />} valueStyle={{ fontSize: 22, color: Colors.success }} />
+          <Card size="small" styles={{ body: { padding: isDesktop ? '16px 24px' : '12px 16px' } }}>
+            <Statistic title="在库" value={stats.inStock} prefix={<InboxOutlined />} valueStyle={{ fontSize: isDesktop ? 26 : 22, color: Colors.success }} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-            <Statistic title="在用" value={stats.inUse} prefix={<ToolOutlined />} valueStyle={{ fontSize: 22, color: Colors.primary }} />
+          <Card size="small" styles={{ body: { padding: isDesktop ? '16px 24px' : '12px 16px' } }}>
+            <Statistic title="在用" value={stats.inUse} prefix={<ToolOutlined />} valueStyle={{ fontSize: isDesktop ? 26 : 22, color: Colors.primary }} />
           </Card>
         </Col>
         <Col xs={12} sm={6}>
-          <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-            <Statistic title="维护中" value={stats.maintenance} prefix={<BuildOutlined />} valueStyle={{ fontSize: 22, color: Colors.warning }} />
+          <Card size="small" styles={{ body: { padding: isDesktop ? '16px 24px' : '12px 16px' } }}>
+            <Statistic title="维护中" value={stats.maintenance} prefix={<BuildOutlined />} valueStyle={{ fontSize: isDesktop ? 26 : 22, color: Colors.warning }} />
           </Card>
         </Col>
       </Row>
 
       {/* ─── 工具栏 ─── */}
-      <Card size="small" styles={{ body: { padding: '12px 16px' } }} style={{ marginBottom: 12 }}>
+      <Card size="small" styles={{ body: { padding: isDesktop ? '16px 24px' : '12px 16px' } }} style={{ marginBottom: 12 }}>
         <Row gutter={[12, 12]} align="middle" justify="space-between">
-          <Col xs={24} sm={16}>
+          <Col xs={24} md={16}>
             <Space wrap size="small">
               <Input
                 placeholder="搜索编码/名称..."
                 prefix={<SearchOutlined />}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ width: 200 }}
+                style={{ width: isDesktop ? 280 : 200 }}
                 allowClear
               />
               <Select
@@ -276,7 +290,7 @@ export default function ToolingList() {
                 value={typeFilter}
                 onChange={setTypeFilter}
                 allowClear
-                style={{ width: 100 }}
+                style={{ width: isDesktop ? 130 : 100 }}
                 options={TYPE_OPTIONS.map(t => ({ value: t, label: t }))}
               />
               <Select
@@ -284,13 +298,13 @@ export default function ToolingList() {
                 value={statusFilter}
                 onChange={setStatusFilter}
                 allowClear
-                style={{ width: 110 }}
+                style={{ width: isDesktop ? 140 : 110 }}
                 options={STATUS_OPTIONS}
               />
               <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
             </Space>
           </Col>
-          <Col xs={24} sm={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>
+          <Col xs={24} md={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>
             <Space>
               <Button icon={<PrinterOutlined />} onClick={() => setPrintModalOpen(true)}>
                 打印标签
@@ -304,13 +318,13 @@ export default function ToolingList() {
       </Card>
 
       {/* ─── 表格 ─── */}
-      <Card size="small" styles={{ body: { padding: 0 } }}>
+      <Card size="small" styles={{ body: { padding: 0 } }} style={{ borderRadius: 8, overflow: 'hidden' }}>
         <Table
           columns={columns}
           dataSource={data}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 'max-content' }}
+          scroll={{ x: tableWidth }}
           size="small"
           pagination={{ pageSize: 20, showSizeChanger: true, pageSizeOptions: ['10', '20', '50', '100'], showTotal: t => `共 ${t} 条` }}
           onRow={(record) => ({
@@ -327,11 +341,11 @@ export default function ToolingList() {
         onCancel={() => setModalOpen(false)}
         onOk={handleSubmit}
         confirmLoading={submitting}
-        width={560}
+        width={isDesktop ? 640 : 560}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Row gutter={16}>
+          <Row gutter={isDesktop ? 24 : 16}>
             <Col span={12}>
               <Form.Item name="code" label="编码" rules={[{ required: true }]}>
                 <Input placeholder="自动生成或手动输入" />
@@ -343,7 +357,7 @@ export default function ToolingList() {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
+          <Row gutter={isDesktop ? 24 : 16}>
             <Col span={12}>
               <Form.Item name="type" label="类型" rules={[{ required: true }]}>
                 <Select options={TYPE_OPTIONS.map(t => ({ value: t, label: t }))} />
@@ -355,7 +369,7 @@ export default function ToolingList() {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
+          <Row gutter={isDesktop ? 24 : 16}>
             <Col span={8}>
               <Form.Item name="theoreticalLife" label="理论寿命">
                 <Input type="number" min={0} />
@@ -376,7 +390,7 @@ export default function ToolingList() {
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
+          <Row gutter={isDesktop ? 24 : 16}>
             <Col span={12}>
               <Form.Item name="location" label="储位">
                 <Input placeholder="如: A-3-12" />
@@ -397,7 +411,7 @@ export default function ToolingList() {
         open={statusModalOpen}
         onCancel={() => setStatusModalOpen(false)}
         onOk={confirmStatusChange}
-        width={400}
+        width={isDesktop ? 480 : 400}
         destroyOnClose
       >
         <Form form={statusForm} layout="vertical" style={{ marginTop: 16 }}>
@@ -413,11 +427,11 @@ export default function ToolingList() {
         open={detailModal}
         onCancel={() => setDetailModal(false)}
         footer={null}
-        width={560}
+        width={isDesktop ? 640 : 560}
         destroyOnClose
       >
         {detailTarget && (
-          <Descriptions column={2} size="small" bordered>
+          <Descriptions column={isDesktop ? 3 : 2} size="small" bordered>
             <Descriptions.Item label="编码">{detailTarget.code}</Descriptions.Item>
             <Descriptions.Item label="名称">{detailTarget.name}</Descriptions.Item>
             <Descriptions.Item label="类型">{detailTarget.type}</Descriptions.Item>
@@ -451,7 +465,7 @@ export default function ToolingList() {
         onCancel={() => { setPrintModalOpen(false); setSelectedPrintIds([]); }}
         onOk={handlePrintLabel}
         okText="打印"
-        width={600}
+        width={isDesktop ? 720 : 600}
         destroyOnClose
       >
         <div style={{ marginBottom: 12 }}>

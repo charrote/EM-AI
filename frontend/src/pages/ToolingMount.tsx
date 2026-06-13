@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Form, Input, Select, message, Steps, Result, Row, Col, Descriptions, Badge } from 'antd';
-import { ScanOutlined, DesktopOutlined, ToolOutlined, CheckCircleOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { Card, Button, Form, Input, Select, message, Steps, Result, Row, Col, Descriptions, Badge, Tag, Table, Space, Typography } from 'antd';
+import { ScanOutlined, DesktopOutlined, ToolOutlined, CheckCircleOutlined, ArrowRightOutlined, DeleteOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+
+const { Text } = Typography;
 
 interface Device {
   id: string;
@@ -37,7 +40,8 @@ export default function ToolingMount() {
   const [toolingCode, setToolingCode] = useState('');
   const [toolingSearch, setToolingSearch] = useState('');
   const [toolingOptions, setToolingOptions] = useState<Tooling[]>([]);
-  const [selectedTooling, setSelectedTooling] = useState<Tooling | null>(null);
+  const [selectedToolingIds, setSelectedToolingIds] = useState<string[]>([]);
+  const [selectedToolings, setSelectedToolings] = useState<Tooling[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -61,6 +65,7 @@ export default function ToolingMount() {
   const handleDeviceSelect = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
     setSelectedDevice(device || null);
+    if (device) setStep(1);
   };
 
   const fetchToolings = useCallback(async () => {
@@ -69,7 +74,8 @@ export default function ToolingMount() {
       const params: any = { status: 'in_stock' };
       if (toolingSearch) params.search = toolingSearch;
       const res = await api.get('/toolings', { params });
-      setToolingOptions(res.data.data || []);
+      const list: Tooling[] = res.data.data || [];
+      setToolingOptions(list);
     } catch {
       message.error('加载工治具数据失败');
     } finally {
@@ -78,11 +84,6 @@ export default function ToolingMount() {
   }, [toolingSearch]);
 
   useEffect(() => { fetchToolings(); }, [fetchToolings]);
-
-  const handleToolingSelect = (toolingId: string) => {
-    const tooling = toolingOptions.find(t => t.id === toolingId);
-    setSelectedTooling(tooling || null);
-  };
 
   const handleManualToolingCode = async () => {
     if (!toolingCode) return;
@@ -93,8 +94,17 @@ export default function ToolingMount() {
         (t: Tooling) => t.code === toolingCode || t.name.includes(toolingCode)
       );
       if (found) {
-        setSelectedTooling(found);
-        message.success(`已找到工治具: ${found.code} - ${found.name}`);
+        if (found.status === 'in_stock') {
+          setSelectedToolingIds(prev =>
+            prev.includes(found.id) ? prev : [...prev, found.id]
+          );
+          setSelectedToolings(prev =>
+            prev.some(t => t.id === found.id) ? prev : [...prev, found]
+          );
+          message.success(`已添加工治具: ${found.code} - ${found.name}`);
+        } else {
+          message.warning('该工治具不在"在库"状态，无法上机');
+        }
       } else {
         message.warning('未找到匹配的工治具');
       }
@@ -105,18 +115,32 @@ export default function ToolingMount() {
     }
   };
 
+  const handleSelectionChange = (keys: React.Key[], rows: Tooling[]) => {
+    setSelectedToolingIds(keys as string[]);
+    setSelectedToolings(rows);
+  };
+
+  const handleRemoveSelected = (id: string) => {
+    setSelectedToolingIds(prev => prev.filter(k => k !== id));
+    setSelectedToolings(prev => prev.filter(t => t.id !== id));
+  };
+
   const handleSubmit = async () => {
-    if (!selectedDevice || !selectedTooling) {
-      message.warning('请选择设备和工治具');
+    if (!selectedDevice || selectedToolingIds.length === 0) {
+      message.warning('请选择设备和至少一个工治具');
       return;
     }
     setSubmitting(true);
     try {
-      await api.put(`/toolings/${selectedTooling.id}/mount`, { deviceId: selectedDevice.id });
-      setResult({ success: true, message: `工治具 ${selectedTooling.code} 已成功上机到设备 ${selectedDevice.name}` });
+      const res = await api.post('/toolings/batch-mount', {
+        deviceId: selectedDevice.id,
+        toolingIds: selectedToolingIds,
+      });
+      const count = res.data.data?.count || selectedToolingIds.length;
+      setResult({ success: true, message: `${count} 个工治具已成功上机到设备 ${selectedDevice.name}` });
       setStep(2);
     } catch {
-      setResult({ success: false, message: '上机操作失败，请重试' });
+      setResult({ success: false, message: '批量上机操作失败，请重试' });
     } finally {
       setSubmitting(false);
     }
@@ -125,19 +149,42 @@ export default function ToolingMount() {
   const handleReset = () => {
     setStep(0);
     setSelectedDevice(null);
-    setSelectedTooling(null);
+    setSelectedToolingIds([]);
+    setSelectedToolings([]);
     setDeviceSearch('');
     setToolingSearch('');
     setToolingCode('');
     setResult(null);
   };
 
+  const columns: ColumnsType<Tooling> = [
+    { title: '编码', dataIndex: 'code', key: 'code', width: 140, render: (v: string) => <Text code>{v}</Text> },
+    { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
+    {
+      title: '状态', dataIndex: 'status', key: 'status', width: 100,
+      render: (v: string) => <Badge color={STATUS_CONFIG[v]?.color} text={STATUS_CONFIG[v]?.label} />,
+    },
+  ];
+
+  const selectedColumns: ColumnsType<Tooling> = [
+    { title: '编码', dataIndex: 'code', key: 'code', width: 140, render: (v: string) => <Text code>{v}</Text> },
+    { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true },
+    { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
+    {
+      title: '操作', key: 'action', width: 80,
+      render: (_: unknown, r: Tooling) => (
+        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleRemoveSelected(r.id)} />
+      ),
+    },
+  ];
+
   return (
     <div>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Steps current={step} size="small" items={[
           { title: '选择设备', icon: <DesktopOutlined /> },
-          { title: '选择工治具', icon: <ToolOutlined /> },
+          { title: '选择工治具（可多选）', icon: <ToolOutlined /> },
           { title: '完成', icon: <CheckCircleOutlined /> },
         ]} />
       </Card>
@@ -145,7 +192,7 @@ export default function ToolingMount() {
       {step === 0 && (
         <Card title={<span><DesktopOutlined /> 扫描或选择设备</span>} size="small">
           <Row gutter={16}>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form layout="vertical">
                 <Form.Item label="设备编码 / 名称">
                   <Input
@@ -158,7 +205,7 @@ export default function ToolingMount() {
                 </Form.Item>
               </Form>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form layout="vertical">
                 <Form.Item label="选择设备">
                   <Select
@@ -204,69 +251,89 @@ export default function ToolingMount() {
       )}
 
       {step === 1 && (
-        <Card title={<span><ToolOutlined /> 扫描或选择工治具</span>} size="small">
-          <Row gutter={16}>
-            <Col span={12}>
+        <Card title={<span><ToolOutlined /> 选择工治具（可多选）</span>} size="small">
+          <Row gutter={16} style={{ marginBottom: 12 }}>
+            <Col xs={24} sm={12}>
               <Form layout="vertical">
-                <Form.Item label="扫描工治具编码（支持手写输入）">
+                <Form.Item label="扫描工治具编码">
                   <Input.Search
-                    placeholder="扫描或输入工治具编码"
+                    placeholder="扫描或输入编码后回车"
                     prefix={<ScanOutlined />}
                     value={toolingCode}
                     onChange={e => setToolingCode(e.target.value)}
                     onSearch={handleManualToolingCode}
-                    enterButton="查询"
+                    enterButton="添加"
                     allowClear
                   />
                 </Form.Item>
               </Form>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Form layout="vertical">
-                <Form.Item label="或在列表中选择（仅显示在库工治具）">
-                  <Select
-                    placeholder="请选择工治具"
-                    showSearch
-                    value={selectedTooling?.id || undefined}
-                    onChange={handleToolingSelect}
-                    style={{ width: '100%' }}
-                    loading={loading}
-                    filterOption={(input, option) =>
-                      (option?.label as string || '').toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={toolingOptions.map(t => ({
-                      value: t.id,
-                      label: `[${t.code}] ${t.name} (${t.type})`,
-                      disabled: t.status !== 'in_stock',
-                    }))}
-                    notFoundContent={loading ? '加载中...' : '暂无在库工治具'}
+                <Form.Item label="搜索在库工治具">
+                  <Input
+                    placeholder="输入名称/编码筛选"
+                    value={toolingSearch}
+                    onChange={e => setToolingSearch(e.target.value)}
+                    allowClear
                   />
                 </Form.Item>
               </Form>
             </Col>
           </Row>
-          {selectedTooling && (
-            <Card size="small" type="inner" style={{ marginTop: 12, background: Colors.sidebarActive }}>
-              <Descriptions size="small" column={3}>
-                <Descriptions.Item label="工治具编码">{selectedTooling.code}</Descriptions.Item>
-                <Descriptions.Item label="工治具名称">{selectedTooling.name}</Descriptions.Item>
-                <Descriptions.Item label="类型">{selectedTooling.type}</Descriptions.Item>
-                <Descriptions.Item label="状态">
-                  <Badge color={STATUS_CONFIG[selectedTooling.status]?.color} text={STATUS_CONFIG[selectedTooling.status]?.label} />
-                </Descriptions.Item>
-              </Descriptions>
+
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={toolingOptions}
+            rowSelection={{
+              type: 'checkbox',
+              selectedRowKeys: selectedToolingIds,
+              onChange: handleSelectionChange as any,
+              getCheckboxProps: (r: Tooling) => ({ disabled: r.status !== 'in_stock' }),
+            }}
+            size="small"
+            scroll={{ y: 260 }}
+            pagination={false}
+            locale={{ emptyText: '暂无在库工治具' }}
+          />
+
+          {selectedToolings.length > 0 && (
+            <Card
+              size="small"
+              type="inner"
+              title={<span style={{ color: Colors.primary }}>已选择 {selectedToolings.length} 个工治具</span>}
+              style={{ marginTop: 12 }}
+              styles={{ body: { padding: 0 } }}
+            >
+              <Table
+                rowKey="id"
+                columns={selectedColumns}
+                dataSource={selectedToolings}
+                size="small"
+                pagination={false}
+                style={{ marginTop: 0 }}
+              />
             </Card>
           )}
-          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between' }}>
-            <Button onClick={() => setStep(0)}>上一步</Button>
+
+          <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Space>
+              <Button onClick={() => setStep(0)}>上一步</Button>
+              <Text style={{ color: Colors.gray500 }}>
+                {selectedToolingIds.length > 0
+                  ? `已选 ${selectedToolingIds.length} 个工治具，将上机到 ${selectedDevice?.name}`
+                  : '请至少选择一个工治具'}
+              </Text>
+            </Space>
             <Button
               type="primary"
               icon={<CheckCircleOutlined />}
-              disabled={!selectedTooling || selectedTooling.status !== 'in_stock'}
+              disabled={selectedToolingIds.length === 0}
               loading={submitting}
               onClick={handleSubmit}
             >
-              保存 - 上机
+              批量上机 ({selectedToolingIds.length})
             </Button>
           </div>
         </Card>

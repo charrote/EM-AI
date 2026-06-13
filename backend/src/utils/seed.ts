@@ -235,17 +235,26 @@ export async function seedDemoData() {
     { code: 'MOLD-A05', name: '注塑模具 A05', type: '模具', theoreticalLife: 600000, lifeUnit: 'cycles', lifeUsed: 350000 },
   ];
 
+  const now = new Date();
   for (const td of toolingData) {
+    const idx = toolingData.indexOf(td);
+    const statuses = ['in_use', 'in_stock', 'in_use', 'maintenance', 'in_use', 'in_stock', 'in_use', 'in_stock', 'repair', 'in_use', 'in_use', 'in_stock', 'in_use', 'in_stock', 'in_use'];
+    const status = statuses[idx];
+    const health = td.theoreticalLife ? Math.round((1 - td.lifeUsed / td.theoreticalLife) * 100) : 80;
+    const lastMaintenanceDaysAgo = Math.max(30, Math.round((1 - health / 100) * 180));
+    const lastMaintenanceAt = new Date(now.getTime() - lastMaintenanceDaysAgo * 86400000);
+
     await prisma.tooling.create({
       data: {
         ...td,
-        status: ['in_use', 'in_stock', 'in_use', 'maintenance', 'in_use', 'in_stock', 'in_use', 'in_stock', 'repair', 'in_use', 'in_use', 'in_stock', 'in_use', 'in_stock', 'in_use'][toolingData.indexOf(td)],
-        deviceId: devices[toolingData.indexOf(td) % devices.length].id,
+        status,
+        deviceId: status === 'in_use' ? devices[idx % devices.length].id : null,
         lifeRemaining: td.theoreticalLife ? td.theoreticalLife - td.lifeUsed : 0,
-        healthScore: td.theoreticalLife ? Math.round((1 - td.lifeUsed / td.theoreticalLife) * 100) : 80,
+        healthScore: health,
         purchaseDate: new Date('2025-06-01'),
         purchaseCost: Math.round(5000 + Math.random() * 50000),
         location: `仓库-${td.type === '模具' ? 'A' : td.type === '夹具' ? 'B' : 'C'}区`,
+        lastMaintenanceAt,
       },
     });
   }

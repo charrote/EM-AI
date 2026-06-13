@@ -115,8 +115,12 @@ export default function ToolingMaintenance() {
       },
     },
     {
-      title: '上次保养', dataIndex: 'lastMaintenanceAt', key: 'lastMaintenanceAt', width: 110,
-      render: (v: string | null) => v ? new Date(v).toLocaleDateString() : <Text type="secondary">-</Text>,
+      title: '上次保养', dataIndex: 'lastMaintenanceAt', key: 'lastMaintenanceAt', width: 130,
+      render: (v: string | null) => {
+        if (!v) return <Text type="secondary">-</Text>;
+        const d = new Date(v);
+        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+      },
     },
     {
       title: '操作', key: 'action', width: 80,
@@ -207,7 +211,7 @@ export default function ToolingMaintenance() {
                 {selectedTooling.device?.name || '-'}
               </Descriptions.Item>
               <Descriptions.Item label="上次保养" span={2}>
-                {selectedTooling.lastMaintenanceAt ? new Date(selectedTooling.lastMaintenanceAt).toLocaleString() : '未保养'}
+                {selectedTooling.lastMaintenanceAt ? (() => { const d = new Date(selectedTooling.lastMaintenanceAt); return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`; })() : '未保养'}
               </Descriptions.Item>
             </Descriptions>
 
