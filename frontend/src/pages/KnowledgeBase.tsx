@@ -524,26 +524,24 @@ export default function KnowledgeBase() {
   const renderCard = (entry: KnowledgeEntry) => {
     const tags = safeTags(entry.tags).slice(0, isMobile ? 3 : 5);
     const isPending = entry.status === 'pending';
-    const borderColor = isPending ? Colors.warningLight : Colors.gray200;
     return (
       <div
         key={entry.id}
         onClick={() => openDetail(entry.id)}
         style={{
           background: '#fff', borderRadius: 8,
-          border: `1px solid ${borderColor}`,
-          borderLeft: isPending ? `4px solid ${Colors.warningLight}` : `1px solid ${Colors.gray200}`,
+          border: `1px solid ${Colors.gray200}`,
           padding: isMobile ? '12px' : '14px 16px', cursor: 'pointer',
           transition: 'box-shadow 0.2s, border-color 0.2s',
           marginBottom: isMobile ? 6 : 8,
         }}
         onMouseEnter={e => {
           e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)';
-          if (!isPending) e.currentTarget.style.borderColor = Colors.primary;
+          e.currentTarget.style.borderColor = Colors.primary;
         }}
         onMouseLeave={e => {
           e.currentTarget.style.boxShadow = 'none';
-          if (!isPending) e.currentTarget.style.borderColor = Colors.gray200;
+          e.currentTarget.style.borderColor = Colors.gray200;
         }}
       >
         {/* Row 1: Title + Type Tag */}

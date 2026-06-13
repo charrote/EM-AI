@@ -56,6 +56,9 @@ interface AppState {
   // Aura 聊天智能体
   auraChatOpen: boolean;
   setAuraChatOpen: (open: boolean) => void;
+  // Aura 聊天智能体全局开关
+  auraChatEnabled: boolean;
+  setAuraChatEnabled: (enabled: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -149,4 +152,7 @@ export const useStore = create<AppState>((set) => ({
   // Aura 聊天智能体
   auraChatOpen: false,
   setAuraChatOpen: (open) => set({ auraChatOpen: open }),
+  // Aura 聊天智能体全局开关（默认打开）
+  auraChatEnabled: true,
+  setAuraChatEnabled: (enabled) => set({ auraChatEnabled: enabled }),
 }));

@@ -144,20 +144,20 @@ router.get('/favorites', async (req: Request, res: Response) => {
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const entry = await prisma.knowledgeEntry.findUnique({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
     });
     if (!entry) return res.status(404).json({ error: 'Entry not found' });
 
     // 增加浏览次数
     await prisma.knowledgeEntry.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { views: { increment: 1 } },
     });
 
     // 检查当前用户是否已收藏
     const userId = getUserId(req);
     const fav = await prisma.knowledgeFavorite.findUnique({
-      where: { userId_entryId: { userId, entryId: req.params.id } },
+      where: { userId_entryId: { userId, entryId: req.params.id as string } },
     });
 
     res.json({ data: { ...entry, views: entry.views + 1, isFavorited: !!fav } });
@@ -188,7 +188,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.put('/:id', async (req: Request, res: Response) => {
   try {
     const entry = await prisma.knowledgeEntry.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: req.body,
     });
     res.json({ data: entry });
@@ -201,8 +201,8 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     // Delete related favorites first
-    await prisma.knowledgeFavorite.deleteMany({ where: { entryId: req.params.id } });
-    await prisma.knowledgeEntry.delete({ where: { id: req.params.id } });
+    await prisma.knowledgeFavorite.deleteMany({ where: { entryId: req.params.id as string } });
+    await prisma.knowledgeEntry.delete({ where: { id: req.params.id as string } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete entry' });
@@ -214,7 +214,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
   try {
     const { status } = req.body; // 'approved' | 'rejected'
     const entry = await prisma.knowledgeEntry.update({
-      where: { id: req.params.id },
+      where: { id: req.params.id as string },
       data: { status: status || 'approved' },
     });
     res.json({ data: entry });
@@ -227,7 +227,7 @@ router.post('/:id/approve', async (req: Request, res: Response) => {
 router.post('/:id/favorite', async (req: Request, res: Response) => {
   try {
     const userId = getUserId(req);
-    const entryId = req.params.id;
+    const entryId = req.params.id as string;
 
     const existing = await prisma.knowledgeFavorite.findUnique({
       where: { userId_entryId: { userId, entryId } },

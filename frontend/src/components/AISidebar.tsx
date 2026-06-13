@@ -114,7 +114,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled, auraChatEnabled, setAuraChatEnabled } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -449,14 +449,18 @@ export default function AISidebar() {
                               {child.en}
                             </div>
                           </div>
-                          {child.key === 'knowledge-mining' && (
+                          {(child.key === 'knowledge-mining' || child.key === 'qa') && (
                             <div style={{ flexShrink: 0, marginLeft: 8 }} onClick={(e) => e.stopPropagation()}>
                               <Switch
                                 size="small"
-                                checked={knowledgeMiningEnabled}
-                                onChange={(checked) => setKnowledgeMiningEnabled(checked)}
+                                checked={child.key === 'qa' ? auraChatEnabled : knowledgeMiningEnabled}
+                                onChange={(checked) => {
+                                  if (child.key === 'qa') setAuraChatEnabled(checked);
+                                  else setKnowledgeMiningEnabled(checked);
+                                }}
                                 style={{
-                                  background: knowledgeMiningEnabled ? 'linear-gradient(135deg, #06B6D4, #3B82F6)' : undefined,
+                                  background: (child.key === 'qa' ? auraChatEnabled : knowledgeMiningEnabled)
+                                    ? 'linear-gradient(135deg, #06B6D4, #3B82F6)' : undefined,
                                 }}
                               />
                             </div>

@@ -15,9 +15,11 @@ const API_BASE = 'http://nat.ywapi.com:9234/v1';
 const API_KEY = 'ux-X2IQWMWLFNMRBZO2QJG8VQ314LW92EQ7';
 const MODEL = 'UANTEKDEV0';
 
+const GREETING = '您好，我是友文智脑Aura，具备感知设备现状和预测性维护的能力。请问有什么可以帮助您的？';
+
 export default function AuraChat() {
   const { auraChatOpen, setAuraChatOpen } = useStore();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([{ role: 'assistant', content: GREETING }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -92,24 +94,24 @@ export default function AuraChat() {
       <div
         style={{
           position: 'fixed',
-          bottom: 24,
+          top: 64,
           right: 24,
           zIndex: 1050,
           width: 380,
           maxWidth: 'calc(100vw - 32px)',
           height: 560,
-          maxHeight: 'calc(100vh - 120px)',
+          maxHeight: 'calc(100vh - 96px)',
           background: '#FFFFFF',
           borderRadius: 12,
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          transform: auraChatOpen ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.95)',
+          transform: auraChatOpen ? 'translateY(0)' : 'translateY(-120%)',
           opacity: auraChatOpen ? 1 : 0,
           pointerEvents: auraChatOpen ? 'auto' : 'none',
-          transition: 'all 0.25s ease',
-          transformOrigin: 'bottom right',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          transformOrigin: 'top right',
         }}
       >
         <div

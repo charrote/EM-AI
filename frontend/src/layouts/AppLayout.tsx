@@ -7,11 +7,12 @@ import {
   BarChartOutlined, BulbOutlined, BugOutlined,
   WarningOutlined, BookOutlined,
   UserOutlined, SettingOutlined, LogoutOutlined,
-  RobotOutlined,   NodeIndexOutlined, CalendarOutlined,
+  RobotOutlined, NodeIndexOutlined, CalendarOutlined,
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -175,7 +176,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, auraChatOpen, setAuraChatOpen } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, auraChatOpen, setAuraChatOpen, auraChatEnabled } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -216,6 +217,13 @@ export default function AppLayout() {
   useEffect(() => {
     setCollapsed(!isDesktop);
   }, [isDesktop]);
+
+  // 关闭 Aura 聊天时同步关闭聊天面板
+  useEffect(() => {
+    if (!auraChatEnabled && auraChatOpen) {
+      setAuraChatOpen(false);
+    }
+  }, [auraChatEnabled]);
 
   // 当前角色可见的菜单
   const menuItems = useMemo(() => filterMenuByRole(scenarioGroups, user.role), [user.role]);
@@ -426,48 +434,57 @@ export default function AppLayout() {
             )}
           </div>
 
-          {/* 当前组织显示 */}
-          <Tag
-            color="default"
-            style={{
-              background: Colors.sidebarActive,
-              border: 'none',
-              borderRadius: 4,
-              color: Colors.primary,
-              fontSize: 12,
-              cursor: 'pointer',
-              lineHeight: '22px',
-            }}
-            onClick={() => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); }}
-          >
-            <ApartmentOutlined style={{ marginRight: 4 }} />
-            {useStore.getState().selectedOrgName || '全厂'}
-          </Tag>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {/* 当前组织显示 */}
+            <Tag
+              color="default"
+              style={{
+                height: 32,
+                display: 'inline-flex',
+                alignItems: 'center',
+                marginInlineEnd: 0,
+                background: Colors.sidebarActive,
+                border: 'none',
+                borderRadius: 4,
+                color: Colors.primary,
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+              onClick={() => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); }}
+            >
+              <ApartmentOutlined style={{ marginRight: 4 }} />
+              {useStore.getState().selectedOrgName || '全厂'}
+            </Tag>
 
-          {/* Aura 聊天智能体 */}
-          <div
-            onClick={() => setAuraChatOpen(!auraChatOpen)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              cursor: 'pointer',
-              color: auraChatOpen ? Colors.primary : Colors.gray500,
-              background: auraChatOpen ? Colors.sidebarActive : 'transparent',
-              fontSize: 18,
-              marginRight: 4,
-              transition: 'all 0.2s',
-            }}
-            title="Aura 聊天智能体"
-          >
-            <RobotOutlined />
-          </div>
+            {/* Aura 聊天智能体 */}
+            {auraChatEnabled && (
+            <div
+              onClick={() => setAuraChatOpen(!auraChatOpen)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                cursor: 'pointer',
+                background: `linear-gradient(135deg, ${Colors.primary}, #7C3AED)`,
+                color: '#FFFFFF',
+                boxShadow: '0 2px 8px rgba(29, 78, 216, 0.3)',
+                transition: 'all 0.2s',
+                lineHeight: 1,
+                gap: 1,
+              }}
+              title="Aura 聊天智能体"
+            >
+              <ThunderboltOutlined style={{ fontSize: 12 }} />
+              <span style={{ fontSize: 6, fontWeight: 700, letterSpacing: 0.5 }}>Aura</span>
+            </div>
+            )}
 
-          {/* 用户面板 */}
-          <Dropdown
+            {/* 用户面板 */}
+            <Dropdown
             menu={{ items: userMenuItems }}
             trigger={['click']}
             placement="bottomRight"
@@ -495,25 +512,27 @@ export default function AppLayout() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  gap: 8,
                   cursor: 'pointer',
-                  padding: '4px 8px',
+                  padding: '0 6px',
+                  height: 32,
                   borderRadius: 6,
                   transition: 'background 0.2s',
                 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = Colors.gray100)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <Avatar size={32} style={{ background: Colors.primary, color: '#FFFFFF', fontWeight: 600 }}>
+                <Avatar size={28} style={{ background: Colors.primary, color: '#FFFFFF', fontWeight: 600 }}>
                   {getInitials(user.name)}
                 </Avatar>
-                <div style={{ lineHeight: 1.3 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: Colors.gray800 }}>{user.name}</div>
-                  <div style={{ fontSize: 11, color: Colors.gray500 }}>{RoleConfig[user.role].label}</div>
+                <div style={{ lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: Colors.gray800 }}>{user.name}</div>
+                  <div style={{ fontSize: 10, color: Colors.gray500 }}>{RoleConfig[user.role].label}</div>
                 </div>
               </div>
             )}
           </Dropdown>
+          </div>
         </Header>
 
         {/* ─── 内容区 ─── */}
