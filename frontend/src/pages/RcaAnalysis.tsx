@@ -335,6 +335,134 @@ export default function RcaAnalysis() {
     };
   }, [fishboneData, isMobile]);
 
+  const historyFishboneChartOption = useMemo(() => {
+    if (!selectedAnalysis?.fishboneData) return null;
+    const histData = selectedAnalysis.fishboneData as Record<string, string[]>;
+    const categories = FISHBONE_CATEGORIES;
+    const w = isMobile ? 480 : 700;
+    const h = isMobile ? 300 : 400;
+    const spineY = h / 2;
+    const spineStartX = 60;
+    const spineEndX = w - 40;
+    const spineLen = spineEndX - spineStartX;
+
+    const elements: any[] = [];
+
+    elements.push({
+      type: 'line',
+      shape: { x1: spineStartX, y1: spineY, x2: spineEndX, y2: spineY },
+      style: { lineWidth: 3, stroke: Colors.gray600 },
+    });
+
+    elements.push({
+      type: 'polygon',
+      shape: {
+        points: [
+          [spineEndX, spineY],
+          [spineEndX - 10, spineY - 5],
+          [spineEndX - 10, spineY + 5],
+        ],
+      },
+      style: { fill: Colors.gray600 },
+    });
+
+    elements.push({
+      type: 'text',
+      shape: { x: spineEndX - 15, y: spineY - 20 },
+      style: {
+        text: '问题',
+        fontSize: 12,
+        fontWeight: 'bold',
+        fill: Colors.danger,
+        textAlign: 'center',
+      },
+    });
+
+    const boneCount = categories.length;
+    const boneSpacing = spineLen / (boneCount + 1);
+
+    categories.forEach((cat, i) => {
+      const boneX = spineStartX + boneSpacing * (i + 1);
+      const isAbove = i < 3;
+      const boneEndY = isAbove ? spineY - 80 : spineY + 80;
+
+      elements.push({
+        type: 'line',
+        shape: { x1: boneX, y1: spineY, x2: boneX, y2: boneEndY },
+        style: { lineWidth: 2, stroke: cat.color, lineDash: [4, 3] },
+      });
+
+      elements.push({
+        type: 'circle',
+        shape: { cx: boneX, cy: spineY, r: 3 },
+        style: { fill: cat.color },
+      });
+
+      elements.push({
+        type: 'text',
+        shape: { x: boneX, y: boneEndY + (isAbove ? -10 : 14) },
+        style: {
+          text: cat.label.split(' ')[0],
+          fontSize: 11,
+          fontWeight: 'bold',
+          fill: cat.color,
+          textAlign: 'center',
+        },
+      });
+
+      const items = (histData[cat.key] || []) as string[];
+      const itemCount = items.length;
+      if (itemCount > 0) {
+        items.forEach((item, j) => {
+          const t = (j + 1) / (itemCount + 1);
+          const ix = boneX + (isAbove ? -1 : 1) * 20 * (1 - t);
+          const iy = spineY + (boneEndY - spineY) * t;
+          const clampedIx = Math.max(spineStartX + 10, Math.min(spineEndX - 20, ix));
+
+          elements.push({
+            type: 'circle',
+            shape: { cx: clampedIx, cy: iy, r: 4 },
+            style: { fill: cat.color, opacity: 0.8 },
+          });
+
+          const label = item.length > 8 ? item.slice(0, 8) + '…' : item;
+          elements.push({
+            type: 'text',
+            shape: {
+              x: clampedIx + (isAbove ? 8 : -8),
+              y: iy + 4,
+            },
+            style: {
+              text: label,
+              fontSize: 9,
+              fill: Colors.gray700,
+              textAlign: isAbove ? 'left' : 'right',
+            },
+          });
+        });
+      }
+    });
+
+    return {
+      graphic: { elements },
+      xAxis: { show: false, min: 0, max: w },
+      yAxis: { show: false, min: 0, max: h },
+      grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      tooltip: {
+        formatter: () => {
+          let html = '<b>鱼骨图分析</b><br/>';
+          categories.forEach(c => {
+            const items = (histData[c.key] || []) as string[];
+            if (items.length > 0) {
+              html += `<b style="color:${c.color}">${c.label}:</b> ${items.join(', ')}<br/>`;
+            }
+          });
+          return html;
+        },
+      },
+    };
+  }, [selectedAnalysis?.fishboneData, isMobile]);
+
   return (
     <div>
       <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
@@ -689,6 +817,25 @@ export default function RcaAnalysis() {
                             <Text>{w.answer}</Text>
                           </div>
                         ))}
+                      </>
+                    )}
+
+                    {selectedAnalysis?.fishboneData && historyFishboneChartOption && (
+                      <>
+                        <Divider>鱼骨图分析</Divider>
+                        <Card size="small" style={{ marginBottom: 16, background: Colors.gray50 }}>
+                          <ReactECharts option={historyFishboneChartOption} style={{ height: isMobile ? 320 : 420 }} />
+                        </Card>
+                        {FISHBONE_CATEGORIES.map(cat => {
+                          const items = (selectedAnalysis.fishboneData as Record<string, string[]>)[cat.key] || [];
+                          if (items.length === 0) return null;
+                          return (
+                            <div key={cat.key} style={{ marginBottom: 4 }}>
+                              <Text strong style={{ color: cat.color }}>{cat.label}: </Text>
+                              <Text>{items.join(', ')}</Text>
+                            </div>
+                          );
+                        })}
                       </>
                     )}
                   </Modal>
