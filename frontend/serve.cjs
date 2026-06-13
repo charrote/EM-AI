@@ -32,14 +32,20 @@ function serveStatic(res, filePath) {
           res.end('Internal Server Error');
           return;
         }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.writeHead(200, {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-cache',
+        });
         res.end(indexHtml);
       });
       return;
     }
+    const isHtml = ext === '.html';
     res.writeHead(200, {
       'Content-Type': MIME_MAP[ext] || 'application/octet-stream',
-      'Cache-Control': 'public, immutable, max-age=31536000',
+      'Cache-Control': isHtml
+        ? 'no-cache'
+        : 'public, immutable, max-age=31536000',
     });
     res.end(data);
   });
