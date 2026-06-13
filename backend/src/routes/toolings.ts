@@ -117,4 +117,47 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/toolings/:id/mount — 工治具上机（挂载到设备）
+router.put('/:id/mount', async (req: Request, res: Response) => {
+  try {
+    const { deviceId } = req.body;
+    if (!deviceId) return res.status(400).json({ error: 'deviceId is required' });
+
+    const tooling = await prisma.tooling.update({
+      where: { id: req.params.id as string },
+      data: { status: 'in_use', deviceId },
+    });
+    res.json({ data: tooling });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to mount tooling' });
+  }
+});
+
+// PUT /api/toolings/:id/dismount — 工治具下机
+router.put('/:id/dismount', async (req: Request, res: Response) => {
+  try {
+    const tooling = await prisma.tooling.update({
+      where: { id: req.params.id as string },
+      data: { status: 'in_stock', deviceId: null },
+    });
+    res.json({ data: tooling });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to dismount tooling' });
+  }
+});
+
+// GET /api/toolings/by-device/:deviceId — 获取设备上的工治具
+router.get('/by-device/:deviceId', async (req: Request, res: Response) => {
+  try {
+    const toolings = await prisma.tooling.findMany({
+      where: { deviceId: req.params.deviceId as string },
+      orderBy: { code: 'asc' },
+      include: { device: true },
+    });
+    res.json({ data: toolings, total: toolings.length });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch toolings by device' });
+  }
+});
+
 export default router;

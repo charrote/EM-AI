@@ -34,6 +34,8 @@ const MaintenanceExecute = lazy(() => import('./pages/MaintenanceExecute'));
 const AndonBoard = lazy(() => import('./pages/AndonBoard'));
 const ToolingList = lazy(() => import('./pages/ToolingList'));
 const ToolingMaintenance = lazy(() => import('./pages/ToolingMaintenance'));
+const ToolingMount = lazy(() => import('./pages/ToolingMount'));
+const ToolingDismount = lazy(() => import('./pages/ToolingDismount'));
 const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
 const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
 const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
@@ -172,6 +174,8 @@ function App() {
             {/* ─── 工治具管理 ─── */}
             <Route path="toolings" element={<ToolingList />} />
             <Route path="tooling-maintenance" element={<ToolingMaintenance />} />
+            <Route path="tooling-mount" element={<ToolingMount />} />
+            <Route path="tooling-dismount" element={<ToolingDismount />} />
 
             {/* ─── 基础数据 ─── */}
             <Route path="organizations" element={<OrganizationPage />} />
