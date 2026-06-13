@@ -38,6 +38,7 @@ const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
 const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
 const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
 const AuraDeviceProfile = lazy(() => import('./pages/AuraDeviceProfile'));
+import AuraDiagnosticModal from './components/AuraDiagnosticModal';
 
 function PageLoading() {
   return (
@@ -246,7 +247,7 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDataConvergence />
-        </div>
+        </div >
       </Modal>
       {/* ─── AURA AI 数据清洗模态窗 ─── */}
       <Modal
@@ -272,7 +273,7 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDataCleaning />
-        </div>
+        </div >
       </Modal>
       {/* ─── AURA 设备健康基线模态窗 ─── */}
       <Modal
@@ -298,7 +299,7 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDeviceHealth />
-        </div>
+        </div >
       </Modal>
       {/* ─── AURA 设备全景画像模态窗 ─── */}
       <Modal
@@ -324,10 +325,13 @@ function App() {
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
           <AuraDeviceProfile />
-        </div>
+        </div >
       </Modal>
+      {/* ─── AURA AI 辅助诊断模态窗 ─── */}
+      <AuraDiagnosticModal />
+
       {/* ─── NLP 自然语言报修 — 纯 DOM 覆盖层（替换 Modal）─── */}
-      {nlrModalOpen && createPortal(
+     {nlrModalOpen && createPortal(
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 1050,
@@ -349,7 +353,6 @@ function App() {
         document.body,
       )}
       </ConfigProvider>
-
       <style>{`
         .aura-modal-content {
           background: #070A1A !important;

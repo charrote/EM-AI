@@ -41,6 +41,9 @@ interface AppState {
   // NLP 自然语言报修模态窗
   nlrModalOpen: boolean;
   setNlrModalOpen: (open: boolean) => void;
+  // AI 辅助诊断模态窗
+  diagnosticModalOpen: boolean;
+  setDiagnosticModalOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -119,4 +122,7 @@ export const useStore = create<AppState>((set) => ({
   // NLP 自然语言报修模态窗
   nlrModalOpen: false,
   setNlrModalOpen: (open) => set({ nlrModalOpen: open }),
+  // AI 辅助诊断模态窗
+  diagnosticModalOpen: false,
+  setDiagnosticModalOpen: (open) => set({ diagnosticModalOpen: open }),
 }));

@@ -61,7 +61,7 @@ const AI_FEATURES: AICategory[] = [
     color: '#8B5CF6',
     children: [
       { key: 'nlr', label: '自然语言报修', desc: '支持语音/文字描述故障，自动提取设备、部位、现象等关键信息', status: 'developing', route: '/nlr-demo' },
-      { key: 'ai-diagnosis', label: 'AI 辅助诊断', desc: '基于报修信息与实时数据，给出故障原因 TOP-3 及排查步骤', status: 'planned' },
+      { key: 'ai-diagnosis', label: 'AI 辅助诊断', desc: '基于报修信息与实时数据，给出故障原因 TOP-3 及排查步骤', status: 'developing' },
       { key: 'knowledge-mining', label: '知识自动沉淀', desc: '维修完成后自动提取 "故障-原因-方案" 三元组', status: 'planned' },
       { key: 'qa', label: '智能问答', desc: '通过自然语言实时检索设备手册、故障代码及处理经验', status: 'developing' },
     ],
@@ -112,7 +112,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -127,10 +127,12 @@ export default function AISidebar() {
       setDeviceProfileModalOpen(true);
     } else if (key === 'nlr') {
       setNlrModalOpen(true);
+    } else if (key === 'ai-diagnosis') {
+      setDiagnosticModalOpen(true);
     } else if (key === 'data-collection' || key === 'qa') {
       setAuraModalOpen(true);
     }
-  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen]);
+  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen, setDiagnosticModalOpen]);
   const inputRef = useRef<any>(null);
 
   // 边栏打开时自动聚焦搜索框
@@ -401,13 +403,16 @@ export default function AISidebar() {
                         <div
                           key={child.key}
                           onClick={() => {
-                            if (child.key === 'nlr') {
-                              setAISidebarOpen(false);
-                              setNlrModalOpen(true);
-                            } else if (child.route) {
-                              handleFeatureClick(child.key, child.route);
-                            }
-                          }}
+                             if (child.key === 'nlr') {
+                               setAISidebarOpen(false);
+                               setNlrModalOpen(true);
+                             } else if (child.key === 'ai-diagnosis') {
+                               setAISidebarOpen(false);
+                               setDiagnosticModalOpen(true);
+                             } else if (child.route) {
+                               handleFeatureClick(child.key, child.route);
+                             }
+                           }}
                           data-testid={child.key}
                           style={{
                             display: 'flex',
