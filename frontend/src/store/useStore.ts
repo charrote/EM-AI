@@ -44,6 +44,15 @@ interface AppState {
   // AI 辅助诊断模态窗
   diagnosticModalOpen: boolean;
   setDiagnosticModalOpen: (open: boolean) => void;
+  // 知识自动沉淀模态窗
+  knowledgeMiningModalOpen: boolean;
+  setKnowledgeMiningModalOpen: (open: boolean) => void;
+  // 知识自动沉淀全局开关
+  knowledgeMiningEnabled: boolean;
+  setKnowledgeMiningEnabled: (enabled: boolean) => void;
+  // 知识自动沉淀 - 当前选中的工单
+  knowledgeMiningWorkOrder: any;
+  setKnowledgeMiningWorkOrder: (wo: any) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -125,4 +134,13 @@ export const useStore = create<AppState>((set) => ({
   // AI 辅助诊断模态窗
   diagnosticModalOpen: false,
   setDiagnosticModalOpen: (open) => set({ diagnosticModalOpen: open }),
+  // 知识自动沉淀模态窗
+  knowledgeMiningModalOpen: false,
+  setKnowledgeMiningModalOpen: (open) => set({ knowledgeMiningModalOpen: open }),
+  // 知识自动沉淀全局开关（默认关闭）
+  knowledgeMiningEnabled: false,
+  setKnowledgeMiningEnabled: (enabled) => set({ knowledgeMiningEnabled: enabled }),
+  // 知识自动沉淀 - 当前选中的工单
+  knowledgeMiningWorkOrder: null,
+  setKnowledgeMiningWorkOrder: (wo) => set({ knowledgeMiningWorkOrder: wo }),
 }));

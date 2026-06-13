@@ -12,7 +12,6 @@ import {
   MonitorOutlined, BuildOutlined, SafetyOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined,
   PieChartOutlined, DatabaseOutlined, ApartmentOutlined, TagsOutlined, TeamOutlined,
-  ThunderboltOutlined, SoundOutlined,
 } from '@ant-design/icons';
 import { useStore, type UserRole } from '../store/useStore';
 import { Colors, RoleConfig } from '../styles/theme';
@@ -64,17 +63,6 @@ const scenarioGroups: ScenarioGroup[] = [
       { key: 'device-manage', icon: <DatabaseOutlined />, label: '设备基础数据', roles: ['supervisor', 'admin'] },
       { key: 'teams', icon: <TeamOutlined />, label: '班组管理', roles: ['supervisor', 'admin'] },
       { key: 'work-calendar', icon: <CalendarOutlined />, label: '工作日历', roles: ['supervisor', 'admin'] },
-    ],
-  },
-  {
-    key: 'scenario-aura',
-    icon: <ThunderboltOutlined />,
-    label: 'AURA 智能',
-    roles: ['supervisor', 'executive', 'admin'],
-    children: [
-      { key: 'aura-data-convergence', icon: <NodeIndexOutlined />, label: '多元数据汇聚', roles: ['supervisor', 'executive', 'admin'] },
-      { key: 'aura-device-health', icon: <MonitorOutlined />, label: '设备健康基线', roles: ['supervisor', 'executive', 'admin'] },
-      { key: 'nlr-demo', icon: <SoundOutlined />, label: '自然语言报修', roles: ['operator', 'repair', 'supervisor', 'admin'] },
     ],
   },
   {
@@ -187,7 +175,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, setAuraModalOpen, setDeviceHealthModalOpen } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -283,14 +271,7 @@ export default function AppLayout() {
 
   // 菜单点击处理
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
-    // AURA → 打开模态窗
-    if (key === 'aura-data-convergence') {
-      setAuraModalOpen(true);
-    } else if (key === 'aura-device-health') {
-      setDeviceHealthModalOpen(true);
-    } else {
-      navigate('/' + key);
-    }
+    navigate('/' + key);
     if (isMobile) {
       setDrawerOpen(false);
     }

@@ -11,7 +11,7 @@ import {
   RightOutlined,
   DownOutlined,
 } from '@ant-design/icons';
-import { Input } from 'antd';
+import { Input, Switch } from 'antd';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
@@ -22,6 +22,8 @@ type FeatureStatus = 'ready' | 'developing' | 'planned';
 interface SubFeature {
   key: string;
   label: string;
+  /** 英文名称（显示在中文 Title 下方） */
+  en: string;
   desc: string;
   status: FeatureStatus;
   /** 可选的路由路径，点击后导航到对应页面 */
@@ -47,10 +49,10 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'The Eyes',
     color: '#3B82F6',
     children: [
-      { key: 'data-collection', label: '多源数据汇聚', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing', route: '/aura/data-convergence' },
-      { key: 'data-cleaning', label: 'AI 数据清洗', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'developing', route: '/aura/data-cleaning' },
-      { key: 'health-baseline', label: '设备健康基线', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'developing', route: '/aura/device-health' },
-      { key: 'device-profile', label: '设备全景画像', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'developing', route: '/aura/device-profile' },
+      { key: 'data-collection', label: '多源数据汇聚', en: 'Multi-source Data Convergence', desc: '消除数据孤岛，实现 OPC-UA/Modbus/MQTT 等多源数据统一接入', status: 'developing', route: '/aura/data-convergence' },
+      { key: 'data-cleaning', label: 'AI 数据清洗', en: 'AI Data Cleaning', desc: '自动识别并修复跳变、死值、漂移、缺失等数据质量问题', status: 'developing', route: '/aura/data-cleaning' },
+      { key: 'health-baseline', label: '设备健康基线', en: 'Device Health Baseline', desc: '建立多维健康基线，从阈值报警升级到偏离报警', status: 'developing', route: '/aura/device-health' },
+      { key: 'device-profile', label: '设备全景画像', en: 'Device Profile', desc: '集成实时数据、历史趋势、异常时间轴与健康评分', status: 'developing', route: '/aura/device-profile' },
     ],
   },
   {
@@ -60,10 +62,10 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'The Brain',
     color: '#8B5CF6',
     children: [
-      { key: 'nlr', label: '自然语言报修', desc: '支持语音/文字描述故障，自动提取设备、部位、现象等关键信息', status: 'developing', route: '/nlr-demo' },
-      { key: 'ai-diagnosis', label: 'AI 辅助诊断', desc: '基于报修信息与实时数据，给出故障原因 TOP-3 及排查步骤', status: 'developing' },
-      { key: 'knowledge-mining', label: '知识自动沉淀', desc: '维修完成后自动提取 "故障-原因-方案" 三元组', status: 'planned' },
-      { key: 'qa', label: '智能问答', desc: '通过自然语言实时检索设备手册、故障代码及处理经验', status: 'developing' },
+      { key: 'nlr', label: '自然语言报修', en: 'Natural Language Repair', desc: '支持语音/文字描述故障，自动提取设备、部位、现象等关键信息', status: 'developing', route: '/nlr-demo' },
+      { key: 'ai-diagnosis', label: 'AI 辅助诊断', en: 'AI Diagnostic', desc: '基于报修信息与实时数据，给出故障原因 TOP-3 及排查步骤', status: 'developing' },
+      { key: 'knowledge-mining', label: '知识自动沉淀', en: 'Knowledge Mining', desc: '在已完成工单中开启自动沉淀 "故障-原因-方案" 知识', status: 'ready' },
+      { key: 'qa', label: '智能问答', en: 'AI Q&A', desc: '通过自然语言实时检索设备手册、故障代码及处理经验', status: 'developing' },
     ],
   },
   {
@@ -73,9 +75,9 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'Predictive',
     color: '#06B6D4',
     children: [
-      { key: 'health-score', label: '健康评分系统', desc: '多维融合设备状态，生成 0-100 分连续健康图谱', status: 'planned' },
-      { key: 'rul', label: 'RUL 寿命预测', desc: '预测轴承、电机等关键部件的剩余可用寿命及置信区间', status: 'planned' },
-      { key: 'maintenance-optimize', label: '维护时机优化', desc: '综合生产计划、备件状态与设备健康度推荐最优维护窗口', status: 'planned' },
+      { key: 'health-score', label: '健康评分系统', en: 'Health Score', desc: '多维融合设备状态，生成 0-100 分连续健康图谱', status: 'planned' },
+      { key: 'rul', label: 'RUL 寿命预测', en: 'RUL Prediction', desc: '预测轴承、电机等关键部件的剩余可用寿命及置信区间', status: 'planned' },
+      { key: 'maintenance-optimize', label: '维护时机优化', en: 'Maintenance Optimization', desc: '综合生产计划、备件状态与设备健康度推荐最优维护窗口', status: 'planned' },
     ],
   },
   {
@@ -85,9 +87,9 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'The Hands',
     color: '#F59E0B',
     children: [
-      { key: 'skill-profile', label: '技能画像构建', desc: '基于维修记录与修复率构建维修人员高维技能向量', status: 'planned' },
-      { key: 'smart-dispatch', label: '智能派工调度', desc: '实现技能匹配、工作量均衡、响应距离的多目标自动派工', status: 'planned' },
-      { key: 're-dispatch', label: '动态重调度', desc: '针对紧急插单或人员变动实时重新优化在途工单', status: 'planned' },
+      { key: 'skill-profile', label: '技能画像构建', en: 'Skill Profile', desc: '基于维修记录与修复率构建维修人员高维技能向量', status: 'planned' },
+      { key: 'smart-dispatch', label: '智能派工调度', en: 'Smart Dispatch', desc: '实现技能匹配、工作量均衡、响应距离的多目标自动派工', status: 'planned' },
+      { key: 're-dispatch', label: '动态重调度', en: 'Re-dispatch', desc: '针对紧急插单或人员变动实时重新优化在途工单', status: 'planned' },
     ],
   },
   {
@@ -97,9 +99,9 @@ const AI_FEATURES: AICategory[] = [
     subtitle: 'Optimization',
     color: '#10B981',
     children: [
-      { key: 'oee-attribution', label: 'OEE 归因分析', desc: '自动定位 OEE 下降的根因：可用性、性能或质量问题', status: 'planned' },
-      { key: 'loss-pattern', label: '损失模式识别', desc: '识别重复出现的隐性损失模式（如换型后的低速运行）', status: 'planned' },
-      { key: 'improvement-suggest', label: '改善建议生成', desc: '针对识别的损失自动生成基于最佳实践的改善方案', status: 'planned' },
+      { key: 'oee-attribution', label: 'OEE 归因分析', en: 'OEE Attribution', desc: '自动定位 OEE 下降的根因：可用性、性能或质量问题', status: 'planned' },
+      { key: 'loss-pattern', label: '损失模式识别', en: 'Loss Pattern', desc: '识别重复出现的隐性损失模式（如换型后的低速运行）', status: 'planned' },
+      { key: 'improvement-suggest', label: '改善建议生成', en: 'Improvement Suggestion', desc: '针对识别的损失自动生成基于最佳实践的改善方案', status: 'planned' },
     ],
   },
 ];
@@ -112,7 +114,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -132,7 +134,7 @@ export default function AISidebar() {
     } else if (key === 'data-collection' || key === 'qa') {
       setAuraModalOpen(true);
     }
-  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen, setDiagnosticModalOpen]);
+  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen, setDiagnosticModalOpen, setKnowledgeMiningEnabled]);
   const inputRef = useRef<any>(null);
 
   // 边栏打开时自动聚焦搜索框
@@ -407,9 +409,11 @@ export default function AISidebar() {
                                setAISidebarOpen(false);
                                setNlrModalOpen(true);
                              } else if (child.key === 'ai-diagnosis') {
-                               setAISidebarOpen(false);
-                               setDiagnosticModalOpen(true);
-                             } else if (child.route) {
+                                setAISidebarOpen(false);
+                                setDiagnosticModalOpen(true);
+                               } else if (child.key === 'knowledge-mining') {
+                                 setKnowledgeMiningEnabled(!knowledgeMiningEnabled);
+                               } else if (child.route) {
                                handleFeatureClick(child.key, child.route);
                              }
                            }}
@@ -418,9 +422,9 @@ export default function AISidebar() {
                             display: 'flex',
                             alignItems: 'flex-start',
                             gap: 8,
-                            padding: '8px 8px',
+                            padding: '10px 8px',
                             borderRadius: 6,
-                            cursor: child.route ? 'pointer' : 'default',
+                            cursor: (child.route || child.key === 'nlr' || child.key === 'ai-diagnosis' || child.key === 'knowledge-mining') ? 'pointer' : 'default',
                             transition: 'background 0.15s',
                           }}
                           onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray50; }}
@@ -438,10 +442,25 @@ export default function AISidebar() {
                             }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 12, fontWeight: 500, color: Colors.gray700 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: Colors.gray800, lineHeight: 1.4 }}>
                               {child.label}
                             </div>
+                            <div style={{ fontSize: 11, color: Colors.gray400, lineHeight: 1.4, marginTop: 1 }}>
+                              {child.en}
+                            </div>
                           </div>
+                          {child.key === 'knowledge-mining' && (
+                            <div style={{ flexShrink: 0, marginLeft: 8 }} onClick={(e) => e.stopPropagation()}>
+                              <Switch
+                                size="small"
+                                checked={knowledgeMiningEnabled}
+                                onChange={(checked) => setKnowledgeMiningEnabled(checked)}
+                                style={{
+                                  background: knowledgeMiningEnabled ? 'linear-gradient(135deg, #06B6D4, #3B82F6)' : undefined,
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       );
                     })}

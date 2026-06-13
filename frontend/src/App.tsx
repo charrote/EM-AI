@@ -39,6 +39,7 @@ const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
 const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
 const AuraDeviceProfile = lazy(() => import('./pages/AuraDeviceProfile'));
 import AuraDiagnosticModal from './components/AuraDiagnosticModal';
+import KnowledgeMiningModal from './components/KnowledgeMiningModal';
 
 function PageLoading() {
   return (
@@ -140,32 +141,6 @@ function App() {
           {/* 登录页（独立布局，无侧栏） */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* ─── AURA 独立路由（无 EM-AI 侧栏/顶栏，方便独立部署与跨系统集成）─── */}
-          <Route
-            path="/aura/data-convergence"
-            element={
-              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
-                <AuraDataConvergence />
-              </div>
-            }
-          />
-          <Route
-            path="/aura/data-cleaning"
-            element={
-              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
-                <AuraDataCleaning />
-              </div>
-            }
-          />
-          <Route
-            path="/aura/device-health"
-            element={
-              <div style={{ height: '100vh', overflow: 'hidden', background: '#070A1A' }}>
-                <AuraDeviceHealth />
-              </div>
-            }
-          />
-
           {/* 受保护的主应用 */}
           <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
             {/* 首页 = 决策仪表盘 */}
@@ -173,7 +148,6 @@ function App() {
 
             {/* ─── 故障管理 ─── */}
             <Route path="report-fault" element={<ReportFault />} />
-            <Route path="nlr-demo" element={<ErrorBoundary><NlrDemo /></ErrorBoundary>} />
             <Route path="devices" element={<DeviceList />} />
             <Route path="devices/:id" element={<DeviceDetail />} />
             <Route path="work-orders" element={<WorkOrderList />} />
@@ -329,6 +303,8 @@ function App() {
       </Modal>
       {/* ─── AURA AI 辅助诊断模态窗 ─── */}
       <AuraDiagnosticModal />
+      {/* ─── AURA 知识自动沉淀模态窗 ─── */}
+      <KnowledgeMiningModal />
 
       {/* ─── NLP 自然语言报修 — 纯 DOM 覆盖层（替换 Modal）─── */}
      {nlrModalOpen && createPortal(

@@ -200,20 +200,43 @@ model Tooling {
 
 // ===== 知识条目 =====
 model KnowledgeEntry {
-  id          String   @id @default(uuid())
-  title       String
-  faultType   String?  @map("fault_type")
-  symptom     String?
-  cause       String?
-  solution    String?
-  tags        Json?
-  status      String   @default("pending") // pending/approved/rejected
-  sourceWoId  String?  @map("source_wo_id")
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  type          String   @default("case") // "case" | "sop"
+  title         String
+  equipmentType String?  @map("equipment_type")
+  faultPart     String?  @map("fault_part")
+  severity      String?  // P0/P1/P2/P3
+  faultType     String?  @map("fault_type") // 机械/电气/液压/气动/软件/其他
+  symptom       String?
+  cause         String?
+  solution      String?
+  prevention    String?
+  content       Json?    // {steps, tools, spareParts, safetyWarnings, parameters, media, etc.}
+  tags          Json?
+  status        String   @default("pending") // pending/approved/rejected
+  views         Int      @default(0)
+  author        String?
+  sourceWoId    String?  @map("source_wo_id")
+  createdBy     String?  @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  favorites     KnowledgeFavorite[]
 
   @@map("knowledge_entries")
+}
+
+// ===== 知识收藏 =====
+model KnowledgeFavorite {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  entryId   String   @map("entry_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry KnowledgeEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, entryId])
+  @@map("knowledge_favorites")
 }
 
 // ===== 点检计划 =====

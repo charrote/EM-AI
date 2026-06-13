@@ -6,12 +6,13 @@ import {
 } from 'antd';
 import {
   CheckCircleOutlined, ToolOutlined, BookOutlined,
-  RightOutlined, DownOutlined,
+  RightOutlined, DownOutlined, NodeIndexOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors, WorkOrderStatusLabels, WorkOrderStatusColors, PriorityColors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useStore } from '../store/useStore';
 
 export default function WorkOrderList() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -20,6 +21,7 @@ export default function WorkOrderList() {
   const [tab, setTab] = useState('pending');
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
+  const { knowledgeMiningEnabled, setKnowledgeMiningWorkOrder, setKnowledgeMiningModalOpen } = useStore();
 
   // Detail modal state
   const [detailOpen, setDetailOpen] = useState(false);
@@ -163,6 +165,36 @@ export default function WorkOrderList() {
         render: (v: string) => v ? new Date(v).toLocaleString() : '-',
       },
     ] as ColumnsType<any>),
+    ...(tab === 'completed' && knowledgeMiningEnabled ? [
+      {
+        title: '操作',
+        key: 'action',
+        width: 100,
+        render: (_: any, record: any) => (
+          <Button
+            size="small"
+            icon={<NodeIndexOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              setKnowledgeMiningWorkOrder(record);
+              setKnowledgeMiningModalOpen(true);
+            }}
+            style={{
+              borderRadius: 6,
+              background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
+              border: 'none',
+              color: '#fff',
+              fontSize: 12,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            知识沉淀
+          </Button>
+        ),
+      },
+    ] as ColumnsType<any> : []),
   ];
 
   const statusFilterMap: Record<string, string> = {
