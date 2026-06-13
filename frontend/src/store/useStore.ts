@@ -53,6 +53,9 @@ interface AppState {
   // 知识自动沉淀 - 当前选中的工单
   knowledgeMiningWorkOrder: any;
   setKnowledgeMiningWorkOrder: (wo: any) => void;
+  // Aura 聊天智能体
+  auraChatOpen: boolean;
+  setAuraChatOpen: (open: boolean) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -143,4 +146,7 @@ export const useStore = create<AppState>((set) => ({
   // 知识自动沉淀 - 当前选中的工单
   knowledgeMiningWorkOrder: null,
   setKnowledgeMiningWorkOrder: (wo) => set({ knowledgeMiningWorkOrder: wo }),
+  // Aura 聊天智能体
+  auraChatOpen: false,
+  setAuraChatOpen: (open) => set({ auraChatOpen: open }),
 }));

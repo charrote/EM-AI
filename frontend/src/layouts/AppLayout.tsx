@@ -175,7 +175,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, auraChatOpen, setAuraChatOpen } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -443,6 +443,28 @@ export default function AppLayout() {
             <ApartmentOutlined style={{ marginRight: 4 }} />
             {useStore.getState().selectedOrgName || '全厂'}
           </Tag>
+
+          {/* Aura 聊天智能体 */}
+          <div
+            onClick={() => setAuraChatOpen(!auraChatOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              cursor: 'pointer',
+              color: auraChatOpen ? Colors.primary : Colors.gray500,
+              background: auraChatOpen ? Colors.sidebarActive : 'transparent',
+              fontSize: 18,
+              marginRight: 4,
+              transition: 'all 0.2s',
+            }}
+            title="Aura 聊天智能体"
+          >
+            <RobotOutlined />
+          </div>
 
           {/* 用户面板 */}
           <Dropdown
