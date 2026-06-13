@@ -845,9 +845,53 @@ export async function seedDemoData() {
           },
         },
       },
+      {
+        title: '空压机管路泄漏综合治理', lossType: '设备故障', currentValue: 8, targetValue: 2, unit: '次/月', assignee: '钱九', deadline: new Date('2026-05-30'), status: 'completed', progress: 100, description: '通过引入超声波检漏技术，系统性治理空压管路泄漏问题',
+        effectData: {
+          pdca: {
+            plan: { analysis: '全厂空压管路每月平均发生8次泄漏，压缩空气浪费约30%，电费增加显著', target: '管路泄漏降低至每月2次以下，节约压缩空气成本', actionPlan: '1. 采购超声波检漏仪 2. 全厂管路普查 3. 分区治理泄漏点 4. 建立巡检制度', completed: true },
+            do: { execution: '已完成全厂管路普查，发现56个泄漏点，已全部修复并记录，建立月度巡检制度', issues: '部分埋地管路无法检漏，需计划改造', completed: true },
+            check: { result: '治理后每月泄漏次数从8次降至1-2次，压缩机电耗降低22%', completed: true },
+            act: { standardization: '将管路巡检纳入每周点检项，建立泄漏维修台账管理制度', completed: true, sopUpdated: true, inspectionUpdated: true, maintenanceUpdated: false },
+          },
+        },
+      },
+      {
+        title: '研磨机冷却系统改造', lossType: '速度降低', currentValue: 15, targetValue: 5, unit: 'min/次', assignee: '赵六', deadline: new Date('2026-05-15'), status: 'completed', progress: 100, description: '改造研磨机冷却系统解决因温度过高导致的降速运行',
+        effectData: {
+          pdca: {
+            plan: { analysis: '研磨机夏季每班平均降速运行15分钟，因冷却系统降温不足导致主轴温度超限', target: '消除因冷却不足导致的降速，每班减少8分钟以上异常降速', actionPlan: '1. 评估冷却系统容量 2. 改造冷却管路 3. 增加冷却塔 4. 温度监测联动', completed: true },
+            do: { execution: '已完成冷却塔更换和管路改造，增加循环水泵功率，实现了温度自动监测联动停机', issues: '施工期间产线停机协调困难，利用周末完成施工', completed: true },
+            check: { result: '改造后研磨机主轴温度稳定在42°C±3°C，未再出现因温度过高降速', completed: true },
+            act: { standardization: '冷却系统运行参数已标准化，纳入设备作业指导书', completed: true, sopUpdated: true, inspectionUpdated: true, maintenanceUpdated: true },
+          },
+        },
+      },
+      {
+        title: 'AGV 充电策略优化', lossType: '短暂停机', currentValue: 30, targetValue: 15, unit: 'min/次', assignee: '李四', deadline: new Date('2026-07-01'), status: 'active', progress: 15, description: '优化 AGV 充电策略，减少因电量不足导致的运输中断',
+        effectData: {
+          pdca: {
+            plan: { analysis: 'AGV 因电量不足每班平均停机充电3次，每次30分钟，影响物料配送效率', target: '通过智能充电调度，减少充电停机时间50%', actionPlan: '1. 分析AGV运行模式 2. 部署自动充电站 3. 优化充电调度算法 4. 试运行', completed: true },
+            do: { execution: '已完成运行数据分析和2台自动充电站部署，算法正在开发中', issues: '充电站安装位置与原规划有出入，需协调产线调整', completed: false },
+            check: { result: '' },
+            act: { standardization: '', promotion: '' },
+          },
+        },
+      },
+      {
+        title: '外观检测机光源系统升级', lossType: '废品/返工', currentValue: 3.8, targetValue: 1.5, unit: '%', assignee: '王五', deadline: new Date('2026-06-01'), status: 'completed', progress: 100, description: '升级LED光源系统提升检测准确率，降低误判导致的废品',
+        effectData: {
+          pdca: {
+            plan: { analysis: '外观检测机光源衰减导致误判率升高，良品被误判为不良品比例达3.8%', target: '将误判率降低至1.5%以下，减少不必要的返工和报废', actionPlan: '1. 评估光源方案 2. 升级LED光源 3. 重新训练检测模型 4. 效果验证', completed: true },
+            do: { execution: '已完成光源升级和相机标定，采集5000张新图像重新训练了检测模型', issues: '新光源色温与原有参数不匹配，调整了3次才达到最佳效果', completed: true },
+            check: { result: '升级后误判率从3.8%降至1.2%，检测通过率提升至98.5%', completed: true },
+            act: { standardization: '光源维护周期已纳入点检标准，检测模型更新流程已标准化', completed: true, sopUpdated: true, inspectionUpdated: true, maintenanceUpdated: true },
+          },
+        },
+      },
     ],
   });
-  console.log(`   改善项目: 6 个（含PDCA数据）`);
+  console.log(`   改善项目: 10 个（含PDCA数据）`);
 
   // ═══════════════════════════════════════════════
   // 企业层级 Demo 数据
@@ -928,7 +972,8 @@ export async function seedDemoData() {
   const metalCount = allDevices.filter(d => d.scenario === SCENARIO_METAL).length;
   const capCount = allDevices.filter(d => d.scenario === SCENARIO_CAPACITOR).length;
   const knowledgeCount = await prisma.knowledgeEntry.count();
-  console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, ${knowledgeCount} knowledge entries, 8 RCA, 3 projects`);
+  const projectCount = await prisma.improvementProject.count();
+  console.log(`✅ Demo data seeded: ${devices.length} devices, 50 work orders, 15 inspections, 15 toolings, ${knowledgeCount} knowledge entries, 8 RCA, ${projectCount} projects`);
   // ── 班组 8 个 ────────────────────────────────
   const teamData = [
     { code: 'TEAM-MA', name: '金属甲班', leader: '张伟', memberCount: 12, shift: '早班', workshopId: workshopMetal.id },

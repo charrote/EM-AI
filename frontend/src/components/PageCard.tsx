@@ -3,11 +3,21 @@ import type { CardProps } from 'antd';
 import type { CSSProperties } from 'react';
 import { Colors } from '../styles/theme';
 
+interface CardSemanticStyles {
+  root?: CSSProperties;
+  header?: CSSProperties;
+  body?: CSSProperties;
+  extra?: CSSProperties;
+  title?: CSSProperties;
+  actions?: CSSProperties;
+  cover?: CSSProperties;
+}
+
 interface PageCardProps extends Omit<CardProps, 'styles'> {
   icon?: React.ReactNode;
   /** @deprecated 请使用 styles.body 替代 */
   bodyStyle?: CSSProperties;
-  styles?: CardProps['styles'];
+  styles?: CardSemanticStyles;
 }
 
 /**
