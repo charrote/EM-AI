@@ -406,7 +406,7 @@ export default function AuraChat() {
               transition: 'all 0.2s',
               fontSize: 16,
             }}
-            title={thinking ? '关闭思考' : '开启思考'}
+            title={thinking ? '关闭思考' : '展示思考'}
           >
             <BulbOutlined />
           </div>
