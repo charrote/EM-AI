@@ -54,10 +54,11 @@ model Device {
   status       String   @default("idle") // running/idle/changeover/fault/maintenance/repair/retired
   area         String?
   line         String?
-  healthScore  Float?   @map("health_score")
-  oee          Float?
-  mtbf         Float?
-  mttr         Float?
+  healthScore       Float?   @map("health_score")
+  oee               Float?
+  mtbf              Float?
+  mttr              Float?
+  totalRunningTime  Float?   @map("total_running_time")
   priority     String   @default("B") // A/B/C
   config       Json?
 
@@ -85,13 +86,30 @@ model Device {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  workOrders       WorkOrder[]
-  inspections      Inspection[]
-  toolingAssigns   Tooling[]
+  workOrders        WorkOrder[]
+  inspections       Inspection[]
+  toolingAssigns    Tooling[]
+  hourlyProductions HourlyProduction[]
 
   @@index([workshopId])
   @@index([lineId])
   @@map("devices")
+}
+
+// ===== 每小时产量 =====
+model HourlyProduction {
+  id        String   @id @default(uuid())
+  deviceId  String   @map("device_id")
+  hourStart DateTime @map("hour_start")
+  output    Int      @default(0)
+  defect    Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  device    Device   @relation(fields: [deviceId], references: [id])
+
+  @@unique([deviceId, hourStart])
+  @@map("hourly_productions")
 }
 
 // ===== 工单 =====

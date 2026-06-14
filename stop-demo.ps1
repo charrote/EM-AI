@@ -66,6 +66,21 @@ try {
     Write-Host "  [!] 进程名查找失败 (可能需要管理员权限): $_" -ForegroundColor Yellow
 }
 
+# -- 杀掉守护进程 (父 PowerShell) --
+try {
+    $parentProcs = Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue
+    $currentPid = $PID
+    foreach ($proc in $parentProcs) {
+        if ($proc.CommandLine -like "*start-demo.ps1*" -and $proc.ProcessId -ne $currentPid) {
+            Stop-Process -Id $proc.ProcessId -Force -ErrorAction SilentlyContinue
+            Write-Host "  ✓ 守护进程已停止 (PID: $($proc.ProcessId))" -ForegroundColor Green
+            $stopped = $true
+        }
+    }
+} catch {
+    # ignore
+}
+
 if (-not $stopped) {
     Write-Host "  [!] 未找到运行中的 EM-AI Demo 服务" -ForegroundColor Yellow
 } else {

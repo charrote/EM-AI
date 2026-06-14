@@ -21,7 +21,7 @@ import MobileBottomNav from '../components/MobileBottomNav';
 import AISidebar from '../components/AISidebar';
 import api from '../services/api';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
 const { Text } = Typography;
 
 // ── 角色类型 ──────────────────────────────────
@@ -550,6 +550,20 @@ export default function AppLayout() {
             <Outlet />
           </div>
         </Content>
+
+        {/* ─── 版权信息 ─── */}
+        <Footer
+          style={{
+            textAlign: 'center',
+            padding: '12px 24px',
+            fontSize: 12,
+            color: Colors.gray400,
+            background: 'transparent',
+            borderTop: `1px solid ${Colors.gray200}`,
+          }}
+        >
+          Copyright © 2026 Uantek. All Rights Reserved.
+        </Footer>
       </Layout>
 
       {/* ─── 移动端：底部导航 ─── */}

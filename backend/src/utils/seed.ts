@@ -56,6 +56,7 @@ function generateDevicesForArea(area: AreaDef, scenario: string, line: string) {
       oee: baseOEE,
       mtbf: Math.round(100 + Math.random() * 300),
       mttr: Math.round((0.5 + Math.random() * 4) * 10) / 10,
+      totalRunningTime: Math.round(500 + Math.random() * 5000),  // hours
       priority: ['A', 'A', 'A', 'B', 'B', 'C'][i % 6],
     });
   }
@@ -65,7 +66,7 @@ function generateDevicesForArea(area: AreaDef, scenario: string, line: string) {
 export interface DeviceSeed {
   code: string; name: string; type: string; status: string;
   area: string; line: string; scenario: string;
-  healthScore: number; oee: number; mtbf: number; mttr: number;
+  healthScore: number; oee: number; mtbf: number; mttr: number; totalRunningTime: number;
   priority: string;
 }
 
@@ -110,7 +111,7 @@ export async function seedDemoData() {
           code: d.code, name: d.name, type: d.type,
           status: d.status, area: d.area, line: d.line,
           healthScore: d.healthScore, oee: d.oee,
-          mtbf: d.mtbf, mttr: d.mttr,
+          mtbf: d.mtbf, mttr: d.mttr, totalRunningTime: d.totalRunningTime,
           priority: d.priority,
           config: d.type === '注塑机'
             ? { tempRange: [180, 220], pressureRange: [80, 150] }
@@ -920,8 +921,8 @@ export async function seedDemoData() {
     data: { code: 'WS-CAP', name: '电解电容车间', level: 'workshop', parentId: company.id, sortOrder: 2, location: 'A 栋 2F', oeeTarget: 82 },
   });
 
-  const linesMetal = [
-    { code: 'LN-CNC', name: 'CNC 产线', workshopId: workshopMetal.id, sortOrder: 1 },
+  const linesMetal: { code: string; name: string; workshopId: string; sortOrder: number; oeeTarget?: number }[] = [
+    { code: 'LN-CNC', name: 'CNC 产线', workshopId: workshopMetal.id, sortOrder: 1, oeeTarget: 65 },
     { code: 'LN-LD', name: '冷墩产线', workshopId: workshopMetal.id, sortOrder: 2 },
     { code: 'LN-YM', name: '研磨产线', workshopId: workshopMetal.id, sortOrder: 3 },
     { code: 'LN-ZS', name: '注塑产线', workshopId: workshopMetal.id, sortOrder: 4 },
@@ -929,7 +930,7 @@ export async function seedDemoData() {
     { code: 'LN-WZ', name: '弯折产线', workshopId: workshopMetal.id, sortOrder: 6 },
     { code: 'LN-WG', name: '外观检测产线', workshopId: workshopMetal.id, sortOrder: 7 },
   ];
-  const linesCap = [
+  const linesCap: { code: string; name: string; workshopId: string; sortOrder: number; oeeTarget?: number }[] = [
     { code: 'LN-CQ', name: '裁切产线', workshopId: workshopCapacitor.id, sortOrder: 1 },
     { code: 'LN-DJ', name: '钉卷产线', workshopId: workshopCapacitor.id, sortOrder: 2 },
     { code: 'LN-RK', name: '入壳产线', workshopId: workshopCapacitor.id, sortOrder: 3 },
@@ -941,7 +942,7 @@ export async function seedDemoData() {
   const allLines = [...linesMetal, ...linesCap];
   for (const l of allLines) {
     await prisma.organization.create({
-      data: { code: l.code, name: l.name, level: 'line', parentId: l.workshopId, sortOrder: l.sortOrder },
+      data: { code: l.code, name: l.name, level: 'line', parentId: l.workshopId, sortOrder: l.sortOrder, oeeTarget: l.oeeTarget },
     });
   }
 

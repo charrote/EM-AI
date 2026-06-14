@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
-import { TreeSelect, Spin, Tag, Tooltip } from 'antd';
+import { Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useResponsive } from '../hooks/useResponsive';
 import { useStore } from '../store/useStore';
@@ -10,11 +10,8 @@ export default function ExecutiveDashboard() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { isMobile } = useResponsive();
-  const { selectedOrganizationId, setSelectedOrganizationId, selectedOrgName } = useStore();
+  const { selectedOrganizationId, selectedOrgName } = useStore();
 
-  // ── 企业层级选择 ──
-  const [orgTree, setOrgTree] = useState<any[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string | undefined>(selectedOrganizationId || undefined);
   const [trendData, setTrendData] = useState<any>(null);
   const [trendLoading, setTrendLoading] = useState(false);
 
@@ -32,18 +29,7 @@ export default function ExecutiveDashboard() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Fetch org tree for selector
-  useEffect(() => {
-    fetch('/api/organizations/tree')
-      .then(r => r.json())
-      .then(res => setOrgTree(res.data || []))
-      .catch(() => {});
-  }, []);
-
-  // Org tree field mappings for TreeSelect
-  const treeFieldNames = { label: 'name', value: 'id', children: 'children' };
-
-  // Fetch OEE trend for selected org
+  // Fetch OEE trend for selected org (from global store)
   const fetchTrend = useCallback(async (orgId?: string) => {
     setTrendLoading(true);
     try {
@@ -52,30 +38,20 @@ export default function ExecutiveDashboard() {
       const json = await res.json();
       setTrendData(json.data);
     } catch {
-      // fallback to main data
       setTrendData(null);
     } finally {
       setTrendLoading(false);
     }
   }, []);
 
-  // Load initial trend (no org filter = 全厂)
   useEffect(() => {
-    fetchTrend(undefined);
-  }, [fetchTrend]);
-
-  const handleOrgChange = (value: string | undefined) => {
-    setSelectedOrgId(value);
-    setSelectedOrganizationId(value || null);
-    fetchTrend(value);
-    if (faultChartRef.current) {
-      faultChartRef.current.resize();
-    }
-  };
+    fetchTrend(selectedOrganizationId || undefined);
+  }, [fetchTrend, selectedOrganizationId]);
 
   // Use org trend data if available, otherwise fallback to main data
   const oeeTrend = trendData?.trend || data?.dailyOEETrend || data?.monthlyOEETrend || [];
-  const trendOrgName = trendData?.orgName || '全厂';
+  const trendOrgName = selectedOrgName;
+  const targetOEE = trendData?.targetOEE ?? 85;
   const currentOEE = trendData?.currentOEE ?? data?.currentOEE;
   const prevOEE = trendData?.prevOEE ?? data?.prevOEE;
 
@@ -228,22 +204,7 @@ export default function ExecutiveDashboard() {
 
       {/* ═══ OEE 30日趋势 — 竖柱状图 + 目标线 ═══ */}
       <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: isMobile ? 12 : 16, marginBottom: isMobile ? 12 : 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
-          <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: 0 }}><BoltIcon size={16} color="#F59E0B" style={{ marginRight: 4 }} /> OEE 30日趋势</h3>
-          <TreeSelect
-            placeholder="选择企业层级"
-            allowClear
-            showSearch
-            treeDefaultExpandAll
-            treeNodeFilterProp="name"
-            value={selectedOrgId}
-            onChange={handleOrgChange}
-            style={{ minWidth: isMobile ? 140 : 220 }}
-            size="small"
-            treeData={orgTree}
-            fieldNames={treeFieldNames}
-          />
-        </div>
+        <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}><BoltIcon size={16} color="#F59E0B" style={{ marginRight: 4 }} /> OEE 30日趋势</h3>
         {trendLoading && (
           <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
             <Spin size="small" style={{ marginRight: 8 }} />加载趋势...
@@ -253,7 +214,7 @@ export default function ExecutiveDashboard() {
           <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无趋势数据</div>
         )}
         {!trendLoading && oeeTrend.length > 0 && (<>
-        <div style={{ display: 'flex', gap: 8, height: 220, position: 'relative' }}>
+        <div style={{ display: 'flex', gap: 8, height: 220, position: 'relative', overflow: 'hidden' }}>
           {/* Y轴刻度 */}
           <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', width: 30, flexShrink: 0, paddingBottom: 28 }}>
             <span style={{ fontSize: 10, color: '#999' }}>100</span>
@@ -265,61 +226,66 @@ export default function ExecutiveDashboard() {
           </div>
 
           {/* 图表 */}
-          <div style={{ flex: 1, position: 'relative', paddingBottom: 28, overflowX: 'auto' }}>
-            {/* 目标线 (85%) */}
+          <div style={{ flex: 1, position: 'relative', paddingBottom: 28 }}>
+             {/* 柱状图 — 30天每日数据 */}
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%', position: 'relative', minWidth: isMobile ? 400 : 600 }}>
+            {/* 目标线（与柱形图同一坐标系） */}
             <div style={{
-              position: 'absolute', left: 0, right: 0, top: `${100 - 85}%`,
-              borderTop: '2px dashed #EF4444', zIndex: 1,
+              position: 'absolute', left: 0, right: 0, top: `${100 - targetOEE}%`,
+              borderTop: '2px dashed #EF4444', zIndex: 1, pointerEvents: 'none',
             }} />
             <span style={{
-              position: 'absolute', right: 0, top: `${100 - 85}%`, transform: 'translateY(-100%)',
+              position: 'absolute', right: 0, top: `${100 - targetOEE}%`, transform: 'translateY(-100%)',
               fontSize: 10, color: '#EF4444', fontWeight: 600, background: '#fff', paddingRight: 4, zIndex: 2,
-            }}>目标 85%</span>
-
-            {/* 柱状图 — 30天每日数据 */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: '100%', position: 'relative', minWidth: isMobile ? 400 : 600 }}>
-              {oeeTrend.map((t: any, idx: number) => {
-                const oee = Math.min(100, Math.max(0, t.oee));
-                const barColor = oee >= 85 ? '#22C55E' : oee >= 70 ? '#3B82F6' : '#F59E0B';
-                const isLast = idx === (oeeTrend.length - 1);
-                const showLabel = idx % 5 === 0 || isLast;
-                return (
-                  <div key={t.date || t.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                    {/* 柱体 */}
-                    <div style={{
-                      width: '100%', height: `${oee}%`,
-                      background: `linear-gradient(180deg, ${barColor}, ${barColor}99)`,
-                      borderRadius: '2px 2px 0 0',
-                      position: 'relative',
-                      transition: 'height 0.3s',
-                      minHeight: oee > 0 ? 2 : 0,
-                    }}>
-                      {/* 数值标注（仅首尾和突出点） */}
-                      {isLast && (
+            }}>目标 {targetOEE}%</span>
+              {(() => {
+                const maxIdx = oeeTrend.reduce((best, t, i) => t.oee > oeeTrend[best].oee ? i : best, 0);
+                const minIdx = oeeTrend.reduce((worst, t, i) => t.oee < oeeTrend[worst].oee ? i : worst, 0);
+                return oeeTrend.map((t: any, idx: number) => {
+                  const oee = Math.min(100, Math.max(0, t.oee));
+                  const barColor = oee >= targetOEE ? '#22C55E' : '#EF4444';
+                  const isLast = idx === (oeeTrend.length - 1);
+                  const showLabel = idx % 5 === 0 || isLast;
+                  const isMax = idx === maxIdx;
+                  const isMin = idx === minIdx;
+                  const showValue = isMax || isMin;
+                  return (
+                    <div key={t.date || t.month} style={{ flex: 1, display: 'flex', alignItems: 'flex-end', height: '100%', position: 'relative' }}>
+                      {/* 柱体 */}
+                      <Tooltip title={`${(t.date || t.month || '').slice(0, 10)}: ${t.oee}%`}>
+                      <div style={{
+                        width: '100%', height: `${oee}%`,
+                        background: `linear-gradient(180deg, ${barColor}, ${barColor}99)`,
+                        borderRadius: '8px 8px 0 0',
+                        position: 'relative',
+                        transition: 'height 0.3s',
+                        minHeight: oee > 0 ? 2 : 0,
+                      }}>
+                        {/* 极好/极差数值标注 */}
+                        {showValue && (
+                          <span style={{
+                            position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
+                            fontSize: 12, fontWeight: 800, color: isMax ? '#22C55E' : '#EF4444',
+                            whiteSpace: 'nowrap', background: '#fff', padding: '0 4px', borderRadius: 3,
+                          }}>{t.oee}%</span>
+                        )}
+                      </div>
+                      </Tooltip>
+                      {/* X轴标签（每5天显示） — 绝对定位不影响柱体排列 */}
+                      {showLabel && (
                         <span style={{
-                          position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)',
-                          fontSize: 9, fontWeight: 600, color: barColor, whiteSpace: 'nowrap',
-                        }}>{t.oee}%</span>
+                          position: 'absolute', bottom: -22, left: '50%', transform: 'translateX(-50%)',
+                          fontSize: 11, color: '#999', whiteSpace: 'nowrap',
+                        }}>
+                          {(t.date || t.month || '').slice(5)}
+                        </span>
                       )}
                     </div>
-                    {/* X轴标签（每5天显示） */}
-                    {showLabel && (
-                      <span style={{ fontSize: 9, color: '#999', marginTop: 3, whiteSpace: 'nowrap' }}>
-                        {(t.date || t.month || '').slice(5)}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
 
-            {/* 网格线 */}
-            {[0, 20, 40, 60, 80, 100].map(v => (
-              <div key={v} style={{
-                position: 'absolute', left: 0, right: 0, top: `${100 - v}%`,
-                borderTop: '1px solid #f0f0f0', pointerEvents: 'none',
-              }} />
-            ))}
           </div>
         </div>
         </>)}

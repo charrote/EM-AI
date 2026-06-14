@@ -159,6 +159,29 @@ function Start-GuardedService {
     return $p
 }
 
+# 读取端口配置
+$ConfigJson = Get-Content (Join-Path $ScriptDir "config.json") | ConvertFrom-Json
+$ApiPort = $ConfigJson.API_PORT
+$FrontendPort = $ConfigJson.FRONTEND_PORT
+if (-not $ApiPort) { $ApiPort = 5174 }
+if (-not $FrontendPort) { $FrontendPort = 5173 }
+
+# 清理旧进程
+$portTargets = @($ApiPort, $FrontendPort)
+foreach ($port in $portTargets) {
+    try {
+        $connections = netstat -ano 2>$null | Select-String ":$port\s+"
+        foreach ($conn in $connections) {
+            $pid = ($conn -split '\s+')[-1]
+            if ($pid -match '^\d+$') {
+                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                Log "已清理端口 $port (PID: $pid)"
+            }
+        }
+    } catch { }
+}
+Start-Sleep -Seconds 1
+
 $backendProc = Start-GuardedService "Backend" $BackendDir "npx" @("tsx", "src/index.ts") $BackendLog
 $frontendProc = Start-GuardedService "Frontend" $FrontendDir "npm" @("run", "dev") $FrontendLog
 
@@ -169,12 +192,6 @@ PrintAndLog "[5/5] 启动完成!" Green
 PrintAndLog "================================================" Cyan
 PrintAndLog "  EM-AI 演示系统运行中" Green
 PrintAndLog ""
-# Read ports from config.json
-$ConfigJson = Get-Content (Join-Path $ScriptDir "config.json") | ConvertFrom-Json
-$ApiPort = $ConfigJson.API_PORT
-$FrontendPort = $ConfigJson.FRONTEND_PORT
-if (-not $ApiPort) { $ApiPort = 5174 }
-if (-not $FrontendPort) { $FrontendPort = 5173 }
 
 PrintAndLog "  前端:       http://localhost:$FrontendPort"
 PrintAndLog "  后端:       http://localhost:${ApiPort}/api/health"

@@ -126,11 +126,11 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%FRONTEND_PORT% "') do task
 set BACKEND_LOG=%LOG_DIR%\backend.log
 set FRONTEND_LOG=%LOG_DIR%\frontend.log
 
-:: Launch backend
-start "UantekEM-AI Backend" /min cmd /c "title UantekEM-AI Backend && cd /d %BACKEND_DIR% && set PORT=%API_PORT% && node dist/index.js >> "%BACKEND_LOG%" 2>&1"
+:: Launch backend (hidden)
+powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"!BACKEND_DIR!\" && set PORT=!API_PORT! && node dist/index.js >> \"!BACKEND_LOG!\" 2>&1' -WindowStyle Hidden"
 
-:: Launch frontend
-start "UantekEM-AI Frontend" /min cmd /c "title UantekEM-AI Frontend && cd /d %FRONTEND_DIR% && node serve.cjs >> "%FRONTEND_LOG%" 2>&1"
+:: Launch frontend (hidden)
+powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"!FRONTEND_DIR!\" && node serve.cjs >> \"!FRONTEND_LOG!\" 2>&1' -WindowStyle Hidden"
 
 echo   [OK] Backend started - http://localhost:!API_PORT!/api
 echo   [OK] Frontend started - http://localhost:!FRONTEND_PORT!
@@ -154,13 +154,13 @@ timeout /t 30 /nobreak >nul
 netstat -ano | findstr ":%API_PORT% " >nul
 if errorlevel 1 (
     echo [!date! !time!] Backend port !API_PORT! not responding, restarting...
-    start "UantekEM-AI Backend" /min cmd /c "title UantekEM-AI Backend && cd /d %BACKEND_DIR% && set PORT=%API_PORT% && node dist/index.js >> "%BACKEND_LOG%" 2>&1"
+    powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"!BACKEND_DIR!\" && set PORT=!API_PORT! && node dist/index.js >> \"!BACKEND_LOG!\" 2>&1' -WindowStyle Hidden"
 )
 
 netstat -ano | findstr ":%FRONTEND_PORT% " >nul
 if errorlevel 1 (
     echo [!date! !time!] Frontend port !FRONTEND_PORT! not responding, restarting...
-    start "UantekEM-AI Frontend" /min cmd /c "title UantekEM-AI Frontend && cd /d %FRONTEND_DIR% && node serve.cjs >> "%FRONTEND_LOG%" 2>&1"
+    powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"!FRONTEND_DIR!\" && node serve.cjs >> \"!FRONTEND_LOG!\" 2>&1' -WindowStyle Hidden"
 )
 
 goto guard

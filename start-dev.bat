@@ -57,15 +57,19 @@ call npx prisma generate >nul 2>&1
 call npx tsx src/utils/seed.ts >nul 2>&1
 cd ..
 
+:: Kill any leftovers on our ports
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%API_PORT% "') do taskkill /F /PID %%a >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%FRONTEND_PORT% "') do taskkill /F /PID %%a >nul 2>&1
+
 echo.
 echo Starting services...
 echo.
 
-:: Launch backend (visible window)
-start "UantekEM-AI Backend" cmd /c "cd /d %CD%\backend && title UantekEM-AI Backend && npm run dev"
+:: Launch backend (hidden)
+powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"%CD%\backend\" && title UantekEM-AI Backend && npm run dev' -WindowStyle Hidden"
 
-:: Launch frontend (visible window)
-start "UantekEM-AI Frontend" cmd /c "cd /d %CD%\frontend && title UantekEM-AI Frontend && npm run dev"
+:: Launch frontend (hidden)
+powershell -NoProfile -Command "Start-Process cmd.exe -ArgumentList '/c cd /d \"%CD%\frontend\" && title UantekEM-AI Frontend && npm run dev' -WindowStyle Hidden"
 
 echo ================================================
 echo   Backend:  http://localhost:%API_PORT%/api

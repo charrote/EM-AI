@@ -116,8 +116,8 @@ class DeviceSimulator {
   private async tick() {
     this._tickCount++;
     try {
-      const devices = await prisma.device.findMany({ select: { id: true, status: true, healthScore: true, oee: true } });
-      const updates: { id: string; status: string; healthScore: number; oee: number }[] = [];
+      const devices = await prisma.device.findMany({ select: { id: true, status: true, healthScore: true, oee: true, totalRunningTime: true } });
+      const updates: { id: string; status: string; healthScore: number; oee: number; totalRunningTime: number }[] = [];
 
       for (const device of devices) {
         // 每次 tick 模拟 ~15% 的设备变化
@@ -127,11 +127,16 @@ class DeviceSimulator {
         const newHealth = Math.max(5, Math.min(100, Math.round((device.healthScore || 70) + healthDelta(newStatus))));
         const newOee = Math.max(5, Math.min(100, Math.round((device.oee || 70) + oeeDelta(newStatus))));
 
+        // Track running time (tick is 30s ≈ 0.00833h)
+        const prevRunningTime = device.totalRunningTime || 0;
+        const addHours = newStatus === 'running' ? 0.00833 : 0;
+
         updates.push({
           id: device.id,
           status: newStatus,
           healthScore: newHealth,
           oee: newOee,
+          totalRunningTime: Math.round((prevRunningTime + addHours) * 100) / 100,
         });
       }
 
@@ -141,7 +146,7 @@ class DeviceSimulator {
           updates.map((u) =>
             prisma.device.update({
               where: { id: u.id },
-              data: { status: u.status, healthScore: u.healthScore, oee: u.oee },
+              data: { status: u.status, healthScore: u.healthScore, oee: u.oee, totalRunningTime: u.totalRunningTime },
             })
           )
         );

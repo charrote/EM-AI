@@ -29,6 +29,7 @@ const METRIC_HELP: Record<string, string> = {
   oee: '设备综合效率 (Overall Equipment Effectiveness)，计算方法：可用率 × 性能率 × 质量率。行业标准≥85%为世界级。',
   mtbf: '平均故障间隔时间 (Mean Time Between Failures)，衡量设备可靠性的关键指标，值越大越好。',
   mttr: '平均修复时间 (Mean Time To Repair)，衡量维修效率的关键指标，值越小越好。',
+  totalRunningTime: '设备累计运行总时长，反映设备的使用强度和维护周期参考。',
 };
 
 function KpiStatWithHelp({ label, value, suffix, color, helpKey }: { label: string; value: string | number; suffix?: string; color?: string; helpKey: string }) {
@@ -160,62 +161,136 @@ export default function DeviceDetail() {
 
     const is24h = trendType === '24h';
 
-    chart.setOption({
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: any[]) => {
-          const label = params[0]?.axisValue || '';
-          let html = `<strong>${is24h ? '' : ''}${label}</strong><br/>`;
-          params.forEach((p: any) => {
-            html += `${p.marker} ${p.seriesName}: ${p.value}${p.seriesName === 'OEE' || p.seriesName === '可用率' || p.seriesName === '性能率' ? '%' : ''}<br/>`;
-          });
-          return html;
+    if (is24h) {
+      // ── 当日每小时产量 ──
+      const outputVals = trend.map(t => t.output);
+      const defectVals = trend.map(t => t.defect);
+      const allVals = [...outputVals, ...defectVals];
+      const dataMin = Math.min(...allVals);
+      const dataMax = Math.max(...allVals);
+      const pad = Math.max(2, (dataMax - dataMin) * 0.15);
+
+      chart.setOption({
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params: any[]) => {
+            const label = params[0]?.axisValue || '';
+            let html = `<strong>${label}</strong><br/>`;
+            let outputVal = 0, defectVal = 0;
+            params.forEach((p: any) => {
+              html += `${p.marker} ${p.seriesName}: ${p.value}<br/>`;
+              if (p.seriesName === '产量') outputVal = p.value;
+              if (p.seriesName === '不良') defectVal = p.value;
+            });
+            if (outputVal > 0) {
+              html += `不良率: ${(defectVal / outputVal * 100).toFixed(1)}%`;
+            }
+            return html;
+          },
         },
-      },
-      legend: {
-        data: ['OEE', '可用率', '性能率'],
-        top: 0, right: 0,
-        textStyle: { fontSize: 12 },
-      },
-      grid: { left: 45, right: 10, top: 30, bottom: 25 },
-      xAxis: {
-        type: 'category',
-        data: trend.map(t => is24h ? t.hour : t.date.slice(5)),
-        axisLabel: { fontSize: 10, color: '#999', rotate: is24h ? 45 : 0 },
-      },
-      yAxis: {
-        type: 'value', min: 40, max: 100,
-        splitLine: { lineStyle: { color: '#F3F4F6' } },
-        axisLabel: { fontSize: 10 },
-      },
-      series: [
-        {
-          name: 'OEE', type: 'line',
-          data: trend.map(t => t.oee),
-          smooth: true,
-          lineStyle: { color: '#3B82F6', width: 2 },
-          itemStyle: { color: '#3B82F6' },
-          areaStyle: { opacity: 0.08, color: '#3B82F6' },
-          symbol: 'circle', symbolSize: 4,
+        legend: {
+          data: ['产量', '不良'],
+          top: 0, right: 0,
+          textStyle: { fontSize: 12 },
         },
-        {
-          name: '可用率', type: 'line',
-          data: trend.map(t => t.availability),
-          smooth: true,
-          lineStyle: { color: '#22C55E', width: 1.5, type: 'dashed' },
-          itemStyle: { color: '#22C55E' },
-          symbol: 'none',
+        grid: { left: 50, right: 10, top: 30, bottom: 25 },
+        xAxis: {
+          type: 'category',
+          data: trend.map(t => t.hour),
+          axisLabel: { fontSize: 10, color: '#999', rotate: 45 },
         },
-        {
-          name: '性能率', type: 'line',
-          data: trend.map(t => t.performance),
-          smooth: true,
-          lineStyle: { color: '#F59E0B', width: 1.5, type: 'dashed' },
-          itemStyle: { color: '#F59E0B' },
-          symbol: 'none',
+        yAxis: {
+          type: 'value',
+          min: Math.max(0, Math.floor(dataMin - pad)),
+          max: Math.ceil(dataMax + pad),
+          splitLine: { lineStyle: { color: '#F3F4F6' } },
+          axisLabel: { fontSize: 10 },
         },
-      ],
-    });
+        series: [
+          {
+            name: '产量', type: 'bar',
+            data: outputVals,
+            itemStyle: { color: '#3B82F6', borderRadius: [4, 4, 0, 0] },
+            barMaxWidth: 24,
+          },
+          {
+            name: '不良', type: 'line',
+            data: defectVals,
+            smooth: true,
+            lineStyle: { color: '#EF4444', width: 2 },
+            itemStyle: { color: '#EF4444' },
+            symbol: 'diamond', symbolSize: 6,
+          },
+        ],
+      });
+    } else {
+      // ── OEE 趋势 (date range) ──
+      const allVals = trend.flatMap(t => [t.oee, t.availability, t.performance]);
+      const dataMin = Math.min(...allVals);
+      const dataMax = Math.max(...allVals);
+      const pad = Math.max(5, (dataMax - dataMin) * 0.15);
+      const yMin = Math.max(0, Math.floor(dataMin - pad));
+      const yMax = Math.min(100, Math.ceil(dataMax + pad));
+
+      chart.setOption({
+        tooltip: {
+          trigger: 'axis',
+          formatter: (params: any[]) => {
+            const label = params[0]?.axisValue || '';
+            let html = `<strong>${label}</strong><br/>`;
+            params.forEach((p: any) => {
+              html += `${p.marker} ${p.seriesName}: ${p.value}%<br/>`;
+            });
+            return html;
+          },
+        },
+        legend: {
+          data: ['OEE', '可用率', '性能率'],
+          top: 0, right: 0,
+          textStyle: { fontSize: 12 },
+        },
+        grid: { left: 45, right: 10, top: 30, bottom: 25 },
+        xAxis: {
+          type: 'category',
+          data: trend.map(t => t.date.slice(5)),
+          axisLabel: { fontSize: 10, color: '#999' },
+        },
+        yAxis: {
+          type: 'value',
+          min: yMin,
+          max: yMax,
+          splitLine: { lineStyle: { color: '#F3F4F6' } },
+          axisLabel: { fontSize: 10, formatter: '{value}%' },
+        },
+        series: [
+          {
+            name: 'OEE', type: 'line',
+            data: trend.map(t => t.oee),
+            smooth: true,
+            lineStyle: { color: '#3B82F6', width: 2 },
+            itemStyle: { color: '#3B82F6' },
+            areaStyle: { opacity: 0.08, color: '#3B82F6' },
+            symbol: 'circle', symbolSize: 4,
+          },
+          {
+            name: '可用率', type: 'line',
+            data: trend.map(t => t.availability),
+            smooth: true,
+            lineStyle: { color: '#22C55E', width: 1.5, type: 'dashed' },
+            itemStyle: { color: '#22C55E' },
+            symbol: 'none',
+          },
+          {
+            name: '性能率', type: 'line',
+            data: trend.map(t => t.performance),
+            smooth: true,
+            lineStyle: { color: '#F59E0B', width: 1.5, type: 'dashed' },
+            itemStyle: { color: '#F59E0B' },
+            symbol: 'none',
+          },
+        ],
+      });
+    }
   }, [trend]);
 
   const handleRangeChange = (dates: any) => {
@@ -321,6 +396,7 @@ export default function DeviceDetail() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 12, marginBottom: 12 }}>
           <HealthDonut score={device.healthScore || 0} onClick={handleHealthScoreClick} />
           <KpiStatWithHelp label="OEE" value={device.oee || '-'} suffix="%" color={oeeColor} helpKey="oee" />
+          <KpiStatWithHelp label="总运行时间" value={device.totalRunningTime ?? '-'} suffix="h" helpKey="totalRunningTime" />
           <KpiStatWithHelp label="MTBF" value={device.mtbf || '-'} suffix="h" helpKey="mtbf" />
           <KpiStatWithHelp label="MTTR" value={device.mttr || '-'} suffix="h" helpKey="mttr" />
         </div>
@@ -381,7 +457,7 @@ export default function DeviceDetail() {
         <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #E5E7EB', padding: 16, marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#333', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ThunderboltOutlined /> OEE 24 小时趋势
+              <ThunderboltOutlined /> {trendType === '24h' ? '当日每小时产量' : 'OEE 趋势'}
             </h3>
             <Space size={8}>
               <Button size="small" type={trendType === '24h' ? 'primary' : 'default'} onClick={() => { setTrendType('24h'); fetchData('24h'); }}>

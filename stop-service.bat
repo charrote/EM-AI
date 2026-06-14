@@ -13,6 +13,25 @@ echo ================================================
 
 set STOPPED=0
 
+:: Kill the guardian process first (the main start-service.bat window)
+taskkill /F /FI "WINDOWTITLE eq UantekEM-AI Service" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo   [OK] Guardian process stopped
+    set STOPPED=1
+)
+
+:: Kill backend/frontend cmd windows by title
+taskkill /F /FI "WINDOWTITLE eq UantekEM-AI Backend" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo   [OK] Backend window closed
+    set STOPPED=1
+)
+taskkill /F /FI "WINDOWTITLE eq UantekEM-AI Frontend" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo   [OK] Frontend window closed
+    set STOPPED=1
+)
+
 :: Kill by saved PIDs
 if exist "%PID_BACKEND%" (
     set /p PID=<%PID_BACKEND%

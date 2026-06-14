@@ -157,19 +157,20 @@ router.get('/devices/:id/trend', async (req: Request, res: Response) => {
     const range = req.query.range as string;
 
     if (range === '24h') {
-      // Generate 24-hour trend
-      const trend: { hour: string; oee: number; availability: number; performance: number; quality: number }[] = [];
-      let hourOee = currentOEE;
+      // Generate 24-hour hourly output & defect
+      const capacity = device?.theoreticalCapacity ?? 200;
+      const trend: { hour: string; output: number; defect: number }[] = [];
       for (let i = 23; i >= 0; i--) {
-        const change = (Math.random() - 0.5) * 4;
-        hourOee = Math.max(40, Math.min(100, hourOee + change));
         const h = new Date(Date.now() - i * 3600000);
+        const hour = h.getHours();
+        // Daytime (8-18) has higher utilization
+        const baseUtil = hour >= 8 && hour <= 18 ? 0.7 + Math.random() * 0.25 : 0.1 + Math.random() * 0.25;
+        const output = Math.round(capacity * baseUtil);
+        const defect = Math.round(output * (0.01 + Math.random() * 0.04));
         trend.push({
-          hour: `${String(h.getHours()).padStart(2, '0')}:00`,
-          oee: Math.round(hourOee * 100) / 100,
-          availability: Math.round(Math.min(100, hourOee + 5 + (Math.random() - 0.5) * 2) * 100) / 100,
-          performance: Math.round(Math.min(100, hourOee + 8 + (Math.random() - 0.5) * 2) * 100) / 100,
-          quality: Math.round(Math.min(100, hourOee + 10 + (Math.random() - 0.5) * 1) * 100) / 100,
+          hour: `${String(hour).padStart(2, '0')}:00`,
+          output,
+          defect,
         });
       }
       return res.json({ data: trend });
@@ -449,7 +450,7 @@ router.get('/oee-trend', async (req: Request, res: Response) => {
 
     const runningCount = devices.filter(d => d.status === 'running').length;
     const totalDevices = devices.length;
-    const baseOEE = totalDevices > 0 ? Math.round((runningCount / totalDevices) * 70 + 15) : 75;
+    const baseOEE = totalDevices > 0 ? Math.round(75 + (runningCount / totalDevices) * 10) : 80;
 
     // Generate 30-day daily trend
     const faultDays = new Set<number>();
@@ -459,13 +460,13 @@ router.get('/oee-trend', async (req: Request, res: Response) => {
       if (day + 1 < 30) faultDays.add(day + 1);
     }
     const trend: { date: string; oee: number }[] = [];
-    let dayOee = baseOEE - 4;
+    let dayOee = baseOEE - 5;
     for (let i = 29; i >= 0; i--) {
       let change: number;
       if (faultDays.has(i)) {
-        change = faultDays.has(i + 1) ? 0.5 + Math.random() * 1.5 : -(8 + Math.random() * 5);
+        change = faultDays.has(i + 1) ? 1 + Math.random() * 3 : -(6 + Math.random() * 4);
       } else {
-        change = (Math.random() - 0.5) * 0.8;
+        change = (Math.random() - 0.45) * 1.2;
       }
       dayOee = Math.max(40, Math.min(98, dayOee + change));
       trend.unshift({
@@ -481,14 +482,29 @@ router.get('/oee-trend', async (req: Request, res: Response) => {
     const currentAvg = currentPeriod.reduce((s, d) => s + d.oee, 0) / currentPeriod.length;
     const prevAvg = prevPeriod.length > 0 ? prevPeriod.reduce((s, d) => s + d.oee, 0) / prevPeriod.length : currentAvg;
 
-    const orgName = orgId
-      ? (await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } }))?.name
-      : undefined;
+    // Resolve oeeTarget: inherit from parent org if not set on current org
+    let orgName = '全厂';
+    let resolvedTarget = 85;
+    if (orgId) {
+      const allOrgs = await prisma.organization.findMany({ select: { id: true, parentId: true, name: true, oeeTarget: true } });
+      const orgMap = new Map(allOrgs.map(o => [o.id, o]));
+      const orgInfo = orgMap.get(orgId);
+      if (orgInfo) orgName = orgInfo.name;
+      let current = orgMap.get(orgId);
+      while (current) {
+        if (current.oeeTarget != null) {
+          resolvedTarget = current.oeeTarget;
+          break;
+        }
+        current = current.parentId ? orgMap.get(current.parentId) : undefined;
+      }
+    }
 
     res.json({
       data: {
         orgId: orgId || null,
-        orgName: orgName || '全厂',
+        orgName,
+        targetOEE: resolvedTarget,
         totalDevices,
         runningCount,
         baseOEE,
