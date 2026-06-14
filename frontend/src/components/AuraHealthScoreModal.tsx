@@ -499,6 +499,21 @@ function CostRiskChart() {
   return <div ref={ref} style={{ width: '100%', height: 200 }} />;
 }
 
+/* ─── Tab Label Component ──────────────────── */
+
+function TabLabel({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '6px 4px', fontSize: 14, fontWeight: 700,
+      letterSpacing: 0.5,
+    }}>
+      <span style={{ fontSize: 16 }}>{icon}</span>
+      <span className="tab-label-text" style={{ color: '#9CA3AF', transition: 'color 0.2s' }}>{text}</span>
+    </div>
+  );
+}
+
 /* ─── Main Component ──────────────────────── */
 
 export default function AuraHealthScoreModal() {
@@ -508,6 +523,34 @@ export default function AuraHealthScoreModal() {
   if (!healthScoreModalOpen) return null;
 
   return (
+    <>
+    <style>{`
+      .health-score-tabs .ant-tabs-tab {
+        padding: 8px 16px !important;
+        margin: 0 2px !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+      }
+      .health-score-tabs .ant-tabs-tab:hover {
+        background: rgba(59, 130, 246, 0.1) !important;
+      }
+      .health-score-tabs .ant-tabs-tab-active {
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(59, 130, 246, 0.15)) !important;
+        box-shadow: 0 0 0 1px rgba(6, 182, 212, 0.3) !important;
+      }
+      .health-score-tabs .ant-tabs-tab-active .tab-label-text {
+        color: #06B6D4 !important;
+      }
+      .health-score-tabs .ant-tabs-ink-bar {
+        display: none !important;
+      }
+      .health-score-tabs .ant-tabs-nav {
+        margin-bottom: 0 !important;
+      }
+      .health-score-tabs .ant-tabs-nav::before {
+        border-bottom: 1px solid #1F2937 !important;
+      }
+    `}</style>
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 1050,
@@ -572,16 +615,21 @@ export default function AuraHealthScoreModal() {
         <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
           <Tabs
             defaultActiveKey="health-score"
+            className="health-score-tabs"
             items={[
-              { key: 'health-score', label: <span style={{ fontSize: 13 }}>健康分项目</span>, children: <HealthScoreTab /> },
-              { key: 'rul', label: <span style={{ fontSize: 13 }}>RUL寿命预测</span>, children: <RULPredictionTab /> },
-              { key: 'maintenance-optimize', label: <span style={{ fontSize: 13 }}>维护时机优化</span>, children: <MaintenanceOptimizeTab /> },
+              { key: 'health-score', label: <TabLabel icon="📊" text="健康分项目" />, children: <HealthScoreTab /> },
+              { key: 'rul', label: <TabLabel icon="📈" text="RUL寿命预测" />, children: <RULPredictionTab /> },
+              { key: 'maintenance-optimize', label: <TabLabel icon="🔧" text="维护时机优化" />, children: <MaintenanceOptimizeTab /> },
             ]}
             style={{ color: '#E5E7EB' }}
-            tabBarStyle={{ borderBottom: '1px solid #1F2937', marginBottom: 16 }}
+            tabBarStyle={{
+              borderBottom: '1px solid #1F2937', marginBottom: 16,
+            }}
+            tabBarGutter={4}
           />
         </div>
       </div>
     </div>
+    </>
   );
 }
