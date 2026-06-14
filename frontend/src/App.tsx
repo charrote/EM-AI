@@ -43,6 +43,7 @@ const AuraDeviceProfile = lazy(() => import('./pages/AuraDeviceProfile'));
 import AuraDiagnosticModal from './components/AuraDiagnosticModal';
 import KnowledgeMiningModal from './components/KnowledgeMiningModal';
 import AuraChat from './components/AuraChat';
+import AuraHealthScoreModal from './components/AuraHealthScoreModal';
 
 function PageLoading() {
   return (
@@ -313,6 +314,9 @@ function App() {
 
       {/* ─── Aura 聊天智能体 ─── */}
       <AuraChat />
+
+      {/* ─── AURA 健康评分详情模态窗 ─── */}
+      <AuraHealthScoreModal />
 
       {/* ─── NLP 自然语言报修 — 纯 DOM 覆盖层（替换 Modal）─── */}
      {nlrModalOpen && createPortal(

@@ -59,6 +59,15 @@ interface AppState {
   // Aura 聊天智能体全局开关
   auraChatEnabled: boolean;
   setAuraChatEnabled: (enabled: boolean) => void;
+  // 预测性维护全局开关
+  predictiveMaintenanceEnabled: boolean;
+  setPredictiveMaintenanceEnabled: (enabled: boolean) => void;
+  // 健康评分详情模态窗
+  healthScoreModalOpen: boolean;
+  setHealthScoreModalOpen: (open: boolean) => void;
+  // 健康评分当前设备ID
+  healthScoreDeviceId: string | null;
+  setHealthScoreDeviceId: (id: string | null) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -155,4 +164,13 @@ export const useStore = create<AppState>((set) => ({
   // Aura 聊天智能体全局开关（默认打开）
   auraChatEnabled: true,
   setAuraChatEnabled: (enabled) => set({ auraChatEnabled: enabled }),
+  // 预测性维护全局开关（默认关闭）
+  predictiveMaintenanceEnabled: false,
+  setPredictiveMaintenanceEnabled: (enabled) => set({ predictiveMaintenanceEnabled: enabled }),
+  // 健康评分详情模态窗
+  healthScoreModalOpen: false,
+  setHealthScoreModalOpen: (open) => set({ healthScoreModalOpen: open }),
+  // 健康评分当前设备ID
+  healthScoreDeviceId: null,
+  setHealthScoreDeviceId: (id) => set({ healthScoreDeviceId: id }),
 }));

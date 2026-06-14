@@ -74,11 +74,7 @@ const AI_FEATURES: AICategory[] = [
     label: '预测性维护',
     subtitle: 'Predictive',
     color: '#06B6D4',
-    children: [
-      { key: 'health-score', label: '健康评分系统', en: 'Health Score', desc: '多维融合设备状态，生成 0-100 分连续健康图谱', status: 'planned' },
-      { key: 'rul', label: 'RUL 寿命预测', en: 'RUL Prediction', desc: '预测轴承、电机等关键部件的剩余可用寿命及置信区间', status: 'planned' },
-      { key: 'maintenance-optimize', label: '维护时机优化', en: 'Maintenance Optimization', desc: '综合生产计划、备件状态与设备健康度推荐最优维护窗口', status: 'planned' },
-    ],
+    children: [],
   },
   {
     key: 'dispatch',
@@ -114,7 +110,7 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled, auraChatEnabled, setAuraChatEnabled } = useStore();
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled, auraChatEnabled, setAuraChatEnabled, predictiveMaintenanceEnabled, setPredictiveMaintenanceEnabled } = useStore();
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -355,7 +351,13 @@ export default function AISidebar() {
               <div key={category.key} style={{ marginBottom: 4 }}>
                 {/* 类别头部 */}
                 <div
-                  onClick={() => toggleExpand(category.key)}
+                  onClick={() => {
+                    if (category.key === 'predictive') {
+                      setPredictiveMaintenanceEnabled(!predictiveMaintenanceEnabled);
+                    } else {
+                      toggleExpand(category.key);
+                    }
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -392,9 +394,23 @@ export default function AISidebar() {
                       {category.subtitle}
                     </div>
                   </div>
-                  <div style={{ color: Colors.gray300, fontSize: 11 }}>
-                    {isExpanded ? <DownOutlined /> : <RightOutlined />}
-                  </div>
+                  {category.key === 'predictive' ? (
+                    <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                      <Switch
+                        size="small"
+                        checked={predictiveMaintenanceEnabled}
+                        onChange={(checked) => setPredictiveMaintenanceEnabled(checked)}
+                        style={{
+                          background: predictiveMaintenanceEnabled
+                            ? 'linear-gradient(135deg, #06B6D4, #3B82F6)' : undefined,
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ color: Colors.gray300, fontSize: 11 }}>
+                      {isExpanded ? <DownOutlined /> : <RightOutlined />}
+                    </div>
+                  )}
                 </div>
 
                 {/* 子项列表 */}

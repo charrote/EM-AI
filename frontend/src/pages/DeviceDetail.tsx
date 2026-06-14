@@ -6,6 +6,7 @@ import * as echarts from 'echarts';
 import dayjs from 'dayjs';
 import { SpinnerIcon } from '../components/Icons';
 import { Colors } from '../styles/theme';
+import { useStore } from '../store/useStore';
 
 const { RangePicker } = DatePicker;
 
@@ -47,29 +48,52 @@ function KpiStatWithHelp({ label, value, suffix, color, helpKey }: { label: stri
   );
 }
 
-function HealthDonut({ score }: { score: number }) {
+function HealthDonut({ score, onClick }: { score: number; onClick?: () => void }) {
+  const predictiveMaintenanceEnabled = useStore((s) => s.predictiveMaintenanceEnabled);
   const color = score >= 80 ? '#22C55E' : score >= 60 ? '#F59E0B' : '#EF4444';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <Tooltip title={METRIC_HELP.healthScore}>
-        <div style={{
-          width: 68, height: 68, borderRadius: '50%', position: 'relative', cursor: 'pointer',
-          background: `conic-gradient(${color} ${score}%, #F3F4F6 ${score}%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+      <div style={{ position: 'relative' }} onClick={onClick}>
+        <Tooltip title={METRIC_HELP.healthScore}>
           <div style={{
-            width: 52, height: 52, borderRadius: '50%', background: '#fff',
+            width: 68, height: 68, borderRadius: '50%', position: 'relative', cursor: onClick ? 'pointer' : 'default',
+            background: `conic-gradient(${color} ${score}%, #F3F4F6 ${score}%)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <span style={{ fontSize: 16, fontWeight: 700, color }}>{score}</span>
+            <div style={{
+              width: 52, height: 52, borderRadius: '50%', background: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color }}>{score}</span>
+            </div>
           </div>
-        </div>
-      </Tooltip>
+        </Tooltip>
+        {predictiveMaintenanceEnabled && (
+          <div style={{
+            position: 'absolute', top: -4, right: -4,
+            background: 'linear-gradient(135deg, #06B6D4, #3B82F6)',
+            borderRadius: '50%', width: 20, height: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 6px rgba(6, 182, 212, 0.4)',
+          }}>
+            <ThunderboltOutlined style={{ color: '#fff', fontSize: 10 }} />
+          </div>
+        )}
+      </div>
       <span style={{ fontSize: 11, color: '#999', display: 'flex', alignItems: 'center', gap: 3 }}>
         健康度
         <Tooltip title={METRIC_HELP.healthScore}>
           <QuestionCircleOutlined style={{ fontSize: 10, color: '#bbb', cursor: 'pointer' }} />
         </Tooltip>
+        {predictiveMaintenanceEnabled && (
+          <span style={{
+            fontSize: 9, fontWeight: 600, color: '#06B6D4',
+            background: '#06B6D415', padding: '0 5px', borderRadius: 3,
+            lineHeight: '16px', letterSpacing: 0.5,
+          }}>
+            Aura
+          </span>
+        )}
       </span>
     </div>
   );
@@ -85,6 +109,16 @@ export default function DeviceDetail() {
   const [loading, setLoading] = useState(true);
   const trendChartDomRef = useRef<HTMLDivElement>(null);
   const trendChartRef = useRef<echarts.ECharts | null>(null);
+  const predictiveMaintenanceEnabled = useStore((s) => s.predictiveMaintenanceEnabled);
+  const setHealthScoreModalOpen = useStore((s) => s.setHealthScoreModalOpen);
+  const setHealthScoreDeviceId = useStore((s) => s.setHealthScoreDeviceId);
+
+  const handleHealthScoreClick = () => {
+    if (predictiveMaintenanceEnabled && id) {
+      setHealthScoreDeviceId(id);
+      setHealthScoreModalOpen(true);
+    }
+  };
 
   const fetchData = (range?: string, startDate?: string, endDate?: string) => {
     if (!id) return;
@@ -285,7 +319,7 @@ export default function DeviceDetail() {
 
         {/* KPI 行 - 指标 + 产量 */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 12, marginBottom: 12 }}>
-          <HealthDonut score={device.healthScore || 0} />
+          <HealthDonut score={device.healthScore || 0} onClick={handleHealthScoreClick} />
           <KpiStatWithHelp label="OEE" value={device.oee || '-'} suffix="%" color={oeeColor} helpKey="oee" />
           <KpiStatWithHelp label="MTBF" value={device.mtbf || '-'} suffix="h" helpKey="mtbf" />
           <KpiStatWithHelp label="MTTR" value={device.mttr || '-'} suffix="h" helpKey="mttr" />
