@@ -53,10 +53,10 @@ interface AppState {
   // 知识自动沉淀 - 当前选中的工单
   knowledgeMiningWorkOrder: any;
   setKnowledgeMiningWorkOrder: (wo: any) => void;
-  // Aura 聊天智能体
+  // Aura助手
   auraChatOpen: boolean;
   setAuraChatOpen: (open: boolean) => void;
-  // Aura 聊天智能体全局开关
+  // Aura助手全局开关
   auraChatEnabled: boolean;
   setAuraChatEnabled: (enabled: boolean) => void;
   // 预测性维护全局开关
@@ -158,10 +158,10 @@ export const useStore = create<AppState>((set) => ({
   // 知识自动沉淀 - 当前选中的工单
   knowledgeMiningWorkOrder: null,
   setKnowledgeMiningWorkOrder: (wo) => set({ knowledgeMiningWorkOrder: wo }),
-  // Aura 聊天智能体
+  // Aura助手
   auraChatOpen: false,
   setAuraChatOpen: (open) => set({ auraChatOpen: open }),
-  // Aura 聊天智能体全局开关（默认打开）
+  // Aura助手全局开关（默认打开）
   auraChatEnabled: true,
   setAuraChatEnabled: (enabled) => set({ auraChatEnabled: enabled }),
   // 预测性维护全局开关（默认关闭）

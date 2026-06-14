@@ -458,7 +458,7 @@ export default function AppLayout() {
               {useStore.getState().selectedOrgName || '全厂'}
             </Tag>
 
-            {/* Aura 聊天智能体 */}
+            {/* Aura助手 */}
             {auraChatEnabled && (
             <div
               onClick={() => setAuraChatOpen(!auraChatOpen)}
@@ -478,7 +478,7 @@ export default function AppLayout() {
                 lineHeight: 1,
                 gap: 1,
               }}
-              title="Aura 聊天智能体"
+              title="Aura助手"
             >
               <ThunderboltOutlined style={{ fontSize: 12 }} />
               <span style={{ fontSize: 6, fontWeight: 700, letterSpacing: 0.5 }}>Aura</span>

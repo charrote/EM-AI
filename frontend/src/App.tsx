@@ -312,7 +312,7 @@ function App() {
       {/* ─── AURA 知识自动沉淀模态窗 ─── */}
       <KnowledgeMiningModal />
 
-      {/* ─── Aura 聊天智能体 ─── */}
+      {/* ─── Aura助手 ─── */}
       <AuraChat />
 
       {/* ─── AURA 健康评分详情模态窗 ─── */}

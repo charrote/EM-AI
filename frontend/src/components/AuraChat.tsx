@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Input, Button, Spin } from 'antd';
-import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
+import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, BulbOutlined } from '@ant-design/icons';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string;
 }
 
 const SYSTEM_PROMPT = '我是友文科技Aura智能体，Aura具备感知设备现状，预测性维护的能力。制造业领域设备维护范畴以外的问答一律不提供服务。问及公司及所属，您就是友文智脑下单Aura智能体。回答客观简洁直接，不允许大长文，不允许过度渲染';
@@ -22,7 +23,10 @@ export default function AuraChat() {
   const [messages, setMessages] = useState<Message[]>([{ role: 'assistant', content: GREETING }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [thinking, setThinking] = useState(false);
+  const [currentThinking, setCurrentThinking] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const thinkingRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (listRef.current) {
@@ -30,10 +34,17 @@ export default function AuraChat() {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (thinkingRef.current) {
+      thinkingRef.current.scrollTop = thinkingRef.current.scrollHeight;
+    }
+  }, [currentThinking]);
+
   const handleSend = async () => {
     const text = input.trim();
     if (!text || loading) return;
     setInput('');
+    setCurrentThinking('');
 
     const userMsg: Message = { role: 'user', content: text };
     const updated = [...messages, userMsg];
@@ -54,6 +65,7 @@ export default function AuraChat() {
             ...updated.map((m) => ({ role: m.role, content: m.content })),
           ],
           stream: false,
+          ...(thinking ? { enable_thinking: true } : {}),
         }),
       });
 
@@ -63,7 +75,11 @@ export default function AuraChat() {
 
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || '抱歉，暂时无法回答。';
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
+      const reasoning = data.choices?.[0]?.message?.reasoning || '';
+      if (reasoning) {
+        setCurrentThinking(reasoning);
+      }
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply, thinking: reasoning }]);
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: '连接失败，请稍后重试。' }]);
     } finally {
@@ -142,7 +158,7 @@ export default function AuraChat() {
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: Colors.gray800, lineHeight: 1.3 }}>
-                Aura 聊天智能体
+                Aura助手
               </div>
               <div style={{ fontSize: 11, color: Colors.gray400, lineHeight: 1.3 }}>
                 Uantek Aura Agent
@@ -193,7 +209,7 @@ export default function AuraChat() {
               }}
             >
               <RobotOutlined style={{ fontSize: 40, color: Colors.gray300 }} />
-              <div>你好！我是 Aura 智能体</div>
+              <div>你好！我是 Aura助手</div>
               <div style={{ fontSize: 11 }}>请问有什么可以帮您？</div>
             </div>
           )}
@@ -223,20 +239,42 @@ export default function AuraChat() {
               >
                 {msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
               </div>
-              <div
-                style={{
-                  maxWidth: '80%',
-                  padding: '10px 14px',
-                  borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                  background: msg.role === 'user' ? Colors.primary : Colors.gray100,
-                  color: msg.role === 'user' ? '#FFFFFF' : Colors.gray800,
-                  fontSize: 13,
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {msg.content}
+              <div style={{ maxWidth: '80%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {msg.role === 'assistant' && msg.thinking && (
+                  <div
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: 8,
+                      background: '#FFF8E1',
+                      border: '1px solid #FFE082',
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: '#795548',
+                      fontStyle: 'italic',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#F57F17', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <BulbOutlined style={{ fontSize: 12 }} /> 思考过程
+                    </div>
+                    {msg.thinking}
+                  </div>
+                )}
+                <div
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: msg.role === 'user' ? Colors.primary : Colors.gray100,
+                    color: msg.role === 'user' ? '#FFFFFF' : Colors.gray800,
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {msg.content}
+                </div>
               </div>
             </div>
           ))}
@@ -263,6 +301,32 @@ export default function AuraChat() {
           )}
         </div>
 
+        {thinking && (currentThinking || loading) && (
+          <div
+            style={{
+              maxHeight: 200,
+              overflow: 'auto',
+              margin: '0 12px 8px',
+              padding: 10,
+              borderRadius: 8,
+              background: '#FFF8E1',
+              border: '1px solid #FFE082',
+              fontSize: 12,
+              lineHeight: 1.6,
+              color: '#795548',
+              flexShrink: 0,
+            }}
+            ref={thinkingRef}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 6, color: '#F57F17', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <BulbOutlined style={{ fontSize: 12 }} /> 思考过程
+            </div>
+            <div style={{ fontStyle: 'italic' }}>
+              {currentThinking || '思考中...'}
+            </div>
+          </div>
+        )}
+
         <div
           style={{
             padding: '12px 16px',
@@ -270,6 +334,7 @@ export default function AuraChat() {
             display: 'flex',
             gap: 8,
             flexShrink: 0,
+            alignItems: 'flex-end',
           }}
         >
           <Input.TextArea
@@ -287,6 +352,27 @@ export default function AuraChat() {
               padding: '8px 12px',
             }}
           />
+          <div
+            onClick={() => setThinking(!thinking)}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+              background: thinking ? '#FFF8E1' : 'transparent',
+              color: thinking ? '#F57F17' : Colors.gray400,
+              border: thinking ? '1px solid #FFE082' : '1px solid transparent',
+              transition: 'all 0.2s',
+              fontSize: 16,
+            }}
+            title={thinking ? '关闭思考' : '开启思考'}
+          >
+            <BulbOutlined />
+          </div>
           <Button
             type="primary"
             shape="circle"
