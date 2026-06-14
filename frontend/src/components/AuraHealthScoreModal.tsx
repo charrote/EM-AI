@@ -467,7 +467,7 @@ function MaintenanceWindowChart() {
           return { value: 0 };
         }),
         barWidth: 20,
-        label: { show: true, position: 'top', formatter: d === days.find(x => x === '06/22') ? '备件未到' : '', color: '#F59E0B', fontSize: 9 },
+        label: { show: true, position: 'top', formatter: (p: any) => days[p.dataIndex] === '06/22' ? '备件未到' : '', color: '#F59E0B', fontSize: 9 },
       }],
     });
     return () => { chart.dispose(); };
@@ -501,14 +501,21 @@ function CostRiskChart() {
 
 /* ─── Tab Label Component ──────────────────── */
 
-function TabLabel({ icon, text }: { icon: string; text: string }) {
+function TabIcon({ type }: { type: 'chart' | 'ruler' | 'tool' }) {
+  const props = { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  if (type === 'chart') return <svg {...props}><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-6"/></svg>;
+  if (type === 'ruler') return <svg {...props}><path d="M12 20h9"/><path d="M16.5 3.5L20 7l-8 8-8-8 3.5-3.5"/><path d="M3 12h2"/><path d="M7 12h2"/><path d="M11 12h2"/></svg>;
+  return <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M12 1v4"/><path d="M12 19v4"/><path d="M4.22 4.22l2.83 2.83"/><path d="M16.95 16.95l2.83 2.83"/><path d="M1 12h4"/><path d="M19 12h4"/><path d="M4.22 19.78l2.83-2.83"/><path d="M16.95 7.05l2.83-2.83"/></svg>;
+}
+
+function TabLabel({ type, text }: { type: 'chart' | 'ruler' | 'tool'; text: string }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6,
       padding: '6px 4px', fontSize: 14, fontWeight: 700,
       letterSpacing: 0.5,
     }}>
-      <span style={{ fontSize: 16 }}>{icon}</span>
+      <span style={{ color: '#9CA3AF', display: 'flex' }}><TabIcon type={type} /></span>
       <span className="tab-label-text" style={{ color: '#9CA3AF', transition: 'color 0.2s' }}>{text}</span>
     </div>
   );
@@ -561,7 +568,7 @@ export default function AuraHealthScoreModal() {
     >
       <div
         style={{
-          width: '94vw', maxWidth: 960, height: '85vh',
+          width: '94vw', maxWidth: 1200, height: '85vh',
           background: '#070A1A', borderRadius: 12,
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -617,9 +624,9 @@ export default function AuraHealthScoreModal() {
             defaultActiveKey="health-score"
             className="health-score-tabs"
             items={[
-              { key: 'health-score', label: <TabLabel icon="📊" text="健康分项目" />, children: <HealthScoreTab /> },
-              { key: 'rul', label: <TabLabel icon="📈" text="RUL寿命预测" />, children: <RULPredictionTab /> },
-              { key: 'maintenance-optimize', label: <TabLabel icon="🔧" text="维护时机优化" />, children: <MaintenanceOptimizeTab /> },
+              { key: 'health-score', label: <TabLabel type="chart" text="健康分项目" />, children: <HealthScoreTab /> },
+              { key: 'rul', label: <TabLabel type="ruler" text="RUL寿命预测" />, children: <RULPredictionTab /> },
+              { key: 'maintenance-optimize', label: <TabLabel type="tool" text="维护时机优化" />, children: <MaintenanceOptimizeTab /> },
             ]}
             style={{ color: '#E5E7EB' }}
             tabBarStyle={{
