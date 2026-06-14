@@ -25,8 +25,10 @@ export default function AuraChat() {
   const [loading, setLoading] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [currentThinking, setCurrentThinking] = useState('');
+  const [chatHeight, setChatHeight] = useState(560);
   const listRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ dragging: false, startY: 0, startHeight: 560 });
 
   useEffect(() => {
     if (listRef.current) {
@@ -39,6 +41,28 @@ export default function AuraChat() {
       thinkingRef.current.scrollTop = thinkingRef.current.scrollHeight;
     }
   }, [currentThinking]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current.dragging) return;
+      const delta = e.clientY - dragRef.current.startY;
+      const newHeight = Math.max(560, dragRef.current.startHeight - delta);
+      const maxHeight = window.innerHeight - 96;
+      setChatHeight(Math.min(newHeight, maxHeight));
+    };
+    const onMouseUp = () => {
+      if (!dragRef.current.dragging) return;
+      dragRef.current.dragging = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -65,7 +89,7 @@ export default function AuraChat() {
             ...updated.map((m) => ({ role: m.role, content: m.content })),
           ],
           stream: false,
-          ...(thinking ? { enable_thinking: true } : {}),
+          enable_thinking: thinking,
         }),
       });
 
@@ -75,7 +99,8 @@ export default function AuraChat() {
 
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || '抱歉，暂时无法回答。';
-      const reasoning = data.choices?.[0]?.message?.reasoning || '';
+      const msg = data.choices?.[0]?.message;
+      const reasoning = msg?.reasoning || msg?.reasoning_content || '';
       if (reasoning) {
         setCurrentThinking(reasoning);
       }
@@ -115,8 +140,9 @@ export default function AuraChat() {
           zIndex: 1050,
           width: 380,
           maxWidth: 'calc(100vw - 32px)',
-          height: 560,
+          height: chatHeight,
           maxHeight: 'calc(100vh - 96px)',
+          minHeight: 560,
           background: '#FFFFFF',
           borderRadius: 12,
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
@@ -385,6 +411,26 @@ export default function AuraChat() {
               flexShrink: 0,
             }}
           />
+        </div>
+        <div
+          onMouseDown={(e) => {
+            dragRef.current = { dragging: true, startY: e.clientY, startHeight: chatHeight };
+            document.body.style.cursor = 'ns-resize';
+            document.body.style.userSelect = 'none';
+          }}
+          style={{
+            height: 6,
+            cursor: 'ns-resize',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderTop: `1px solid ${Colors.gray200}`,
+            background: Colors.gray50,
+            borderRadius: '0 0 12px 12px',
+          }}
+        >
+          <div style={{ width: 32, height: 3, borderRadius: 2, background: Colors.gray300 }} />
         </div>
       </div>
     </>
