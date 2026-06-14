@@ -157,7 +157,7 @@ export default function AISidebar() {
 
   // 搜索过滤
   const filteredFeatures = AI_FEATURES.map((cat) => {
-    if (!searchText.trim()) return { ...cat, children: cat.children };
+    if (!searchText.trim()) return cat;
     const q = searchText.toLowerCase();
     const matchedChildren = cat.children.filter(
       (child) =>
@@ -165,7 +165,10 @@ export default function AISidebar() {
         child.desc.toLowerCase().includes(q),
     );
     return { ...cat, children: matchedChildren };
-  }).filter((cat) => cat.children.length > 0);
+  }).filter((cat) => {
+    if (!searchText.trim()) return true;
+    return cat.children.length > 0;
+  });
 
   // ── 浮标按钮 ──────────────────────────────
   const renderFloatingButton = () => (
