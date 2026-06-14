@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Tabs, Tag, Row, Col, Table } from 'antd';
+import { Tabs, Tag, Row, Col, Tooltip } from 'antd';
 import * as echarts from 'echarts';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
@@ -346,26 +346,53 @@ function HistoricalCompareChart() {
   return <div ref={ref} style={{ width: '100%', height: 180 }} />;
 }
 
+/* ─── Help Tooltip ──────────────────────────── */
+
+function HelpTip({ content }: { content: string }) {
+  return (
+    <Tooltip title={content}>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 14, height: 14, borderRadius: '50%',
+        background: '#374151', color: '#9CA3AF', fontSize: 9, fontWeight: 700,
+        cursor: 'pointer', marginLeft: 3, lineHeight: '14px',
+      }}>
+        ?
+      </span>
+    </Tooltip>
+  );
+}
+
 /* ─── Tab: 维护时机优化 ────────────────────── */
 
 function MaintenanceOptimizeTab() {
   return (
     <div>
       {/* 维护优先级队列 */}
-      <div style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 8 }}>维护优先级队列（紧迫度 × 影响度）</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+        <span style={{ color: '#9CA3AF', fontSize: 12 }}>维护优先级队列（紧迫度 × 影响度）</span>
+        <HelpTip content="紧迫度：基于设备当前健康评分与退化趋势计算（0-100，越高越紧迫）。影响度：设备故障对产能、质量、交期的影响评估（0-100，越高越严重）。综合得分 = 紧迫度 × 影响度 / 100。" />
+      </div>
       <div style={{
         background: '#0D1117', borderRadius: 8, border: '1px solid #1F2937', padding: 12, marginBottom: 12,
       }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {MOCK_PRIORITY_QUEUE.map((item) => {
             const cfg = LEVEL_CFG[item.level];
+            const levelColors = { urgent: '#EF4444', planned: '#F59E0B', observe: '#9CA3AF' };
             return (
               <div key={item.key} style={{
                 background: '#111827', borderRadius: 6, padding: '10px 12px',
-                minWidth: 140, flex: 1, borderLeft: `3px solid ${cfg.color}`,
+                minWidth: 140, flex: 1,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 600 }}>{item.device}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: levelColors[item.level], flexShrink: 0,
+                    }} />
+                    <span style={{ color: '#E5E7EB', fontSize: 13, fontWeight: 600 }}>{item.device}</span>
+                  </span>
                   <Tag color={cfg.color} style={{ borderRadius: 4, border: 'none', fontSize: 10, lineHeight: '18px', padding: '0 6px' }}>{cfg.label}</Tag>
                 </div>
                 <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 4 }}>
@@ -392,7 +419,7 @@ function MaintenanceOptimizeTab() {
         <Col xs={24} sm={12}>
           <div style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 8 }}>约束条件</div>
           <div style={{
-            background: '#0D1117', borderRadius: 8, border: '1px solid #1F2937', padding: 12, marginBottom: 12,
+            background: '#0D1117', borderRadius: 8, border: '1px solid #1F2937', padding: 12, height: 200, overflow: 'auto',
           }}>
             {MOCK_CONSTRAINTS.map((c, i) => {
               const statusColor = c.status === 'conflict' ? '#EF4444' : '#22C55E';
@@ -412,9 +439,12 @@ function MaintenanceOptimizeTab() {
           </div>
         </Col>
         <Col xs={24} sm={12}>
-          <div style={{ color: '#9CA3AF', fontSize: 12, marginBottom: 8 }}>成本-风险对比</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+            <span style={{ color: '#9CA3AF', fontSize: 12 }}>成本-风险对比</span>
+            <HelpTip content="成本：包含备件费用、人工工时、停机损失的综合估算（千元）。风险指数：继续运行至计划窗口期间发生故障的概率加权值（0-100），综合了退化速度、历史故障频率、工况波动等因素。" />
+          </div>
           <div style={{
-            background: '#0D1117', borderRadius: 8, border: '1px solid #1F2937', padding: 12,
+            background: '#0D1117', borderRadius: 8, border: '1px solid #1F2937', padding: 12, height: 200,
           }}>
             <CostRiskChart />
           </div>
@@ -437,43 +467,60 @@ function MaintenanceWindowChart() {
     });
     chart.setOption({
       tooltip: { trigger: 'axis' },
-      grid: { left: 30, right: 10, top: 10, bottom: 25 },
+      grid: { left: 30, right: 10, top: 30, bottom: 25 },
       xAxis: { type: 'category', data: days, axisLabel: { color: '#6B7280', fontSize: 10, rotate: 45 }, axisLine: { lineStyle: { color: '#1F2937' } } },
       yAxis: { show: false, min: 0, max: 1 },
+      legend: {
+        data: [
+          { name: '推荐窗口', icon: 'roundRect' },
+          { name: '生产占用', icon: 'roundRect' },
+          { name: '备件未到', icon: 'roundRect' },
+          { name: '空闲', icon: 'roundRect' },
+        ],
+        textStyle: { color: '#9CA3AF', fontSize: 10 },
+        top: 0, left: 'center',
+      },
       series: [{
-        type: 'bar', data: days.map((d, i) => ({
+        name: '推荐窗口', type: 'bar', data: days.map((d, i) => ({
           value: 1,
-          itemStyle: {
-            color: colors[i],
-            borderRadius: d === '06/20' || d === '06/21' ? [4, 4, 0, 0] : [2, 2, 0, 0],
-            opacity: d === '06/20' || d === '06/21' ? 1 : d === '06/18' || d === '06/19' ? 0.7 : 0.3,
-          },
+          itemStyle: { color: d === '06/20' || d === '06/21' ? '#22C55E' : d === '06/18' || d === '06/19' ? '#EF4444' : d === '06/22' ? '#F59E0B' : '#374151', borderRadius: [4, 4, 0, 0], opacity: d === '06/20' || d === '06/21' ? 1 : d === '06/18' || d === '06/19' || d === '06/22' ? 0.85 : 0.35 },
         })),
-        barWidth: 20,
+        barWidth: 24,
         label: {
-          show: true,
-          position: 'top',
+          show: true, position: 'top',
           formatter: (p: any) => {
             const d = days[p.dataIndex];
-            if (d === '06/20' || d === '06/21') return '推荐';
-            if (d === '06/18' || d === '06/19') return '占用';
+            if (d === '06/20' || d === '06/21') return '✓ 推荐';
+            if (d === '06/18' || d === '06/19') return '⚠ 占用';
+            if (d === '06/22') return '⏳ 待备件';
             return '';
           },
-          color: '#9CA3AF', fontSize: 9,
+          color: '#D1D5DB', fontSize: 10,
         },
-      }, {
-        type: 'bar', data: days.map((d) => {
-          if (d === '06/22') return { value: 0.5, itemStyle: { color: '#F59E0B', borderRadius: [4, 4, 0, 0] } };
-          return { value: 0 };
-        }),
-        barWidth: 20,
-        label: { show: true, position: 'top', formatter: (p: any) => days[p.dataIndex] === '06/22' ? '备件未到' : '', color: '#F59E0B', fontSize: 9 },
       }],
     });
     return () => { chart.dispose(); };
   }, []);
 
-  return <div ref={ref} style={{ width: '100%', height: 80 }} />;
+  return (
+    <div>
+      <div ref={ref} style={{ width: '100%', height: 130 }} />
+      <div style={{ display: 'flex', gap: 16, marginTop: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9CA3AF', fontSize: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#22C55E', display: 'inline-block' }} /> 推荐窗口：最佳维护时间
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9CA3AF', fontSize: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444', display: 'inline-block' }} /> 生产占用：该时段有生产计划
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9CA3AF', fontSize: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#F59E0B', display: 'inline-block' }} /> 备件未到：关键备件尚未到货
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#9CA3AF', fontSize: 10 }}>
+          <span style={{ width: 10, height: 10, borderRadius: 2, background: '#374151', display: 'inline-block' }} /> 空闲：可维护时段
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function CostRiskChart() {
@@ -485,18 +532,18 @@ function CostRiskChart() {
     chart.setOption({
       tooltip: { trigger: 'axis' },
       legend: { data: ['成本 (千元)', '风险指数'], textStyle: { color: '#9CA3AF', fontSize: 10 }, bottom: 0 },
-      grid: { left: 40, right: 10, top: 10, bottom: 35 },
+      grid: { left: 45, right: 15, top: 10, bottom: 50 },
       xAxis: { type: 'category', data: labels, axisLabel: { color: '#D1D5DB', fontSize: 11 }, axisLine: { lineStyle: { color: '#1F2937' } } },
       yAxis: { type: 'value', splitLine: { lineStyle: { color: '#1F2937' } }, axisLabel: { color: '#6B7280', fontSize: 10 } },
       series: [
-        { name: '成本 (千元)', type: 'bar', data: MOCK_COST_RISK.map(d => d.cost), barWidth: 20, itemStyle: { color: '#3B82F6', borderRadius: [4, 4, 0, 0] } },
-        { name: '风险指数', type: 'bar', data: MOCK_COST_RISK.map(d => d.risk), barWidth: 20, itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] } },
+        { name: '成本 (千元)', type: 'bar', data: MOCK_COST_RISK.map(d => d.cost), barWidth: 24, itemStyle: { color: '#3B82F6', borderRadius: [4, 4, 0, 0] } },
+        { name: '风险指数', type: 'bar', data: MOCK_COST_RISK.map(d => d.risk), barWidth: 24, itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] } },
       ],
     });
     return () => { chart.dispose(); };
   }, []);
 
-  return <div ref={ref} style={{ width: '100%', height: 200 }} />;
+  return <div ref={ref} style={{ width: '100%', height: 165 }} />;
 }
 
 /* ─── Tab Label Component ──────────────────── */
@@ -568,7 +615,7 @@ export default function AuraHealthScoreModal() {
     >
       <div
         style={{
-          width: '94vw', maxWidth: 1200, height: '85vh',
+          width: '94vw', maxWidth: 1200, maxHeight: '92vh',
           background: '#070A1A', borderRadius: 12,
           display: 'flex', flexDirection: 'column',
           overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
@@ -619,7 +666,7 @@ export default function AuraHealthScoreModal() {
         </div>
 
         {/* Tabs */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '12px 20px 4px' }}>
           <Tabs
             defaultActiveKey="health-score"
             className="health-score-tabs"
