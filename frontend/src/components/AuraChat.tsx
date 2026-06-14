@@ -26,7 +26,6 @@ export default function AuraChat() {
   const [thinking, setThinking] = useState(false);
   const [currentThinking, setCurrentThinking] = useState('');
   const [chatHeight, setChatHeight] = useState(560);
-  const [thinkingCollapsed, setThinkingCollapsed] = useState<Record<number, boolean>>({});
   const listRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ dragging: false, startY: 0, startHeight: 560 });
@@ -89,7 +88,7 @@ export default function AuraChat() {
             { role: 'system', content: SYSTEM_PROMPT },
             ...updated.map((m) => ({ role: m.role, content: m.content })),
           ],
-          stream: false,
+          stream: true,
           enable_thinking: thinking,
         }),
       });
@@ -98,14 +97,45 @@ export default function AuraChat() {
         throw new Error(`API error: ${res.status}`);
       }
 
-      const data = await res.json();
-      const reply = data.choices?.[0]?.message?.content || '抱歉，暂时无法回答。';
-      const msg = data.choices?.[0]?.message;
-      const reasoning = thinking ? (msg?.reasoning || msg?.reasoning_content || '') : '';
-      if (reasoning) {
-        setCurrentThinking(reasoning);
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let replyContent = '';
+      let thinkingContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          const payload = trimmed.slice(6).trim();
+          if (payload === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(payload);
+            const delta = parsed.choices?.[0]?.delta || {};
+            if (thinking && delta.reasoning_content) {
+              thinkingContent += delta.reasoning_content;
+              setCurrentThinking(thinkingContent);
+            }
+            if (delta.content) {
+              replyContent += delta.content;
+            }
+          } catch {}
+        }
       }
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply, thinking: reasoning }]);
+
+      const finalContent = replyContent || '抱歉，暂时无法回答。';
+      const finalThinking = thinking ? thinkingContent : '';
+      if (finalThinking) {
+        setCurrentThinking(finalThinking);
+      }
+      setMessages((prev) => [...prev, { role: 'assistant', content: finalContent, thinking: finalThinking }]);
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: '连接失败，请稍后重试。' }]);
     } finally {
@@ -267,51 +297,6 @@ export default function AuraChat() {
                 {msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
               </div>
               <div style={{ maxWidth: '80%', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {msg.role === 'assistant' && msg.thinking && (
-                  <div
-                    style={{
-                      borderRadius: 8,
-                      background: '#FFF8E1',
-                      border: '1px solid #FFE082',
-                      fontSize: 12,
-                      lineHeight: 1.5,
-                      color: '#795548',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <div
-                      onClick={() => setThinkingCollapsed(prev => ({ ...prev, [i]: !prev[i] }))}
-                      style={{
-                        fontWeight: 600,
-                        padding: '8px 10px',
-                        color: '#F57F17',
-                        fontSize: 11,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                      }}
-                    >
-                      <BulbOutlined style={{ fontSize: 12 }} /> 思考过程
-                      <span style={{ marginLeft: 'auto', fontSize: 10 }}>{thinkingCollapsed[i] ? '▶' : '▼'}</span>
-                    </div>
-                    {!thinkingCollapsed[i] && (
-                      <div
-                        style={{
-                          maxHeight: 200,
-                          overflow: 'auto',
-                          padding: '0 10px 8px',
-                          fontStyle: 'italic',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {msg.thinking}
-                      </div>
-                    )}
-                  </div>
-                )}
                 <div
                   style={{
                     padding: '10px 14px',
