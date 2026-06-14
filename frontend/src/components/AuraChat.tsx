@@ -26,6 +26,7 @@ export default function AuraChat() {
   const [thinking, setThinking] = useState(false);
   const [currentThinking, setCurrentThinking] = useState('');
   const [chatHeight, setChatHeight] = useState(560);
+  const [thinkingCollapsed, setThinkingCollapsed] = useState<Record<number, boolean>>({});
   const listRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ dragging: false, startY: 0, startHeight: 560 });
@@ -46,7 +47,7 @@ export default function AuraChat() {
     const onMouseMove = (e: MouseEvent) => {
       if (!dragRef.current.dragging) return;
       const delta = e.clientY - dragRef.current.startY;
-      const newHeight = Math.max(560, dragRef.current.startHeight - delta);
+      const newHeight = Math.max(560, dragRef.current.startHeight + delta);
       const maxHeight = window.innerHeight - 96;
       setChatHeight(Math.min(newHeight, maxHeight));
     };
@@ -100,7 +101,7 @@ export default function AuraChat() {
       const data = await res.json();
       const reply = data.choices?.[0]?.message?.content || '抱歉，暂时无法回答。';
       const msg = data.choices?.[0]?.message;
-      const reasoning = msg?.reasoning || msg?.reasoning_content || '';
+      const reasoning = thinking ? (msg?.reasoning || msg?.reasoning_content || '') : '';
       if (reasoning) {
         setCurrentThinking(reasoning);
       }
@@ -269,22 +270,46 @@ export default function AuraChat() {
                 {msg.role === 'assistant' && msg.thinking && (
                   <div
                     style={{
-                      padding: '8px 10px',
                       borderRadius: 8,
                       background: '#FFF8E1',
                       border: '1px solid #FFE082',
                       fontSize: 12,
                       lineHeight: 1.5,
                       color: '#795548',
-                      fontStyle: 'italic',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
+                      overflow: 'hidden',
                     }}
                   >
-                    <div style={{ fontWeight: 600, marginBottom: 4, color: '#F57F17', fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div
+                      onClick={() => setThinkingCollapsed(prev => ({ ...prev, [i]: !prev[i] }))}
+                      style={{
+                        fontWeight: 600,
+                        padding: '8px 10px',
+                        color: '#F57F17',
+                        fontSize: 11,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                      }}
+                    >
                       <BulbOutlined style={{ fontSize: 12 }} /> 思考过程
+                      <span style={{ marginLeft: 'auto', fontSize: 10 }}>{thinkingCollapsed[i] ? '▶' : '▼'}</span>
                     </div>
-                    {msg.thinking}
+                    {!thinkingCollapsed[i] && (
+                      <div
+                        style={{
+                          maxHeight: 200,
+                          overflow: 'auto',
+                          padding: '0 10px 8px',
+                          fontStyle: 'italic',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {msg.thinking}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div
