@@ -11,6 +11,7 @@ COPY package.json package-lock.json ./
 COPY prisma/ ./prisma/
 
 # Install all dependencies (need devDeps for seed entry)
+RUN npm config set registry https://registry.npmmirror.com
 RUN npm ci
 
 # Generate Prisma client

@@ -62,6 +62,12 @@ interface AppState {
   // 预测性维护全局开关
   predictiveMaintenanceEnabled: boolean;
   setPredictiveMaintenanceEnabled: (enabled: boolean) => void;
+  // 智能派工模态窗
+  dispatchModalOpen: boolean;
+  setDispatchModalOpen: (open: boolean) => void;
+  // OEE 智能诊断模态窗
+  oeeDiagnosisModalOpen: boolean;
+  setOeeDiagnosisModalOpen: (open: boolean) => void;
   // 健康评分详情模态窗
   healthScoreModalOpen: boolean;
   setHealthScoreModalOpen: (open: boolean) => void;
@@ -167,6 +173,12 @@ export const useStore = create<AppState>((set) => ({
   // 预测性维护全局开关（默认关闭）
   predictiveMaintenanceEnabled: false,
   setPredictiveMaintenanceEnabled: (enabled) => set({ predictiveMaintenanceEnabled: enabled }),
+  // 智能派工模态窗（默认关闭）
+  dispatchModalOpen: false,
+  setDispatchModalOpen: (open) => set({ dispatchModalOpen: open }),
+  // OEE 智能诊断模态窗（默认关闭）
+  oeeDiagnosisModalOpen: false,
+  setOeeDiagnosisModalOpen: (open) => set({ oeeDiagnosisModalOpen: open }),
   // 健康评分详情模态窗
   healthScoreModalOpen: false,
   setHealthScoreModalOpen: (open) => set({ healthScoreModalOpen: open }),

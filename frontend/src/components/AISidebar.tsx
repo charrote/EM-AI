@@ -82,11 +82,7 @@ const AI_FEATURES: AICategory[] = [
     label: '智能派工与调度',
     subtitle: 'The Hands',
     color: '#F59E0B',
-    children: [
-      { key: 'skill-profile', label: '技能画像构建', en: 'Skill Profile', desc: '基于维修记录与修复率构建维修人员高维技能向量', status: 'planned' },
-      { key: 'smart-dispatch', label: '智能派工调度', en: 'Smart Dispatch', desc: '实现技能匹配、工作量均衡、响应距离的多目标自动派工', status: 'planned' },
-      { key: 're-dispatch', label: '动态重调度', en: 'Re-dispatch', desc: '针对紧急插单或人员变动实时重新优化在途工单', status: 'planned' },
-    ],
+    children: [],
   },
   {
     key: 'oee',
@@ -94,11 +90,7 @@ const AI_FEATURES: AICategory[] = [
     label: 'OEE 智能诊断',
     subtitle: 'Optimization',
     color: '#10B981',
-    children: [
-      { key: 'oee-attribution', label: 'OEE 归因分析', en: 'OEE Attribution', desc: '自动定位 OEE 下降的根因：可用性、性能或质量问题', status: 'planned' },
-      { key: 'loss-pattern', label: '损失模式识别', en: 'Loss Pattern', desc: '识别重复出现的隐性损失模式（如换型后的低速运行）', status: 'planned' },
-      { key: 'improvement-suggest', label: '改善建议生成', en: 'Improvement Suggestion', desc: '针对识别的损失自动生成基于最佳实践的改善方案', status: 'planned' },
-    ],
+    children: [],
   },
 ];
 
@@ -110,8 +102,8 @@ const FLOATING_BTN_SIZE = 44;
 /* ─── 组件 ──────────────────────────────────── */
 
 export default function AISidebar() {
-  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled, auraChatEnabled, setAuraChatEnabled, predictiveMaintenanceEnabled, setPredictiveMaintenanceEnabled } = useStore();
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis']));
+  const { aiSidebarOpen, setAISidebarOpen, setAuraModalOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, setDispatchModalOpen, setOeeDiagnosisModalOpen, knowledgeMiningEnabled, setKnowledgeMiningEnabled, auraChatEnabled, setAuraChatEnabled, predictiveMaintenanceEnabled, setPredictiveMaintenanceEnabled } = useStore();
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['perception', 'diagnosis', 'dispatch', 'oee']));
   const [searchText, setSearchText] = useState('');
   const sidebarRef = useRef<HTMLDivElement>(null);
 
@@ -129,8 +121,12 @@ export default function AISidebar() {
       setDiagnosticModalOpen(true);
     } else if (key === 'data-collection' || key === 'qa') {
       setAuraModalOpen(true);
+    } else if (key === 'skill-profile' || key === 'smart-dispatch' || key === 're-dispatch') {
+      setDispatchModalOpen(true);
+    } else if (key === 'oee-attribution' || key === 'loss-pattern' || key === 'improvement-suggest') {
+      setOeeDiagnosisModalOpen(true);
     }
-  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setAuraModalOpen, setDiagnosticModalOpen, setKnowledgeMiningEnabled]);
+  }, [setAISidebarOpen, setDataCleaningModalOpen, setDeviceHealthModalOpen, setDeviceProfileModalOpen, setNlrModalOpen, setDiagnosticModalOpen, setDispatchModalOpen, setOeeDiagnosisModalOpen, setAuraModalOpen, setKnowledgeMiningEnabled]);
   const inputRef = useRef<any>(null);
 
   // 边栏打开时自动聚焦搜索框
@@ -357,6 +353,12 @@ export default function AISidebar() {
                   onClick={() => {
                     if (category.key === 'predictive') {
                       setPredictiveMaintenanceEnabled(!predictiveMaintenanceEnabled);
+                    } else if (category.key === 'dispatch') {
+                      setAISidebarOpen(false);
+                      setDispatchModalOpen(true);
+                    } else if (category.key === 'oee') {
+                      setAISidebarOpen(false);
+                      setOeeDiagnosisModalOpen(true);
                     } else {
                       toggleExpand(category.key);
                     }
@@ -409,7 +411,7 @@ export default function AISidebar() {
                         }}
                       />
                     </div>
-                  ) : (
+                  ) : category.children.length === 0 ? null : (
                     <div style={{ color: Colors.gray300, fontSize: 11 }}>
                       {isExpanded ? <DownOutlined /> : <RightOutlined />}
                     </div>

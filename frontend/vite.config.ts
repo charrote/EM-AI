@@ -1,8 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'fs'
+import { readFileSync, existsSync } from 'fs'
 
-const cfg = JSON.parse(readFileSync('../config.json', 'utf-8'))
+// Fallback when config.json is missing (e.g., Docker build)
+const cfg = existsSync('../config.json')
+  ? JSON.parse(readFileSync('../config.json', 'utf-8'))
+  : { FRONTEND_PORT: 5173, API_PORT: 5174 };
 
 export default defineConfig({
   plugins: [react()],

@@ -40,6 +40,8 @@ const AuraDataConvergence = lazy(() => import('./pages/AuraDataConvergence'));
 const AuraDataCleaning = lazy(() => import('./pages/AuraDataCleaning'));
 const AuraDeviceHealth = lazy(() => import('./pages/AuraDeviceHealth'));
 const AuraDeviceProfile = lazy(() => import('./pages/AuraDeviceProfile'));
+const AuraDispatch = lazy(() => import('./pages/AuraDispatch'));
+const AuraOEE = lazy(() => import('./pages/AuraOEE'));
 import AuraDiagnosticModal from './components/AuraDiagnosticModal';
 import KnowledgeMiningModal from './components/KnowledgeMiningModal';
 import AuraChat from './components/AuraChat';
@@ -80,6 +82,14 @@ function App() {
   const [deviceProfileModalOpen, setDeviceProfileModalOpen] = [
     useStore((s) => s.deviceProfileModalOpen),
     useStore((s) => s.setDeviceProfileModalOpen),
+  ];
+  const [dispatchModalOpen, setDispatchModalOpen] = [
+    useStore((s) => s.dispatchModalOpen),
+    useStore((s) => s.setDispatchModalOpen),
+  ];
+  const [oeeDiagnosisModalOpen, setOeeDiagnosisModalOpen] = [
+    useStore((s) => s.oeeDiagnosisModalOpen),
+    useStore((s) => s.setOeeDiagnosisModalOpen),
   ];
   const [nlrModalOpen, setNlrModalOpen] = [
     useStore((s) => s.nlrModalOpen),
@@ -307,6 +317,48 @@ function App() {
           <AuraDeviceProfile />
         </div >
       </Modal>
+      {/* ─── AURA 智能派工模态窗 ─── */}
+      <Modal
+        open={dispatchModalOpen}
+        onCancel={() => setDispatchModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        styles={{
+          body: { maxHeight: '90vh', padding: 0, margin: 0, overflow: 'auto' },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+          content: { borderRadius: 12 },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraDispatch />
+        </div>
+      </Modal>
+      {/* ─── AURA OEE 智能诊断模态窗 ─── */}
+      <Modal
+        open={oeeDiagnosisModalOpen}
+        onCancel={() => setOeeDiagnosisModalOpen(false)}
+        footer={null}
+        width="94vw"
+        centered
+        styles={{
+          body: { maxHeight: '90vh', padding: 0, margin: 0, overflow: 'auto' },
+          mask: { background: 'rgba(0,0,0,0.5)' },
+          content: { borderRadius: 12 },
+        }}
+        destroyOnHidden
+        closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
+        mask={{ closable: false }}
+        keyboard={true}
+      >
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#070A1A' }}>
+          <AuraOEE />
+        </div>
+      </Modal>
       {/* ─── AURA AI 辅助诊断模态窗 ─── */}
       <AuraDiagnosticModal />
       {/* ─── AURA 知识自动沉淀模态窗 ─── */}
@@ -356,6 +408,40 @@ function App() {
         }
         .aura-modal-mask {
           background: rgba(0,0,0,0.5) !important;
+        }
+        /* Tab 文字颜色 — 激活态蓝色，未激活态可见白色 */
+        .ant-tabs-tab {
+          color: rgba(255,255,255,0.5) !important;
+          transition: color 0.2s;
+        }
+        .ant-tabs-tab:hover {
+          color: rgba(255,255,255,0.8) !important;
+        }
+        .ant-tabs-tab.ant-tabs-tab-active {
+          color: #3B82F6 !important;
+        }
+        .ant-tabs-ink-bar {
+          background: #3B82F6 !important;
+        }
+        /* 暗色滚动条 — 与模态窗背景融合 */
+        .aura-modal-body::-webkit-scrollbar,
+        .ant-modal-body::-webkit-scrollbar,
+        div[class*="ant-modal"]::-webkit-scrollbar {
+          width: 6px !important;
+          height: 6px !important;
+        }
+        .aura-modal-body::-webkit-scrollbar-track,
+        .ant-modal-body::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        .aura-modal-body::-webkit-scrollbar-thumb,
+        .ant-modal-body::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.08) !important;
+          border-radius: 3px !important;
+        }
+        .aura-modal-body::-webkit-scrollbar-thumb:hover,
+        .ant-modal-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.15) !important;
         }
       `}</style>
     </ConfigProvider>
