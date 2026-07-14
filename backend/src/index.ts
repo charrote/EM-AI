@@ -32,16 +32,28 @@ import calendarRoutes from './routes/calendar';
 import settingsRoutes from './routes/settings';
 import nlrRoutes from './routes/nlr';
 import { simulator } from './services/simulator';
+import { authMiddleware } from './middleware/auth';
+import { securityHeaders } from './middleware/security';
+import { requestLogger } from './middleware/security';
 
 const app = express();
 const PORT = cfg.API_PORT || parseInt(process.env.PORT || '') || 5174;
 
-// Middleware
+// Security middleware
+app.use(securityHeaders);
+
+// Request logging
+app.use(requestLogger);
+
+// Core middleware
 app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Auth middleware (applied to all routes)
+app.use(authMiddleware);
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
