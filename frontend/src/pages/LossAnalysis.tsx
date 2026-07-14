@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Table, Tag, Select, Space, Typography } from 'antd';
 import * as echarts from 'echarts';
 import { SpinnerIcon } from '../components/Icons';

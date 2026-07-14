@@ -246,7 +246,7 @@ export default function ReportFault() {
           {/* Recent Faults */}
           {recentFaults.length > 0 && (
             <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-              <Divider orientation="left" style={{ fontSize: isMobile ? 11 : 12, color: Colors.gray500 }}>
+              <Divider plain style={{ fontSize: isMobile ? 11 : 12, color: Colors.gray500 }}>
                 <Space size={6}>
                   <HistoryOutlined />
                   <span>近 30 天故障记录</span>

@@ -410,7 +410,7 @@ export default function DeviceManagePage() {
     <Tabs activeKey={activeTab} onChange={setActiveTab} size="small" style={{ minHeight: 400 }}>
       {/* ════ Tab 1: 设备档案 ════ */}
       <Tabs.TabPane tab="设备档案" key="basic" forceRender>
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>基本信息</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>基本信息</Divider>
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item label="设备编码" name="code" rules={[{ required: true, message: '必填' }]}>
@@ -429,7 +429,7 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>设备参数</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500 }}>设备参数</Divider>
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item label="品牌" name="brand">
@@ -465,7 +465,7 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>归属与运行</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500 }}>归属与运行</Divider>
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item label="所属车间" name="workshopId">
@@ -521,7 +521,7 @@ export default function DeviceManagePage() {
 
       {/* ════ Tab 2: 参数与程序 ════ */}
       <Tabs.TabPane tab="参数与程序" key="params" forceRender>
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>理论产能</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>理论产能</Divider>
         <Row gutter={12}>
           <Col span={8}>
             <Form.Item label="理论产能 (件/小时)" name="theoreticalCapacity">
@@ -530,7 +530,7 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>联机要素</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500 }}>联机要素</Divider>
         <Row gutter={12}>
           <Col xs={12} sm={8}>
             <Form.Item label="IP 地址" name={['onlineParams', 'ip']}>
@@ -561,7 +561,7 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>驱动程序</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500 }}>驱动程序</Divider>
         <Row gutter={12}>
           <Col xs={24} sm={8}>
             <Form.Item label="驱动名称" name={['onlineParams', 'driverName']}>
@@ -595,7 +595,7 @@ export default function DeviceManagePage() {
           </Col>
         </Row>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500 }}>自定义参数</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500 }}>自定义参数</Divider>
         <Form.List name={['onlineParams', 'customParams']}>
           {(fields, { add, remove }) => (
             <div>
@@ -631,7 +631,7 @@ export default function DeviceManagePage() {
           )}
         </Form.List>
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500, marginTop: 16 }}>设备程序清单</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500, marginTop: 16 }}>设备程序清单</Divider>
         <Form.List name="programList">
           {(fields, { add, remove }) => (
             <div>
@@ -675,7 +675,7 @@ export default function DeviceManagePage() {
 
       {/* ════ Tab 3: 设备文档 ════ */}
       <Tabs.TabPane tab="设备文档" key="docs" forceRender>
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>设备类型文档</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500, marginTop: 0 }}>设备类型文档</Divider>
         {editingDevice && typeDocs.length > 0 ? (
           <List
             size="small"
@@ -706,7 +706,7 @@ export default function DeviceManagePage() {
           </Text>
         )}
 
-        <Divider orientation="left" style={{ fontSize: 12, color: Colors.gray500, marginTop: 16 }}>自定义文档</Divider>
+        <Divider plain style={{ fontSize: 12, color: Colors.gray500, marginTop: 16 }}>自定义文档</Divider>
         {deviceDocs.length > 0 ? (
           <List
             size="small"

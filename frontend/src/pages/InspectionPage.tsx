@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Select, InputNumber, Upload, message, List, Tag, Divider, Result, Spin, Empty } from 'antd';
 import { CameraOutlined, ScanOutlined, OrderedListOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';

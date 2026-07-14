@@ -122,7 +122,7 @@ export default function SettingsPage() {
               onChange={handleModeChange}
               checkedChildren="真实"
               unCheckedChildren="模拟"
-              size="large"
+              size="default"
             />
           </div>
           <Alert

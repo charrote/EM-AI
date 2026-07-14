@@ -224,7 +224,7 @@ function App() {
         centered
         style={{ padding: 0, margin: 0 }}
         classNames={{
-          content: 'aura-modal-content',
+          root: 'aura-modal-content',
           body: 'aura-modal-body',
           mask: 'aura-modal-mask',
         }}
@@ -250,7 +250,7 @@ function App() {
         centered
         style={{ padding: 0, margin: 0 }}
         classNames={{
-          content: 'aura-modal-content',
+          root: 'aura-modal-content',
           body: 'aura-modal-body',
           mask: 'aura-modal-mask',
         }}
@@ -276,7 +276,7 @@ function App() {
         centered
         style={{ padding: 0, margin: 0 }}
         classNames={{
-          content: 'aura-modal-content',
+          root: 'aura-modal-content',
           body: 'aura-modal-body',
           mask: 'aura-modal-mask',
         }}
@@ -302,7 +302,7 @@ function App() {
         centered
         style={{ padding: 0, margin: 0 }}
         classNames={{
-          content: 'aura-modal-content',
+          root: 'aura-modal-content',
           body: 'aura-modal-body',
           mask: 'aura-modal-mask',
         }}
@@ -329,7 +329,7 @@ function App() {
         styles={{
           body: { maxHeight: '90vh', padding: 0, margin: 0, overflow: 'auto' },
           mask: { background: 'rgba(0,0,0,0.5)' },
-          content: { borderRadius: 12 },
+          root: { borderRadius: 12 },
         }}
         destroyOnHidden
         closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}
@@ -350,7 +350,7 @@ function App() {
         styles={{
           body: { maxHeight: '90vh', padding: 0, margin: 0, overflow: 'auto' },
           mask: { background: 'rgba(0,0,0,0.5)' },
-          content: { borderRadius: 12 },
+          root: { borderRadius: 12 },
         }}
         destroyOnHidden
         closeIcon={<CloseOutlined style={{ color: '#FFFFFF', fontSize: 18 }} />}

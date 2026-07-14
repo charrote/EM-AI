@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,
   message, Tag, Popconfirm, Typography, Badge, Row, Col, Tabs,
@@ -80,7 +80,7 @@ export default function InspectionPlans() {
     try {
       await api.delete(`/inspection-plans/${id}`);
       message.success('已删除');
-      fetchData();
+      refresh();
     } catch {
       message.error('删除失败');
     }
@@ -100,7 +100,7 @@ export default function InspectionPlans() {
         message.success('创建成功');
       }
       setModalOpen(false);
-      fetchData();
+      refresh();
     } catch {
       // validation error
     } finally {

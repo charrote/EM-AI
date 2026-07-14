@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
