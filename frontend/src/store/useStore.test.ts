@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useStore } from '../useStore';
+import { useStore } from './useStore';
+// @ts-ignore - vitest globals
+global.describe = describe;
+global.it = it;
+global.expect = expect;
+global.beforeEach = beforeEach;
 
 describe('useStore', () => {
   beforeEach(() => {

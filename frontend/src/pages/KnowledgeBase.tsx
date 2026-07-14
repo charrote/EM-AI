@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Dynamic data types with complex column definitions
 import { useState, useCallback } from 'react';
 import {
   Tag, Input, Select, Empty, Spin, Space, message, Button, Segmented, Modal,
@@ -20,6 +20,7 @@ import api from '../services/api';
 import { Colors, PriorityColors, FaultTypeColors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { useKnowledgeDataSource, useKnowledgeStatsDataSource, useKnowledgeEquipmentTypesDataSource } from '../services/dataSource';
+import type { ColumnsType } from 'antd/es/table';
 
 const { Text, Title } = Typography;
 const { Panel } = Collapse;

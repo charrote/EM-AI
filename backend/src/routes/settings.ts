@@ -4,7 +4,7 @@ import path from 'path';
 
 const router = Router();
 
-const SETTINGS_FILE = path.join(__dirname, '../../data/settings.json');
+const SETTINGS_FILE = path.join(__dirname, '../../../data/settings.json');
 
 function ensureDataDir() {
   const dir = path.dirname(SETTINGS_FILE);
@@ -13,7 +13,7 @@ function ensureDataDir() {
   }
 }
 
-function loadSettings(): any {
+function loadSettings(): Record<string, any> {
   ensureDataDir();
   try {
     const raw = fs.readFileSync(SETTINGS_FILE, 'utf-8');
@@ -23,7 +23,7 @@ function loadSettings(): any {
   }
 }
 
-function saveSettings(settings: any) {
+function saveSettings(settings: Record<string, any>) {
   ensureDataDir();
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
 }
@@ -40,6 +40,8 @@ function getDefaultSettings() {
   };
 }
 
+// ─── 通用设置 ───
+
 // GET /api/settings — 获取所有设置
 router.get('/', (_req: Request, res: Response) => {
   res.json({ data: loadSettings() });
@@ -54,8 +56,10 @@ router.put('/', (req: Request, res: Response) => {
   res.json({ data: newSettings });
 });
 
+// ─── 数据模式 ───
+
 // GET /api/settings/dataMode — 获取数据模式
-router.get('/dataMode', (req: Request, res: Response) => {
+router.get('/dataMode', (_req: Request, res: Response) => {
   const settings = loadSettings();
   res.json({ data: { mode: settings.dataMode } });
 });
@@ -72,23 +76,29 @@ router.put('/dataMode', (req: Request, res: Response) => {
   res.json({ data: { mode: settings.dataMode } });
 });
 
-// GET /api/settings/ai — 获取AI配置
-router.get('/ai', (req: Request, res: Response) => {
+// ─── AI / LLM 配置 ───
+
+// GET /api/settings/ai — 获取 AI 配置（隐藏 API Key）
+router.get('/ai', (_req: Request, res: Response) => {
   const settings = loadSettings();
-  res.json({ data: settings.auraAi || getDefaultSettings().auraAi });
+  const ai = settings.auraAi || getDefaultSettings().auraAi;
+  // 不返回 apiKey
+  const { apiKey, ...safeAi } = ai;
+  res.json({ data: { ...safeAi, hasApiKey: !!apiKey } });
 });
 
-// PUT /api/settings/ai — 更新AI配置
+// PUT /api/settings/ai — 更新 AI 配置
 router.put('/ai', (req: Request, res: Response) => {
   const settings = loadSettings();
-  const { provider, baseUrl, apiKey, modelId } = req.body;
   if (!settings.auraAi) settings.auraAi = getDefaultSettings().auraAi;
-  settings.auraAi.provider = provider || settings.auraAi.provider;
-  settings.auraAi.baseUrl = baseUrl !== undefined ? baseUrl : settings.auraAi.baseUrl;
-  settings.auraAi.apiKey = apiKey !== undefined ? apiKey : settings.auraAi.apiKey;
-  settings.auraAi.modelId = modelId || settings.auraAi.modelId;
+  const { provider, baseUrl, apiKey, modelId } = req.body;
+  if (provider !== undefined) settings.auraAi.provider = provider;
+  if (baseUrl !== undefined) settings.auraAi.baseUrl = baseUrl;
+  if (apiKey !== undefined) settings.auraAi.apiKey = apiKey;
+  if (modelId !== undefined) settings.auraAi.modelId = modelId;
   saveSettings(settings);
-  res.json({ data: settings.auraAi });
+  const { apiKey: _, ...safeAi } = settings.auraAi;
+  res.json({ data: safeAi });
 });
 
 export default router;

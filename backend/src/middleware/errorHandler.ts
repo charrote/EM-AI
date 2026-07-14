@@ -28,7 +28,7 @@ export function errorHandler(
   let message = err instanceof AppError ? err.message : 'Internal Server Error';
 
   // 数据库唯一冲突
-  if (err.code === 'P2002') {
+  if ((err as any).code === 'P2002') {
     statusCode = 409;
     message = '数据已存在，请勿重复提交';
   }

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -16,6 +16,13 @@ import api from '../services/api';
 import { Colors, PriorityColors, PriorityLabels } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { useDeviceDataSource } from '../services/dataSource';
+
+interface FormState {
+  faultType?: string;
+  priority: string;
+  description: string;
+  images: string[];
+}
 
 const faultTypeOptions = [
   { value: '机械', label: '机械故障', icon: <ToolOutlined /> },

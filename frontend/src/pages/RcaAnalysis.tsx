@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useState, useCallback, useMemo } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Steps, Input, Form,
@@ -15,6 +15,7 @@ import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { useRcaDataSource } from '../services/dataSource';
+import type { EChartsOption } from 'echarts';
 
 const { Text, Title, Paragraph } = Typography;
 

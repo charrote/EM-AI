@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Dynamic data types with complex column definitions
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ThunderboltOutlined,
@@ -23,6 +23,7 @@ import {
 import { Tag, Select, Tooltip } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { useResponsive } from '../hooks/useResponsive';
+import type { EChartsOption } from 'echarts';
 
 /* ═══════════════════════════════════════════════════
    类型定义

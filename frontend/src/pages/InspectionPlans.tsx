@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Dynamic data types with complex column definitions
 import { useState, useEffect, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,

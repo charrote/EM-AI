@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex NLP parsing with dynamic result types
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Input, Button, Tag, Space, Typography, message as antMsg, Spin, Tooltip, Alert } from 'antd';
 import {
@@ -14,9 +14,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useStore } from '../store/useStore';
 import api from '../services/api';
 import { useDeviceDataSource } from '../services/dataSource';
-
-const { Text } = Typography;
-const { TextArea } = Input;
+import type { TextAreaProps } from 'antd/es/input';
 
 interface ParsedResult {
   deviceName: string;
@@ -26,6 +24,7 @@ interface ParsedResult {
   confidence: number;
   raw?: string;
   urgencyReason?: string;
+  workOrderCreated?: boolean;
 }
 
 interface ChatMessage {

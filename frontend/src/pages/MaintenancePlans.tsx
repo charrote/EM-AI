@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Dynamic data types with complex column definitions
 import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,
@@ -14,6 +14,24 @@ import { Colors } from '../styles/theme';
 import { useMaintenancePlanDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
+
+interface MaintenancePlan {
+  id: string;
+  title: string;
+  deviceId: string | null;
+  deviceType: string | null;
+  type: string;
+  triggerType: string;
+  triggerValue: number;
+  intervalDays: number | null;
+  items: any[];
+  sopUrl: string | null;
+  description: string | null;
+  active: boolean;
+  lastExecutedAt: string | null;
+  nextScheduledAt: string | null;
+  createdAt: string;
+}
 
 interface MaintenancePlan {
   id: string;

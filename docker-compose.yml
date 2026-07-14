@@ -14,6 +14,7 @@ services:
       - NODE_ENV=production
       - PORT=5273
       - DATABASE_URL=file:/app/data/dev.db
+      - JWT_SECRET=change-me-in-production-use-random-string
     ports:
       - "5273:5273"
     volumes:

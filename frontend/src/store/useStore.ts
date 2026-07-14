@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import api from '../services/api';
 
 export type UserRole = 'operator' | 'repair' | 'supervisor' | 'executive' | 'admin';
 
@@ -86,6 +87,8 @@ interface AppState {
   setAuraAiModelApiKey: (apiKey: string) => void;
   auraAiModelId: string;
   setAuraAiModelId: (modelId: string) => void;
+  // ─── 设置同步───
+  fetchSettings: () => Promise<void>;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -198,15 +201,84 @@ export const useStore = create<AppState>((set) => ({
   healthScoreDeviceId: null,
   setHealthScoreDeviceId: (id) => set({ healthScoreDeviceId: id }),
   // ─── 数据模式（mock/real）───
-  dataMode: (localStorage.getItem('dataMode') as 'mock' | 'real') || 'mock',
-  setDataMode: (mode) => { localStorage.setItem('dataMode', mode); set({ dataMode: mode }); },
+  // 从后端 settings API 同步
+  dataMode: 'mock' as 'mock' | 'real',
+  setDataMode: async (mode) => {
+    try {
+      await api.put('/settings/dataMode', { mode });
+    } catch {
+      // fallback to localStorage
+    }
+    localStorage.setItem('dataMode', mode);
+    set({ dataMode: mode });
+  },
   // ─── Aura AI 模型配置───
-  auraAiModelProvider: localStorage.getItem('auraAiModelProvider') || 'openai',
-  setAuraAiModelProvider: (provider) => { localStorage.setItem('auraAiModelProvider', provider); set({ auraAiModelProvider: provider }); },
-  auraAiModelBaseUrl: localStorage.getItem('auraAiModelBaseUrl') || '',
-  setAuraAiModelBaseUrl: (baseUrl) => { localStorage.setItem('auraAiModelBaseUrl', baseUrl); set({ auraAiModelBaseUrl: baseUrl }); },
-  auraAiModelApiKey: localStorage.getItem('auraAiModelApiKey') || '',
-  setAuraAiModelApiKey: (apiKey) => { localStorage.setItem('auraAiModelApiKey', apiKey); set({ auraAiModelApiKey: apiKey }); },
-  auraAiModelId: localStorage.getItem('auraAiModelId') || 'gpt-4o',
-  setAuraAiModelId: (modelId) => { localStorage.setItem('auraAiModelId', modelId); set({ auraAiModelId: modelId }); },
+  // 从后端 settings API 同步
+  auraAiModelProvider: 'openai',
+  setAuraAiModelProvider: async (provider) => {
+    try {
+      await api.put('/settings/ai', { provider, baseUrl: useStore.getState().auraAiModelBaseUrl, apiKey: useStore.getState().auraAiModelApiKey, modelId: useStore.getState().auraAiModelId });
+    } catch {
+      // fallback
+    }
+    localStorage.setItem('auraAiModelProvider', provider);
+    set({ auraAiModelProvider: provider });
+  },
+  auraAiModelBaseUrl: '',
+  setAuraAiModelBaseUrl: async (baseUrl) => {
+    try {
+      await api.put('/settings/ai', { provider: useStore.getState().auraAiModelProvider, baseUrl, apiKey: useStore.getState().auraAiModelApiKey, modelId: useStore.getState().auraAiModelId });
+    } catch {
+      // fallback
+    }
+    localStorage.setItem('auraAiModelBaseUrl', baseUrl);
+    set({ auraAiModelBaseUrl: baseUrl });
+  },
+  auraAiModelApiKey: '',
+  setAuraAiModelApiKey: async (apiKey) => {
+    try {
+      await api.put('/settings/ai', { provider: useStore.getState().auraAiModelProvider, baseUrl: useStore.getState().auraAiModelBaseUrl, apiKey, modelId: useStore.getState().auraAiModelId });
+    } catch {
+      // fallback
+    }
+    localStorage.setItem('auraAiModelApiKey', apiKey);
+    set({ auraAiModelApiKey: apiKey });
+  },
+  auraAiModelId: 'gpt-4o',
+  setAuraAiModelId: async (modelId) => {
+    try {
+      await api.put('/settings/ai', { provider: useStore.getState().auraAiModelProvider, baseUrl: useStore.getState().auraAiModelBaseUrl, apiKey: useStore.getState().auraAiModelApiKey, modelId });
+    } catch {
+      // fallback
+    }
+    localStorage.setItem('auraAiModelId', modelId);
+    set({ auraAiModelId: modelId });
+  },
+  // ─── 设置同步───
+  fetchSettings: async () => {
+    try {
+      const [modeRes, aiRes] = await Promise.all([
+        api.get('/settings/dataMode').catch(() => ({ data: { data: { mode: 'mock' } } })),
+        api.get('/settings/ai').catch(() => ({ data: { data: { provider: 'openai', baseUrl: '', apiKey: '', modelId: 'gpt-4o' } } })),
+      ]);
+      const mode = modeRes.data?.data?.mode || 'mock';
+      const ai = aiRes.data?.data || {};
+      set({
+        dataMode: mode,
+        auraAiModelProvider: ai.provider || 'openai',
+        auraAiModelBaseUrl: ai.baseUrl || '',
+        auraAiModelApiKey: ai.apiKey || '',
+        auraAiModelId: ai.modelId || 'gpt-4o',
+      });
+    } catch {
+      // fallback to localStorage
+      set({
+        dataMode: (localStorage.getItem('dataMode') as 'mock' | 'real') || 'mock',
+        auraAiModelProvider: localStorage.getItem('auraAiModelProvider') || 'openai',
+        auraAiModelBaseUrl: localStorage.getItem('auraAiModelBaseUrl') || '',
+        auraAiModelApiKey: localStorage.getItem('auraAiModelApiKey') || '',
+        auraAiModelId: localStorage.getItem('auraAiModelId') || 'gpt-4o',
+      });
+    }
+  },
 }));

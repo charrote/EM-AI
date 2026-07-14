@@ -1,36 +1,68 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'em-ai-dev-secret-change-in-production';
+const JWT_EXPIRY = '24h';
+
+export interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    username: string;
+    name: string;
+    role: string;
+  };
+}
 
 /**
- * 认证中间件（占位实现）
- * 当前为 Demo 模式，后续替换为 JWT 验证
+ * JWT 认证中间件
  */
 export function authMiddleware(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ): void {
-  // Demo 模式：自动注入 demo token
-  const token = (req.headers.authorization as string)?.replace('Bearer ', '') || 'demo-token';
+  const authHeader = req.headers.authorization;
   
-  if (token) {
-    (req as any).user = {
-      id: 'demo-user',
-      name: '管理员',
-      role: 'admin',
-    };
+  // 健康检查和其他公开端点不需要认证
+  if (req.path === '/api/health') {
+    return next();
   }
-  
-  next();
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: '未提供认证令牌，请先登录',
+    });
+    return;
+  }
+
+  const token = authHeader.replace('Bearer ', '');
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      id: string;
+      username: string;
+      name: string;
+      role: string;
+    };
+
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({
+      error: 'Unauthorized',
+      message: '认证令牌无效或已过期',
+    });
+  }
 }
 
 /**
  * 角色授权中间件
- * 检查用户是否有指定角色
  */
 export function requireRole(...roles: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = (req as any).user;
-    
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    const user = req.user;
+
     if (!user) {
       res.status(401).json({
         error: 'Unauthorized',
@@ -38,7 +70,7 @@ export function requireRole(...roles: string[]) {
       });
       return;
     }
-    
+
     if (!roles.includes(user.role)) {
       res.status(403).json({
         error: 'Forbidden',
@@ -46,7 +78,15 @@ export function requireRole(...roles: string[]) {
       });
       return;
     }
-    
+
     next();
   };
 }
+
+/**
+ * 公开 API 列表（不需要认证）
+ */
+export const publicPaths = [
+  '/api/health',
+  '/api/auth/login',
+];

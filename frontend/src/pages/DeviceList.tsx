@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select, Tag } from 'antd';
@@ -6,6 +6,18 @@ import { BoltIcon, PauseIcon, RefreshIcon, CrossIcon, WrenchIcon, WarningIcon, T
 import { useDataSource } from '../services/dataSource';
 import { deviceApi } from '../services/devices';
 import { generateMockDevices } from '../services/mockData';
+
+interface Device {
+  id: string;
+  code: string;
+  name: string;
+  status: string;
+  oee?: number;
+  healthScore?: number;
+  type: string;
+  area?: string;
+  line?: string;
+}
 
 const STATUS_CFG = {
   running: { color: '#22C55E', label: '运行中', icon: <BoltIcon size={14} /> },

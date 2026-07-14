@@ -1,10 +1,31 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
-const LLM_API = 'http://nat.ywapi.com:9234/v1/chat/completions';
-const LLM_KEY = 'ux-6CNP4MMKATVQSG1IP0EVJ3O32R65SQA4';
-const MODEL = 'UANTEKDEV0';
+const SETTINGS_FILE = path.join(__dirname, '../../../data/settings.json');
+
+function loadAiConfig(): { baseUrl: string; apiKey: string; modelId: string; provider: string } {
+  try {
+    const raw = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+    const settings = JSON.parse(raw);
+    const ai = settings.auraAi || {};
+    return {
+      baseUrl: ai.baseUrl || process.env.LLM_BASE_URL || 'http://nat.ywapi.com:9234/v1',
+      apiKey: ai.apiKey || process.env.LLM_API_KEY || '',
+      modelId: ai.modelId || process.env.LLM_MODEL_ID || 'UANTEKDEV0',
+      provider: ai.provider || 'openai',
+    };
+  } catch {
+    return {
+      baseUrl: process.env.LLM_BASE_URL || 'http://nat.ywapi.com:9234/v1',
+      apiKey: process.env.LLM_API_KEY || '',
+      modelId: process.env.LLM_MODEL_ID || 'UANTEKDEV0',
+      provider: 'openai',
+    };
+  }
+}
 
 const SYSTEM_PROMPT = `你是一个设备故障报修信息提取助手。从用户的自然语言描述中提取结构化的维修需求信息。
 
@@ -29,8 +50,13 @@ router.post('/parse', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing required field: text' });
     }
 
+    const config = loadAiConfig();
+    if (!config.apiKey) {
+      return res.status(503).json({ error: 'LLM API Key not configured. Please set it in System Settings.' });
+    }
+
     const body = JSON.stringify({
-      model: MODEL,
+      model: config.modelId,
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: text },
@@ -39,11 +65,11 @@ router.post('/parse', async (req: Request, res: Response) => {
       max_tokens: 512,
     });
 
-    const response = await fetch(LLM_API, {
+    const response = await fetch(config.baseUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LLM_KEY}`,
+        'Authorization': `Bearer ${config.apiKey}`,
       },
       body,
     });

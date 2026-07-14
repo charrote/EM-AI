@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Dynamic data types with complex column definitions
 import { SettingOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';

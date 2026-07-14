@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import bcrypt from 'bcryptjs';
 
 // ── 场景类型定义 ──────────────────────────────
 export const SCENARIO_METAL = 'metal';
@@ -79,6 +80,22 @@ export function generateAllDevices(): DeviceSeed[] {
 
 export async function seedDemoData() {
   console.log('🌱 Seeding demo data...');
+
+  // ── 创建默认管理员账户 ──────────────────────────
+  try {
+    await prisma.user.deleteMany();
+  } catch { /* ignore */ }
+  const adminPassword = await bcrypt.hash('admin123', 10);
+  await prisma.user.create({
+    data: {
+      username: 'admin',
+      password: adminPassword,
+      name: '系统管理员',
+      role: 'admin',
+      email: 'admin@em-ai.com',
+    },
+  });
+  console.log('   管理员账户: admin / admin123');
 
   // Clean existing data
   await prisma.workLog.deleteMany();

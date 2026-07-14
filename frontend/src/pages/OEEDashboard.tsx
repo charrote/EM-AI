@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tag, Select, Space, DatePicker } from 'antd';

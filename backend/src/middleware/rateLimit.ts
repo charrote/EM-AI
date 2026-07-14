@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
  * 全局请求限流
  * 默认：100 请求/15 分钟
  */
-export const rateLimit = rateLimit({
+export const globalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,

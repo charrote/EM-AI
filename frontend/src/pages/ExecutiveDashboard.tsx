@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useRef, useCallback, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { Spin, Tag, Tooltip } from 'antd';
@@ -9,6 +9,28 @@ import { useApiDataSource } from '../services/dataSource';
 import { useDataSource } from '../services/dataSource';
 import { generateMockOEEData } from '../services/mockData';
 import { BoltIcon, SuccessIcon, BarChartIcon, WarningIcon, WrenchIcon, TrophyIcon, RobotIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon, PauseIcon, CrossIcon, STATUS_ICONS } from '../components/Icons';
+import type { EChartsOption } from 'echarts';
+
+export interface ExecutiveDashboardData {
+  overallOEE: number;
+  availability: number;
+  performance: number;
+  quality: number;
+  dailyTrend: { date: string; oee: number; target: number }[];
+  faultTypeDistribution: { name: string; value: number }[];
+  deviceStatusDistribution: { name: string; value: number }[];
+  totalDevices: number;
+  runningCount: number;
+  runningRate: number;
+  avgHealth: number;
+  healthDistribution: { name: string; value: number }[];
+  woPending: number;
+  woCompletionRate: number;
+  woTotal: number;
+  latestCost: number;
+  topHealthyDevices: { name: string; oee: number }[];
+  improvementROI: number;
+}
 
 export default function ExecutiveDashboard() {
   const { isMobile } = useResponsive();

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Tag, Table, Button, Tooltip, DatePicker, Space, Row, Col } from 'antd';
@@ -10,6 +10,7 @@ import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
 import { useApiDataSource } from '../services/dataSource';
 import { generateMockDevices } from '../services/mockData';
+import type { EChartsOption } from 'echarts';
 
 const { RangePicker } = DatePicker;
 

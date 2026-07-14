@@ -7,6 +7,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ===== 用户（认证系统） =====
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // bcrypt hashed
+  name      String
+  role      String   @default("operator") // operator | repair | supervisor | executive | admin
+  email     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  lastLogin DateTime? @map("last_login_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
 // ===== 设备类型（主数据） =====
 model DeviceType {
   id          String   @id @default(uuid())

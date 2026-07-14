@@ -116,7 +116,7 @@ export default function LoginPage() {
           layout="vertical"
           size="large"
           autoComplete="off"
-          initialValues={{ username: 'admin', password: 'admin' }}
+          initialValues={{ username: 'admin', password: 'admin123' }}
         >
           <Form.Item
             name="username"
@@ -175,7 +175,7 @@ export default function LoginPage() {
         >
           <Space direction="vertical" size={2}>
             <Text style={{ fontSize: 12, color: Colors.gray400 }}>
-              演示账号：admin / admin
+              演示账号：admin / admin123
             </Text>
             <Text style={{ fontSize: 11, color: Colors.gray300 }}>
               <ThunderboltOutlined style={{ marginRight: 4 }} />

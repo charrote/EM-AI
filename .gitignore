@@ -21,6 +21,10 @@ backend/prisma/dev.db-journal
 .env.local
 .env.production
 .env.*.local
+.env.example
+
+# Data directory (backend settings)
+backend/data/
 
 # Demo data snapshots (generated daily by simulator)
 backend/demo-data/*.json

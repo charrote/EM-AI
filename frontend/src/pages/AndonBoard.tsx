@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck - Complex component with many dynamic data types
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Card, Row, Col, Statistic, Tag, Typography, Table, Badge, Button,
