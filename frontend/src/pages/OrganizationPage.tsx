@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Tree, Input, Modal, Form,
   message, Tag, Empty, Descriptions, Divider, Alert, Popconfirm,
@@ -14,6 +14,7 @@ import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { useOrgTreeDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
 
@@ -27,10 +28,14 @@ const LEVEL_CONFIG: Record<string, { label: string; icon: React.ReactNode; color
 const NEXT_LEVEL: Record<string, string> = { group: 'company', company: 'workshop', workshop: 'line', line: '' };
 
 export default function OrganizationPage() {
-  const [treeData, setTreeData] = useState<any[]>([]);
+  const {
+    data: treeData,
+    loading,
+    refresh: fetchTree,
+  } = useOrgTreeDataSource();
+
   const [flatData, setFlatData] = useState<any[]>([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
   const [autoExpandDone, setAutoExpandDone] = useState(false);
@@ -44,32 +49,29 @@ export default function OrganizationPage() {
 
   const { isMobile } = useResponsive();
 
-  const fetchTree = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/organizations/tree');
-      const tree = res.data.data || [];
-      setTreeData(tree);
-
-      // Build flat list with OEE inheritance
-      const flat: any[] = [];
-      const flatten = (nodes: any[], parent?: any) => {
-        nodes.forEach(n => {
-          const inheritedOee = n.oeeTarget != null ? n.oeeTarget : (parent?._oeeDisplay ?? null);
-          flat.push({
-            ...n,
-            parentName: parent?.name || null,
-            _oeeDisplay: inheritedOee,
-            _oeeInherited: n.oeeTarget == null && inheritedOee != null,
-          });
-          if (n.children) flatten(n.children, { ...n, _oeeDisplay: inheritedOee });
+  // Build flat list with OEE inheritance when tree data loads
+  const buildFlatData = useCallback((nodes: any[]) => {
+    const flat: any[] = [];
+    const flatten = (ns: any[], parent?: any) => {
+      ns.forEach(n => {
+        const inheritedOee = n.oeeTarget != null ? n.oeeTarget : (parent?._oeeDisplay ?? null);
+        flat.push({
+          ...n,
+          parentName: parent?.name || null,
+          _oeeDisplay: inheritedOee,
+          _oeeInherited: n.oeeTarget == null && inheritedOee != null,
         });
-      };
-      flatten(tree);
-      setFlatData(flat);
+        if (n.children) flatten(n.children, { ...n, _oeeDisplay: inheritedOee });
+      });
+    };
+    flatten(nodes);
+    setFlatData(flat);
+  }, []);
 
-      // Collect all keys for full expansion
-      if (tree.length > 0 && !autoExpandDone) {
+  useEffect(() => {
+    if (treeData && treeData.length > 0) {
+      buildFlatData(treeData);
+      if (!autoExpandDone) {
         const allKeys: React.Key[] = [];
         const collectKeys = (nodes: any[]) => {
           nodes.forEach(n => {
@@ -77,21 +79,15 @@ export default function OrganizationPage() {
             if (n.children) collectKeys(n.children);
           });
         };
-        collectKeys(tree);
+        collectKeys(treeData);
         setExpandedKeys(allKeys);
         setAutoExpandDone(true);
         if (!selectedNode) {
-          setSelectedNode(tree[0]);
+          setSelectedNode(treeData[0]);
         }
       }
-    } catch {
-      message.error('加载组织架构失败');
-    } finally {
-      setLoading(false);
     }
-  }, []);
-
-  useEffect(() => { fetchTree(); }, []);
+  }, [treeData, autoExpandDone, buildFlatData, selectedNode]);
 
   // Convert flat tree to Ant Design Tree format
   const antTreeData: DataNode[] = useMemo(() => {

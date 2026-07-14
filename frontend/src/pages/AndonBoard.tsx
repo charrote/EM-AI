@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   Card, Row, Col, Statistic, Tag, Typography, Table, Badge, Button,
   Space, Progress, Tooltip,
@@ -9,7 +9,8 @@ import {
   ReloadOutlined, FullscreenOutlined, FullscreenExitOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockAndonData } from '../services/mockData';
 import { Colors, DeviceStatusConfig, PriorityColors, PriorityLabels } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { CheckIcon } from '../components/Icons';
@@ -53,29 +54,18 @@ const LOSS_LABELS: Record<string, string> = {
 };
 
 export default function AndonBoard() {
-  const [data, setData] = useState<AndonData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const { isMobile, isTablet } = useResponsive();
 
-  const fetchData = useCallback(async () => {
-    try {
-      const res = await api.get('/dashboard/andon');
-      setData(res.data.data);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, loading, refresh } = useApiDataSource(
+    '/api/dashboard/andon',
+    generateMockAndonData()
+  );
 
   useEffect(() => {
-    fetchData();
-    timerRef.current = setInterval(fetchData, 10000); // auto-refresh 10s
+    timerRef.current = setInterval(refresh, 10000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [fetchData]);
+  }, [refresh]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
@@ -185,7 +175,7 @@ export default function AndonBoard() {
         </Col>
         <Col>
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
+            <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
             <Button
               icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
               onClick={toggleFullscreen}

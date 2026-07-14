@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tag, Select, Space, DatePicker } from 'antd';
 import { BarChartIcon, LineChartUpIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon } from '../components/Icons';
 import { useStore } from '../store/useStore';
 import { Colors } from '../styles/theme';
 import api from '../services/api';
+import { useOrgTreeDataSource, useOEEDataSource, useLossDataSource } from '../services/dataSource';
 
 const { RangePicker } = DatePicker;
 
@@ -25,39 +26,36 @@ function KpiBlock({ title, value, suffix, color, prefix }: {
 }
 
 export default function OEEDashboard() {
-  const [oee, setOee] = useState<any>(null);
-  const [losses, setLosses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [orgTree, setOrgTree] = useState<any[]>([]);
-  const navigate = useNavigate();
   const { selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName } = useStore();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    api.get('/organizations/tree').then(res => {
-      const flat: any[] = [];
-      const flatten = (nodes: any[]) => {
-        nodes.forEach((n: any) => {
-          flat.push({ id: n.id, name: n.name, level: n.level });
-          if (n.children) flatten(n.children);
-        });
-      };
-      flatten(res.data.data || []);
-      setOrgTree(flat);
-    }).catch(() => {});
-  }, []);
+  // ── Unified data source hooks ──────────────────────────────
+  const {
+    data: orgTree,
+    loading: orgLoading,
+  } = useOrgTreeDataSource();
 
-  useEffect(() => {
-    setLoading(true);
-    const params = selectedOrganizationId ? `?orgId=${selectedOrganizationId}` : '';
-    Promise.all([
-      fetch(`/api/dashboard/oee${params}`).then(r => r.json()).then(r => r.data),
-      fetch('/api/dashboard/losses').then(r => r.json()).then(r => r.data).catch(() => []),
-    ]).then(([oeeData, lossData]) => {
-      setOee(oeeData);
-      setLosses(lossData);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [selectedOrganizationId]);
+  const {
+    data: oee,
+    loading: oeeLoading,
+  } = useOEEDataSource();
+
+  const {
+    data: losses,
+    loading: lossLoading,
+  } = useLossDataSource('plant');
+
+  const loading = orgLoading || oeeLoading || lossLoading;
+
+  // Flatten org tree for dropdown
+  const flatOrgTree: any[] = [];
+  const flattenOrg = (nodes: any[]) => {
+    nodes.forEach((n: any) => {
+      flatOrgTree.push({ id: n.id, name: n.name, level: n.level });
+      if (n.children) flattenOrg(n.children);
+    });
+  };
+  if (orgTree && orgTree.length > 0) flattenOrg(orgTree);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
   if (!oee) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;

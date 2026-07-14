@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Card, Button, Space, Typography, Row, Col, Table, Input, Select, Tag,
-  message, Modal, Form, Popconfirm, Tooltip,
+  Table, Card, Button, Space, Modal, Form, Input, Select, Tag,
+  message, Typography, Popconfirm, Tooltip, Row, Col,
 } from 'antd';
 import {
-  PlusOutlined, ReloadOutlined, DeleteOutlined, EditOutlined,
-  SearchOutlined, TeamOutlined,
+  PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined,
+  ReloadOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockTeams } from '../services/mockData';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 
@@ -22,8 +24,12 @@ const SHIFT_OPTIONS = [
 ];
 
 export default function TeamPage() {
-  const [teams, setTeams] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
+  const { data: teams, loading, refresh } = useApiDataSource(
+    '/api/teams',
+    generateMockTeams(8)
+  );
+
   const [keyword, setKeyword] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -32,22 +38,6 @@ export default function TeamPage() {
   const [orgTree, setOrgTree] = useState<any[]>([]);
   const [form] = Form.useForm();
   const { isMobile } = useResponsive();
-
-  const fetchTeams = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (keyword) params.set('keyword', keyword);
-      const res = await api.get(`/teams?${params.toString()}`);
-      setTeams(res.data.data || []);
-    } catch {
-      message.error('加载班组数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [keyword]);
-
-  useEffect(() => { fetchTeams(); }, [fetchTeams]);
 
   useEffect(() => {
     api.get('/organizations/tree').then(res => {
@@ -90,7 +80,7 @@ export default function TeamPage() {
         message.success('班组已更新');
       }
       setModalOpen(false);
-      fetchTeams();
+      refresh();
     } catch (err: any) {
       const msg = err?.response?.data?.error || '操作失败';
       message.error(msg);
@@ -103,7 +93,7 @@ export default function TeamPage() {
     try {
       await api.delete(`/teams/${record.id}`);
       message.success('已删除');
-      fetchTeams();
+      refresh();
     } catch (err: any) {
       const msg = err?.response?.data?.error || '删除失败';
       message.error(msg);
@@ -185,7 +175,7 @@ export default function TeamPage() {
               onChange={e => setKeyword(e.target.value)}
               allowClear
               size={isMobile ? 'small' : 'middle'}
-              onPressEnter={() => fetchTeams()}
+              onPressEnter={() => refresh()}
             />
           </Col>
           <Col xs={6} sm={4} md={4}>

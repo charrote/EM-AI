@@ -1,59 +1,35 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useRef, useCallback } from 'react';
 import * as echarts from 'echarts';
 import { Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import { useResponsive } from '../hooks/useResponsive';
 import { useStore } from '../store/useStore';
+import { useApiDataSource } from '../services/dataSource';
+import { useDataSource } from '../services/dataSource';
+import { generateMockOEEData } from '../services/mockData';
 import { BoltIcon, SuccessIcon, BarChartIcon, WarningIcon, WrenchIcon, TrophyIcon, RobotIcon, SpinnerIcon, ArrowUpIcon, ArrowDownIcon, PauseIcon, CrossIcon, STATUS_ICONS } from '../components/Icons';
 
 export default function ExecutiveDashboard() {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const { isMobile } = useResponsive();
   const { selectedOrganizationId, selectedOrgName } = useStore();
 
-  const [trendData, setTrendData] = useState<any>(null);
-  const [trendLoading, setTrendLoading] = useState(false);
+  const { data, loading } = useApiDataSource(
+    '/api/dashboard/executive',
+    generateMockOEEData()
+  );
+
+  const { data: trendData } = useDataSource<any>(
+    async () => {
+      const params = selectedOrganizationId ? `?orgId=${selectedOrganizationId}` : '';
+      const res = await fetch(`/api/dashboard/oee-trend${params}`);
+      return res.json();
+    },
+    generateMockOEEData(),
+    { delay: 0 }
+  );
 
   const faultChartDomRef = useRef<HTMLDivElement>(null);
   const faultChartRef = useRef<echarts.ECharts | null>(null);
-
-  // Fetch main dashboard data
-  useEffect(() => {
-    fetch('/api/dashboard/executive')
-      .then(r => r.json())
-      .then(res => {
-        setData(res.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  // Fetch OEE trend for selected org (from global store)
-  const fetchTrend = useCallback(async (orgId?: string) => {
-    setTrendLoading(true);
-    try {
-      const params = orgId ? `?orgId=${orgId}` : '';
-      const res = await fetch(`/api/dashboard/oee-trend${params}`);
-      const json = await res.json();
-      setTrendData(json.data);
-    } catch {
-      setTrendData(null);
-    } finally {
-      setTrendLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTrend(selectedOrganizationId || undefined);
-  }, [fetchTrend, selectedOrganizationId]);
-
-  // Use org trend data if available, otherwise fallback to main data
-  const oeeTrend = trendData?.trend || data?.dailyOEETrend || data?.monthlyOEETrend || [];
-  const trendOrgName = selectedOrgName;
-  const targetOEE = trendData?.targetOEE ?? 85;
-  const currentOEE = trendData?.currentOEE ?? data?.currentOEE;
-  const prevOEE = trendData?.prevOEE ?? data?.prevOEE;
 
   // Init pie chart — re-init when loading finishes (DOM ready)
   useEffect(() => {
@@ -110,6 +86,12 @@ export default function ExecutiveDashboard() {
     });
     chart.resize();
   }, [data?.faultTypeDistribution]);
+
+  const oeeTrend = trendData?.trend || data?.dailyOEETrend || data?.monthlyOEETrend || [];
+  const trendOrgName = selectedOrgName;
+  const targetOEE = trendData?.targetOEE ?? 85;
+  const currentOEE = trendData?.currentOEE ?? data?.currentOEE;
+  const prevOEE = trendData?.prevOEE ?? data?.prevOEE;
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}><SpinnerIcon size={18} style={{ marginRight: 6 }} />加载中...</div>;
   if (!data) return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>暂无数据</div>;

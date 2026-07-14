@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Table, Input, Select, Tag,
   message, Modal, Form, Descriptions, Divider, Popconfirm, Badge, DatePicker,
@@ -11,7 +11,8 @@ import {
   InboxOutlined, MinusCircleOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockDevices } from '../services/mockData';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 
@@ -99,24 +100,10 @@ export default function DeviceManagePage() {
   const { isMobile } = useResponsive();
 
   // ── Data fetching ──
-  const fetchDevices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-      if (filterType) params.set('type', filterType);
-      if (filterStatus) params.set('status', filterStatus);
-      if (filterWorkshop) params.set('workshopId', filterWorkshop);
-      if (keyword) params.set('keyword', keyword);
-
-      const res = await api.get(`/devices/manage?${params.toString()}`);
-      setDevices(res.data.data || []);
-      setTotal(res.data.meta?.total || 0);
-    } catch {
-      message.error('加载设备数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, pageSize, filterType, filterStatus, filterWorkshop, keyword]);
+  const { data: devices, loading, refresh: fetchDevices } = useApiDataSource(
+    '/api/devices/manage?page=' + page + '&pageSize=' + pageSize + (filterType ? '&type=' + filterType : '') + (filterStatus ? '&status=' + filterStatus : '') + (filterWorkshop ? '&workshopId=' + filterWorkshop : '') + (keyword ? '&keyword=' + keyword : ''),
+    generateMockDevices(20)
+  );
 
   const fetchMeta = useCallback(async () => {
     try {
@@ -129,7 +116,6 @@ export default function DeviceManagePage() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchDevices(); }, [fetchDevices]);
   useEffect(() => { fetchMeta(); }, []);
 
   // Fetch device type documents when editing

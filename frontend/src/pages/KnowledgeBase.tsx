@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Tag, Input, Select, Empty, Spin, Space, message, Button, Segmented, Modal,
   Descriptions, Divider, Tooltip, Row, Col, Card, Typography, Breadcrumb,
@@ -18,6 +18,7 @@ import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, PriorityColors, FaultTypeColors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useKnowledgeDataSource, useKnowledgeStatsDataSource, useKnowledgeEquipmentTypesDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
 const { Panel } = Collapse;
@@ -133,12 +134,10 @@ export default function KnowledgeBase() {
   const [faultTypeFilter, setFaultTypeFilter] = useState<string | undefined>(undefined);
   const [severityFilter, setSeverityFilter] = useState<string | undefined>(undefined);
 
-  // ── Data ──
-  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<StatsData | null>(null);
-  const [treeData, setTreeData] = useState<TreeItem[]>([]);
+  // ── Unified data source hooks ───────────────────────────
+  const { data: entries, loading, refresh: fetchEntries } = useKnowledgeDataSource();
+  const { data: stats, loading: statsLoading } = useKnowledgeStatsDataSource();
+  const { data: treeData, loading: treeLoading, refresh: fetchTree } = useKnowledgeEquipmentTypesDataSource();
 
   // ── Detail modal ──
   const [detailOpen, setDetailOpen] = useState(false);
@@ -154,81 +153,8 @@ export default function KnowledgeBase() {
   // ── Mobile filter drawer ──
   const [filterOpen, setFilterOpen] = useState(false);
 
-  // ── Fetch stats ──
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await api.get('/knowledge/stats');
-      setStats(res.data.data);
-    } catch { /* ignore */ }
-  }, []);
-
-  // ── Fetch tree ──
-  const fetchTree = useCallback(async () => {
-    try {
-      const res = await api.get('/knowledge/equipment-types');
-      setTreeData(res.data.data || []);
-    } catch { /* ignore */ }
-  }, []);
-
-  // ── Fetch entries ──
-  const fetchEntries = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = { page: 1, pageSize: 100, sortBy };
-      // 浏览标签页只展示已发布内容，审核标签页只展示待审核
-      if (tab === 'cases') { params.type = 'case'; params.status = 'approved'; }
-      else if (tab === 'sops') { params.type = 'sop'; params.status = 'approved'; }
-      else if (tab === 'all') { params.status = 'approved'; }
-      else if (tab === 'pending') { params.status = 'pending'; }
-
-      if (searchText) params.search = searchText;
-      if (selectedType && tab !== 'pending') params.equipmentType = selectedType;
-      if (selectedPart && tab !== 'pending') params.faultPart = selectedPart;
-      if (faultTypeFilter && tab !== 'pending') params.faultType = faultTypeFilter;
-      if (severityFilter && tab !== 'pending') params.severity = severityFilter;
-
-      if (tab === 'favorites') {
-        const res = await api.get('/knowledge/favorites');
-        setEntries(res.data.data || []);
-        setTotal(res.data.data?.length || 0);
-      } else {
-        const res = await api.get('/knowledge', { params });
-        setEntries(res.data.data || []);
-        setTotal(res.data.total || 0);
-      }
-    } catch (err) {
-      console.error('Knowledge fetch error:', err);
-      message.error('加载知识库失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [tab, searchText, sortBy, selectedType, selectedPart, faultTypeFilter, severityFilter]);
-
-  // ── Fetch detail ──
-  const fetchDetail = useCallback(async (id: string) => {
-    setDetailLoading(true);
-    try {
-      const res = await api.get(`/knowledge/${id}`);
-      setDetailEntry(res.data.data);
-
-      // Update the entry in the list if present
-      setEntries(prev => prev.map(e => e.id === id ? { ...e, ...res.data.data } : e));
-    } catch {
-      message.error('加载详情失败');
-    } finally {
-      setDetailLoading(false);
-    }
-  }, []);
-
-  // ── Initial load ──
-  useEffect(() => {
-    fetchStats();
-    fetchTree();
-  }, [fetchStats, fetchTree]);
-
-  useEffect(() => {
-    fetchEntries();
-  }, [fetchEntries]);
+  // total from hook data
+  const total = entries?.length || 0;
 
   // ── Toggle favorite ──
   const toggleFavorite = useCallback(async (id: string, e?: React.MouseEvent) => {
@@ -236,17 +162,15 @@ export default function KnowledgeBase() {
     try {
       const res = await api.post(`/knowledge/${id}/favorite`);
       const { favorited } = res.data.data;
-      setEntries(prev => prev.map(entry =>
-        entry.id === id ? { ...entry, isFavorited: favorited } : entry
-      ));
       if (detailEntry?.id === id) {
         setDetailEntry(prev => prev ? { ...prev, isFavorited: favorited } : null);
       }
       message.success(favorited ? '已收藏' : '已取消收藏');
+      fetchEntries();
     } catch {
       message.error('操作失败');
     }
-  }, [detailEntry]);
+  }, [detailEntry, fetchEntries]);
 
   // ── Approve / Reject ──
   const handleApprove = useCallback(async (id: string, status: 'approved' | 'rejected', e?: React.MouseEvent) => {
@@ -255,14 +179,13 @@ export default function KnowledgeBase() {
       await api.post(`/knowledge/${id}/approve`, { status });
       message.success(status === 'approved' ? '✓ 已审核通过' : '✗ 已驳回');
       fetchEntries();
-      fetchStats();
       if (detailEntry?.id === id) {
         setDetailEntry(prev => prev ? { ...prev, status } : null);
       }
     } catch {
       message.error('审核操作失败');
     }
-  }, [fetchEntries, fetchStats, detailEntry]);
+  }, [fetchEntries, detailEntry]);
 
   // ── Delete ──
   const handleDelete = useCallback(async (id: string) => {
@@ -272,11 +195,10 @@ export default function KnowledgeBase() {
       setDetailOpen(false);
       setDetailEntry(null);
       fetchEntries();
-      fetchStats();
     } catch {
       message.error('删除失败');
     }
-  }, [fetchEntries, fetchStats]);
+  }, [fetchEntries]);
 
   // ── Create entry ──
   const handleCreate = useCallback(async () => {
@@ -312,19 +234,26 @@ export default function KnowledgeBase() {
       setCreateOpen(false);
       form.resetFields();
       fetchEntries();
-      fetchStats();
     } catch (err: any) {
       if (err.errorFields) return; // Form validation error
       message.error('创建失败');
     } finally {
       setCreateLoading(false);
     }
-  }, [createType, form, fetchEntries, fetchStats]);
+  }, [createType, form, fetchEntries]);
 
   // ── Open detail ──
   const openDetail = (id: string) => {
-    fetchDetail(id);
+    setDetailLoading(true);
     setDetailOpen(true);
+    // Fetch detail via api (detail pages use direct API call)
+    api.get(`/knowledge/${id}`).then((res) => {
+      setDetailEntry(res.data.data);
+      setDetailLoading(false);
+    }).catch(() => {
+      message.error('加载详情失败');
+      setDetailLoading(false);
+    });
   };
 
   // ── Reset filters ──

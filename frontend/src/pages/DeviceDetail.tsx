@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Tag, Table, Button, Tooltip, DatePicker, Space, Row, Col } from 'antd';
 import { ArrowLeftOutlined, UserOutlined, ThunderboltOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
@@ -7,6 +7,8 @@ import dayjs from 'dayjs';
 import { SpinnerIcon } from '../components/Icons';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockDevices } from '../services/mockData';
 
 const { RangePicker } = DatePicker;
 
@@ -103,16 +105,19 @@ function HealthDonut({ score, onClick }: { score: number; onClick?: () => void }
 export default function DeviceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [device, setDevice] = useState<any>(null);
   const [trend, setTrend] = useState<any[]>([]);
   const [trendType, setTrendType] = useState<'24h' | 'range'>('24h');
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
-  const [loading, setLoading] = useState(true);
   const trendChartDomRef = useRef<HTMLDivElement>(null);
   const trendChartRef = useRef<echarts.ECharts | null>(null);
   const predictiveMaintenanceEnabled = useStore((s) => s.predictiveMaintenanceEnabled);
   const setHealthScoreModalOpen = useStore((s) => s.setHealthScoreModalOpen);
   const setHealthScoreDeviceId = useStore((s) => s.setHealthScoreDeviceId);
+
+  const { data: device, loading } = useApiDataSource(
+    `/api/devices/${id || ''}`,
+    generateMockDevices(1)[0]
+  );
 
   const handleHealthScoreClick = () => {
     if (predictiveMaintenanceEnabled && id) {
@@ -121,28 +126,14 @@ export default function DeviceDetail() {
     }
   };
 
-  const fetchData = (range?: string, startDate?: string, endDate?: string) => {
-    if (!id) return;
-    setLoading(true);
-    let trendUrl = `/api/dashboard/devices/${id}/trend?range=30`;
-    if (range === '24h') {
-      trendUrl = `/api/dashboard/devices/${id}/trend?range=24h`;
-    } else if (startDate && endDate) {
-      trendUrl = `/api/dashboard/devices/${id}/trend?range=range&start=${startDate}&end=${endDate}`;
-    }
-    Promise.all([
-      fetch(`/api/devices/${id}`).then(r => r.json()),
-      fetch(trendUrl).then(r => r.json()),
-    ]).then(([devRes, trendRes]) => {
-      setDevice(devRes.data);
-      setTrend(trendRes.data || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  };
-
   useEffect(() => {
-    fetchData('24h');
-  }, [id]);
+    if (id && device) {
+      fetch(`/api/dashboard/devices/${id}/trend?range=24h`)
+        .then(r => r.json())
+        .then(res => { setTrend(res.data || []); })
+        .catch(() => setTrend([]));
+    }
+  }, [id, device]);
 
   // Init trend chart
   useEffect(() => {
@@ -297,7 +288,10 @@ export default function DeviceDetail() {
     if (dates && dates[0] && dates[1]) {
       setDateRange(dates);
       setTrendType('range');
-      fetchData('range', dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD'));
+      fetch(`/api/dashboard/devices/${id}/trend?range=range&start=${dates[0].format('YYYY-MM-DD')}&end=${dates[1].format('YYYY-MM-DD')}`)
+        .then(r => r.json())
+        .then(res => { setTrend(res.data || []); })
+        .catch(() => setTrend([]));
     }
   };
 
@@ -460,7 +454,7 @@ export default function DeviceDetail() {
               <ThunderboltOutlined /> {trendType === '24h' ? '当日每小时产量' : 'OEE 趋势'}
             </h3>
             <Space size={8}>
-              <Button size="small" type={trendType === '24h' ? 'primary' : 'default'} onClick={() => { setTrendType('24h'); fetchData('24h'); }}>
+              <Button size="small" type={trendType === '24h' ? 'primary' : 'default'} onClick={() => { setTrendType('24h'); fetch(`/api/dashboard/devices/${id}/trend?range=24h`).then(r => r.json()).then(res => { setTrend(res.data || []); }).catch(() => setTrend([])); }}>
                 近24小时
               </Button>
               <RangePicker size="small" onChange={handleRangeChange} />

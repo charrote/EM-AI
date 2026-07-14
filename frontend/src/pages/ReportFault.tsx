@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button, Select, Input, Upload, Tag, message, Steps, Result,
@@ -14,6 +14,7 @@ import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors, PriorityColors, PriorityLabels } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useDeviceDataSource } from '../services/dataSource';
 
 const faultTypeOptions = [
   { value: '机械', label: '机械故障', icon: <ToolOutlined /> },
@@ -34,8 +35,15 @@ const priorityOptions = [
 export default function ReportFault() {
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
+
+  // ── Unified data source hook ───────────────────────────────
+  const {
+    data: devices,
+    loading: devicesLoading,
+    refresh: refreshDevices,
+  } = useDeviceDataSource('default');
+
   const [step, setStep] = useState<'scan' | 'report' | 'result'>('scan');
-  const [devices, setDevices] = useState<any[]>([]);
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
   const [form, setForm] = useState({
     faultType: undefined as string | undefined,
@@ -46,10 +54,6 @@ export default function ReportFault() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [recentFaults, setRecentFaults] = useState<any[]>([]);
-
-  useEffect(() => {
-    api.get('/devices').then((res) => setDevices(res.data.data));
-  }, []);
 
   const handleSelectDevice = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);

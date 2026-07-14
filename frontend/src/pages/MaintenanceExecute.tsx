@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Typography, Badge, Tag, message,
   Row, Col, Modal, Steps, Descriptions, Result, Input, InputNumber,
@@ -12,6 +12,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
 import { Colors } from '../styles/theme';
 
 const { Text, Title } = Typography;
@@ -47,9 +48,14 @@ const MAINTENANCE_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function MaintenanceExecute() {
-  const [records, setRecords] = useState<MaintenanceRecord[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: records, loading: recordsLoading, refresh: refreshRecords } = useApiDataSource(
+    '/maintenance/records',
+    [] as MaintenanceRecord[]
+  );
+  const { data: plans, loading: plansLoading, refresh: refreshPlans } = useApiDataSource(
+    '/maintenance/plans?active=true',
+    [] as any[]
+  );
   const [execModalOpen, setExecModalOpen] = useState(false);
   const [currentExec, setCurrentExec] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -57,24 +63,6 @@ export default function MaintenanceExecute() {
   const [completing, setCompleting] = useState(false);
   const [notes, setNotes] = useState('');
   const [duration, setDuration] = useState(0);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [recRes, planRes] = await Promise.all([
-        api.get('/maintenance/records'),
-        api.get('/maintenance/plans', { params: { active: 'true' } }),
-      ]);
-      setRecords(recRes.data.data || []);
-      setPlans(planRes.data.data || []);
-    } catch {
-      message.error('加载数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── 开始执行 ──────────────────────────────────
   const handleStartExecute = async (plan: any) => {
@@ -121,7 +109,8 @@ export default function MaintenanceExecute() {
       });
       message.success('保养完成');
       setExecModalOpen(false);
-      fetchData();
+      refreshRecords();
+      refreshPlans();
     } catch {
       message.error('提交失败');
     } finally {
@@ -187,7 +176,7 @@ export default function MaintenanceExecute() {
           </Title>
         </Col>
         <Col>
-          <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => { refreshRecords(); refreshPlans(); }}>刷新</Button>
         </Col>
       </Row>
 
@@ -223,7 +212,7 @@ export default function MaintenanceExecute() {
           columns={columns}
           dataSource={records}
           rowKey="id"
-          loading={loading}
+          loading={recordsLoading || plansLoading}
           scroll={{ x: 700 }}
           size="small"
           pagination={{ pageSize: 20, showTotal: t => `共 ${t} 条` }}

@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Table, Tag, Select, Space, Typography } from 'antd';
 import * as echarts from 'echarts';
 import { SpinnerIcon } from '../components/Icons';
+import { useDataSource, useDeviceDataSource } from '../services/dataSource';
 
 const { Text } = Typography;
 
@@ -13,21 +14,37 @@ const SCOPE_LABELS: Record<string, string> = {
 };
 
 export default function LossAnalysis() {
-  const [pareto, setPareto] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [scope, setScope] = useState<string>('plant');
   const [deviceId, setDeviceId] = useState<string>('');
   const [product, setProduct] = useState<string>('');
   const [team, setTeam] = useState<string>('');
-  const [devices, setDevices] = useState<any[]>([]);
   const [chartReady, setChartReady] = useState(false);
   const chartDomRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
-  // Fetch devices for filter dropdown
-  useEffect(() => {
-    fetch('/api/devices').then(r => r.json()).then(res => setDevices(res.data || [])).catch(() => {});
-  }, []);
+  // ── Unified data source hooks ──────────────────────────────
+  const { data: devices, loading: devicesLoading } = useDeviceDataSource('default');
+
+  // Build query params
+  const buildQuery = useCallback(() => {
+    const params = new URLSearchParams({ scope });
+    if (scope === 'device' && deviceId) params.set('deviceId', deviceId);
+    if (scope === 'product' && product) params.set('product', product);
+    if (scope === 'team' && team) params.set('team', team);
+    return params.toString();
+  }, [scope, deviceId, product, team]);
+
+  // Use useDataSource for dynamic pareto data based on scope filters
+  const { data: paretoData } = useDataSource<any[]>(
+    async () => {
+      const res = await fetch(`/api/dashboard/pareto?${buildQuery()}`);
+      const json = await res.json();
+      return json.data || [];
+    },
+    [] as any[],
+    { delay: 0, onRealError: () => {} }
+  );
 
   // Init chart
   useEffect(() => {
@@ -46,32 +63,15 @@ export default function LossAnalysis() {
     };
   }, []);
 
-  // Build query params
-  const buildQuery = useCallback(() => {
-    const params = new URLSearchParams({ scope });
-    if (scope === 'device' && deviceId) params.set('deviceId', deviceId);
-    if (scope === 'product' && product) params.set('product', product);
-    if (scope === 'team' && team) params.set('team', team);
-    return params.toString();
-  }, [scope, deviceId, product, team]);
-
-  useEffect(() => {
-    setLoading(true);
-    fetch(`/api/dashboard/pareto?${buildQuery()}`)
-      .then(r => r.json())
-      .then(res => { setPareto(res.data || []); setLoading(false); })
-      .catch(() => { setPareto([]); setLoading(false); });
-  }, [buildQuery]);
-
   // Update chart when data changes
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || pareto.length === 0 || !chartReady) return;
+    if (!chart || paretoData.length === 0 || !chartReady) return;
 
     try {
-      const causes = pareto.map(p => p.cause);
-      const durations = pareto.map(p => p.duration);
-      const cumulatives = pareto.map(p => p.cumulative);
+      const causes = paretoData.map((p: any) => p.cause);
+      const durations = paretoData.map((p: any) => p.duration);
+      const cumulatives = paretoData.map((p: any) => p.cumulative);
 
       const top80Idx = cumulatives.findIndex(c => c >= 80);
       const mark80 = top80Idx >= 0 ? top80Idx + 0.5 : null;
@@ -117,7 +117,7 @@ export default function LossAnalysis() {
         series: [
           {
             name: '停机时长', type: 'bar',
-            data: durations.map((v, i) => ({
+            data: durations.map((v: number, i: number) => ({
               value: v,
               itemStyle: {
                 color: (cumulatives[i] || 0) <= 80 ? '#EF4444' : (cumulatives[i] || 0) <= 90 ? '#F59E0B' : '#3B82F6',
@@ -154,7 +154,7 @@ export default function LossAnalysis() {
     } catch (e) {
       console.error('Chart render error:', e);
     }
-  }, [pareto, chartReady]);
+  }, [paretoData, chartReady]);
 
   const handleScopeChange = (val: string) => {
     setScope(val);
@@ -263,7 +263,7 @@ export default function LossAnalysis() {
               <SpinnerIcon size={16} style={{ marginRight: 4 }} />加载中...
             </div>
           )}
-          {!loading && pareto.length === 0 && (
+          {!loading && paretoData.length === 0 && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', zIndex: 10, borderRadius: 8, color: '#999', fontSize: 14 }}>
               暂无数据
             </div>
@@ -276,25 +276,25 @@ export default function LossAnalysis() {
       <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #eee', padding: 16 }}>
         <h3 style={{ fontSize: 15, fontWeight: 600, color: '#333', margin: '0 0 12px 0' }}>损失明细</h3>
         <Table
-          dataSource={pareto}
+          dataSource={paretoData}
           columns={columns}
           rowKey="cause"
           pagination={false}
           size="small"
-            summary={() => pareto.length > 0 ? (
+            summary={() => paretoData.length > 0 ? (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0}><strong>TOP 3 占总量</strong></Table.Summary.Cell>
               <Table.Summary.Cell index={1}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.count || 0), 0)}</strong>
+                <strong>{paretoData.slice(0, 3).reduce((s: number, p: any) => s + (p.count || 0), 0)}</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={2}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.duration || 0), 0)} min</strong>
+                <strong>{paretoData.slice(0, 3).reduce((s: number, p: any) => s + (p.duration || 0), 0)} min</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={3}>
-                <strong>{pareto.slice(0, 3).reduce((s, p) => s + (p.percentage || 0), 0).toFixed(1)}%</strong>
+                <strong>{paretoData.slice(0, 3).reduce((s: number, p: any) => s + (p.percentage || 0), 0).toFixed(1)}%</strong>
               </Table.Summary.Cell>
               <Table.Summary.Cell index={4}>
-                <Tag color="#EF4444">{pareto[2] ? (Number(pareto[2]?.cumulative) || 0).toFixed(1) : 0}%</Tag>
+                <Tag color="#EF4444">{paretoData[2] ? (Number(paretoData[2]?.cumulative) || 0).toFixed(1) : 0}%</Tag>
               </Table.Summary.Cell>
             </Table.Summary.Row>
           ) : null}

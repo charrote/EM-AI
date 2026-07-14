@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Typography, Badge, Tag, message,
   Row, Col, Select, Modal, Descriptions, Divider, Timeline, Empty,
@@ -7,27 +7,12 @@ import {
   SafetyOutlined, ReloadOutlined, ToolOutlined,
   HistoryOutlined, SearchOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+import { useToolingDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
 
-interface Tooling {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  status: string;
-  device?: { id: string; code: string; name: string } | null;
-  location: string | null;
-  theoreticalLife: number | null;
-  lifeUnit: string;
-  lifeUsed: number | null;
-  lifeRemaining: number | null;
-  lastMaintenanceAt: string | null;
-  healthScore: number | null;
-}
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   in_stock: { color: Colors.success, label: '在库' },
@@ -39,33 +24,20 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
 };
 
 export default function ToolingMaintenance() {
-  const [data, setData] = useState<Tooling[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: data,
+    loading,
+    refresh: fetchData,
+  } = useToolingDataSource();
+
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [detailModal, setDetailModal] = useState(false);
-  const [selectedTooling, setSelectedTooling] = useState<Tooling | null>(null);
+  const [selectedTooling, setSelectedTooling] = useState<any | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (typeFilter) params.type = typeFilter;
-      if (statusFilter) params.status = statusFilter;
-      const res = await api.get('/toolings', { params });
-      setData(res.data.data || []);
-    } catch {
-      message.error('加载工治具数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, statusFilter]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  const columns: ColumnsType<Tooling> = [
+  const columns: any = [
     {
-      title: '编码/名称', key: 'name', render: (_: unknown, r: Tooling) => (
+      title: '编码/名称', key: 'name', render: (_: unknown, r: any) => (
         <div>
           <Text code style={{ fontSize: 11 }}>{r.code}</Text>
           <br />
@@ -87,11 +59,11 @@ export default function ToolingMaintenance() {
     },
     {
       title: '关联设备', key: 'device', width: 130, ellipsis: true,
-      render: (_: unknown, r: Tooling) => r.device ? <Text>{r.device.name}</Text> : <Text type="secondary">-</Text>,
+      render: (_: unknown, r: any) => r.device ? <Text>{r.device.name}</Text> : <Text type="secondary">-</Text>,
     },
     {
       title: '寿命', key: 'life', width: 120,
-      render: (_: unknown, r: Tooling) => {
+      render: (_: unknown, r: any) => {
         if (!r.theoreticalLife) return <Text type="secondary">-</Text>;
         const pct = r.lifeRemaining != null ? Math.round((r.lifeRemaining / r.theoreticalLife) * 100) : 100;
         const color = pct > 50 ? Colors.success : pct > 20 ? Colors.warning : Colors.danger;
@@ -124,7 +96,7 @@ export default function ToolingMaintenance() {
     },
     {
       title: '操作', key: 'action', width: 80,
-      render: (_: unknown, r: Tooling) => (
+      render: (_: unknown, r: any) => (
         <Button size="small" onClick={() => { setSelectedTooling(r); setDetailModal(true); }}>
           详情
         </Button>

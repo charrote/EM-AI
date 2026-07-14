@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Tag, Progress, Button, Modal, Form, Input, InputNumber,
   Select, DatePicker, Row, Col, Statistic, message, Space, Steps,
@@ -15,6 +15,7 @@ import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useImprovementDataSource, useImprovementOpportunityDataSource } from '../services/dataSource';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -48,9 +49,6 @@ type Opportunity = {
 };
 
 export default function ImprovementProjects() {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('active');
   const [modalOpen, setModalOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -58,30 +56,18 @@ export default function ImprovementProjects() {
   const [form] = Form.useForm();
   const { isMobile } = useResponsive();
 
-  const [fetchError, setFetchError] = useState('');
+  // ── Unified data source hooks ──────────────────────────────
+  const { data: projects, loading: projectsLoading } = useImprovementDataSource();
 
-  const fetchData = () => {
-    setFetchError('');
-    Promise.all([
-      api.get('/improvements'),
-      api.get('/improvements/opportunities'),
-    ]).then(([projRes, oppRes]) => {
-      const p = projRes.data?.data || [];
-      const o = oppRes.data?.data || [];
-      setProjects(p);
-      setOpportunities(o);
-      setLoading(false);
-    }).catch((err: any) => {
-      setFetchError(err?.message || '请求失败');
-      setLoading(false);
-    });
-  };
+  const { data: opportunities, loading: oppLoading } = useImprovementOpportunityDataSource();
 
-  useEffect(() => { fetchData(); }, []);
+  // Loading state: show loading if either data source is loading
+  const loading = projectsLoading || oppLoading;
 
+  // ── Data filter groups ─────────────────────────────────────
   const projectGroups = {
-    active: projects.filter((p) => p.status === 'active'),
-    completed: projects.filter((p) => p.status === 'completed'),
+    active: projects.filter((p: any) => p.status === 'active'),
+    completed: projects.filter((p: any) => p.status === 'completed'),
   };
 
   const completionRate = projects.length
@@ -99,7 +85,7 @@ export default function ImprovementProjects() {
       message.success('改善项目已创建');
       setModalOpen(false);
       form.resetFields();
-      fetchData();
+      refreshProjects();
     } catch { message.error('创建失败'); }
   };
 
@@ -107,7 +93,7 @@ export default function ImprovementProjects() {
     try {
       await api.put(`/improvements/${id}`, data);
       message.success('更新成功');
-      fetchData();
+      refreshProjects();
       if (selectedProject?.id === id) {
         setSelectedProject({ ...selectedProject, ...data });
       }
@@ -494,12 +480,6 @@ export default function ImprovementProjects() {
         </Col>
       </Row>
 
-      {fetchError && (
-        <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '8px 16px', borderRadius: 6, marginTop: 8 }}>
-          ⚠ 数据加载失败: {fetchError}
-        </div>
-      )}
-
       <div style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Tabs activeKey={activeTab} onChange={setActiveTab}
           items={[
@@ -510,7 +490,7 @@ export default function ImprovementProjects() {
           style={{ marginBottom: 0 }}
         />
         <Space size={4}>
-          <Button icon={<ReloadOutlined />} onClick={fetchData} size={isMobile ? 'small' : 'middle'} />
+          <Button icon={<ReloadOutlined />} onClick={() => { refreshProjects(); refreshOpportunities(); }} size={isMobile ? 'small' : 'middle'} />
           <Button type="primary" icon={<PlusOutlined />} size={isMobile ? 'small' : 'middle'}
             onClick={() => { form.resetFields(); setModalOpen(true); }}
             style={{ borderRadius: 6 }}>

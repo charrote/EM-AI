@@ -1,7 +1,10 @@
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Select, Tag } from 'antd';
 import { BoltIcon, PauseIcon, RefreshIcon, CrossIcon, WrenchIcon, WarningIcon, TrashIcon, QuestionIcon, SpinnerIcon } from '../components/Icons';
+import { useDataSource } from '../services/dataSource';
+import { deviceApi } from '../services/devices';
+import { generateMockDevices } from '../services/mockData';
 
 const STATUS_CFG = {
   running: { color: '#22C55E', label: '运行中', icon: <BoltIcon size={14} /> },
@@ -74,37 +77,29 @@ function DeviceCard({ device, onClick }: { device: any; onClick: () => void }) {
 export default function DeviceList() {
   const [scenario, setScenario] = useState<string>('metal');
   const [areas, setAreas] = useState<any[]>([]);
-  const [devices, setDevices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filterAreas, setFilterAreas] = useState<string[]>([]);
   const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
   const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const loadData = useCallback(async () => {
-    try {
+  // 使用 useDataSource 钩子，自动根据 dataMode 切换数据源
+  const { data, loading, source } = useDataSource<any[]>(
+    async () => {
       const params = new URLSearchParams();
       params.set('scenario', scenario);
       if (filterAreas.length) filterAreas.forEach(a => params.append('area', a));
       if (filterStatuses.length) filterStatuses.forEach(s => params.append('status', s));
       if (filterTypes.length) filterTypes.forEach(t => params.append('type', t));
 
-      const [areasRes, devicesRes] = await Promise.all([
-        fetch(`/api/devices/areas?scenario=${scenario}`).then(r => r.json()),
-        fetch(`/api/devices?${params.toString()}`).then(r => r.json()),
-      ]);
-      setAreas(areasRes.data || []);
-      setDevices(devicesRes.data || []);
-    } catch (e) {
-      console.error('Failed to load devices', e);
-    }
-  }, [scenario, filterAreas, filterStatuses, filterTypes]);
+      const res = await deviceApi.list();
+      return res.data || [];
+    },
+    generateMockDevices(20),
+    { delay: 200 } // 演示延迟，让切换效果更明显
+  );
 
-  useEffect(() => {
-    setLoading(true);
-    loadData().finally(() => setLoading(false));
-  }, [loadData]);
+  const devices = data || [];
 
   // Filters
   const areaOptions = useMemo(() => areas.map((a: any) => ({ value: a.area, label: `${a.area} (${a.total}台)` })), [areas]);

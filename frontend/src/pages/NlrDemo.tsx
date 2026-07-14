@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Input, Button, Tag, Space, Typography, message as antMsg, Spin, Tooltip, Alert } from 'antd';
 import {
   SoundOutlined, StopOutlined, SendOutlined,
@@ -12,6 +12,7 @@ import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { useStore } from '../store/useStore';
 import api from '../services/api';
+import { useDeviceDataSource } from '../services/dataSource';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -177,8 +178,6 @@ export default function NlrDemo() {
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
-  const [devices, setDevices] = useState<any[]>([]);
-  const [matchedDevice, setMatchedDevice] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [parseSteps, setParseSteps] = useState<ParseStep[]>([]);
   const [isParsing, setIsParsing] = useState(false);
@@ -186,16 +185,15 @@ export default function NlrDemo() {
   const inputRef = useRef<any>(null);
   const parseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Unified data source hook ───────────────────────────────
+  const { data: devices } = useDeviceDataSource('default');
+
+  const [matchedDevice, setMatchedDevice] = useState<any>(null);
+
   useEffect(() => {
     return () => {
       if (parseTimerRef.current) clearTimeout(parseTimerRef.current);
     };
-  }, []);
-
-  useEffect(() => {
-    api.get('/devices').then((res) => {
-      setDevices(res.data.data || []);
-    });
   }, []);
 
   useEffect(() => {

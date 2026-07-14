@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Steps, Input, Form,
   message, Tag, Empty, Divider, Alert, Result, Modal, Select, List,
@@ -13,6 +13,7 @@ import ReactECharts from 'echarts-for-react';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useRcaDataSource } from '../services/dataSource';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -48,8 +49,12 @@ const WHY_QUESTIONS = [
 ];
 
 export default function RcaAnalysis() {
-  const [analyses, setAnalyses] = useState<RcaItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: analyses,
+    loading,
+    refresh: fetchData,
+  } = useRcaDataSource();
+
   const [activeTab, setActiveTab] = useState('new');
   const [selectedAnalysis, setSelectedAnalysis] = useState<RcaItem | null>(null);
   const { isMobile } = useResponsive();
@@ -71,20 +76,6 @@ export default function RcaAnalysis() {
   const [rootCause, setRootCause] = useState('');
   const [improvement, setImprovement] = useState('');
   const [rcaId, setRcaId] = useState<string | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/rca');
-      setAnalyses(res.data.data || []);
-    } catch {
-      message.error('加载 RCA 数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── 5-Why 分析 ────────────────────────────────
   const resetAnalysis = () => {

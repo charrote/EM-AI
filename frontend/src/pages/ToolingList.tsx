@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Table, Tag, Button, Space, Card, Input, Select, Row, Col, Statistic,
   Modal, Form, message, Popconfirm, Typography, Tooltip, Badge, Descriptions,
@@ -8,31 +8,13 @@ import {
   ReloadOutlined, QrcodeOutlined, SwapOutlined, BuildOutlined,
   ToolOutlined, InboxOutlined, PrinterOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 
 const { Text, Title } = Typography;
 
-interface Tooling {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  status: string;
-  deviceId: string | null;
-  device?: { id: string; code: string; name: string } | null;
-  location: string | null;
-  supplier: string | null;
-  theoreticalLife: number | null;
-  lifeUnit: string;
-  lifeUsed: number | null;
-  lifeRemaining: number | null;
-  purchaseCost: number | null;
-  purchaseDate: string | null;
-  createdAt: string;
-}
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   in_stock: { color: Colors.success, label: '在库' },
@@ -47,23 +29,27 @@ const TYPE_OPTIONS = ['模具', '夹具', '刀具', '量具', '其他'];
 const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label }));
 
 export default function ToolingList() {
-  const [data, setData] = useState<Tooling[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
+  const { data, loading, refresh } = useApiDataSource(
+    '/api/toolings',
+    [] as any[]
+  );
+
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Tooling | null>(null);
+  const [editing, setEditing] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
-  const [statusTarget, setStatusTarget] = useState<Tooling | null>(null);
+  const [statusTarget, setStatusTarget] = useState<any | null>(null);
   const [newStatus, setNewStatus] = useState<string>('');
   const { isMobile, isDesktop } = useResponsive();
   const [form] = Form.useForm();
   const [statusForm] = Form.useForm();
 
   // Detail modal
-  const [detailTarget, setDetailTarget] = useState<Tooling | null>(null);
+  const [detailTarget, setDetailTarget] = useState<any | null>(null);
   const [detailModal, setDetailModal] = useState(false);
 
   // Print label
@@ -82,24 +68,6 @@ export default function ToolingList() {
     setSelectedPrintIds([]);
   };
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (search) params.search = search;
-      if (typeFilter) params.type = typeFilter;
-      if (statusFilter) params.status = statusFilter;
-      const res = await api.get('/toolings', { params });
-      setData(res.data.data || []);
-    } catch (err) {
-      message.error('加载工治具数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [search, typeFilter, statusFilter]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
   // ── CRUD ────────────────────────────────────
   const handleCreate = () => {
     setEditing(null);
@@ -107,7 +75,7 @@ export default function ToolingList() {
     setModalOpen(true);
   };
 
-  const handleEdit = (record: Tooling) => {
+  const handleEdit = (record: any) => {
     setEditing(record);
     form.setFieldsValue(record);
     setModalOpen(true);
@@ -117,7 +85,7 @@ export default function ToolingList() {
     try {
       await api.delete(`/toolings/${id}`);
       message.success('已删除');
-      fetchData();
+      refresh();
     } catch {
       message.error('删除失败');
     }
@@ -135,7 +103,7 @@ export default function ToolingList() {
         message.success('创建成功');
       }
       setModalOpen(false);
-      fetchData();
+      refresh();
     } catch {
       // validation error
     } finally {
@@ -144,7 +112,7 @@ export default function ToolingList() {
   };
 
   // ── 状态切换 ──────────────────────────────────
-  const handleStatusChange = (record: Tooling) => {
+  const handleStatusChange = (record: any) => {
     setStatusTarget(record);
     setNewStatus(record.status);
     statusForm.setFieldsValue({ status: record.status });
@@ -158,7 +126,7 @@ export default function ToolingList() {
       await api.put(`/toolings/${statusTarget.id}/status`, { status: values.status });
       message.success('状态已更新');
       setStatusModalOpen(false);
-      fetchData();
+      refresh();
     } catch {
       // validation error
     }
@@ -173,7 +141,7 @@ export default function ToolingList() {
   };
 
   // ── 表格列定义 ──────────────────────────────
-  const columns: ColumnsType<Tooling> = [
+  const columns: any = [
     {
       title: '编码', dataIndex: 'code', key: 'code', width: isDesktop ? 200 : 140,
       render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text>,
@@ -192,12 +160,12 @@ export default function ToolingList() {
     },
     {
       title: '关联设备', key: 'device', width: isDesktop ? 240 : 140, ellipsis: true,
-      render: (_: unknown, r: Tooling) => r.device ? <Text>{r.device.name}</Text> : <Text type="secondary">-</Text>,
+      render: (_: unknown, r: any) => r.device ? <Text>{r.device.name}</Text> : <Text type="secondary">-</Text>,
     },
     { title: '储位', dataIndex: 'location', key: 'location', width: isDesktop ? 180 : 120, ellipsis: true },
     {
       title: '寿命', key: 'life', width: isDesktop ? 180 : 140,
-      render: (_: unknown, r: Tooling) => {
+      render: (_: unknown, r: any) => {
         if (!r.theoreticalLife) return <Text type="secondary">-</Text>;
         const pct = r.lifeRemaining != null ? Math.round((r.lifeRemaining / r.theoreticalLife) * 100) : 100;
         const color = pct > 50 ? Colors.success : pct > 20 ? Colors.warning : Colors.danger;
@@ -214,7 +182,7 @@ export default function ToolingList() {
     },
     {
       title: '操作', key: 'action', width: 160, fixed: 'right',
-      render: (_: unknown, r: Tooling) => (
+      render: (_: unknown, r: any) => (
         <Space size="small">
           <Tooltip title="切换状态">
             <Button size="small" icon={<SwapOutlined />} onClick={() => handleStatusChange(r)} />
@@ -301,7 +269,7 @@ export default function ToolingList() {
                 style={{ width: isDesktop ? 140 : 110 }}
                 options={STATUS_OPTIONS}
               />
-              <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
+              <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
             </Space>
           </Col>
           <Col xs={24} md={8} style={{ textAlign: isMobile ? 'left' : 'right' }}>

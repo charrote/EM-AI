@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Descriptions, Tag, Button, Timeline, List, Spin, message,
-  Modal, Input, Rate, Space, Divider, Card,
+  Modal, Input, Rate, Space, Divider,
 } from 'antd';
 import {
   ArrowLeftOutlined, CheckCircleOutlined, ToolOutlined,
@@ -11,40 +11,65 @@ import {
 } from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import api from '../services/api';
+import { useDataSource } from '../services/dataSource';
 import { Colors, WorkOrderStatusLabels, PriorityColors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 
 export default function WorkOrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [wo, setWo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [diagnosis, setDiagnosis] = useState<any>(null);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
   const [completeData, setCompleteData] = useState({ rootCause: '', resolution: '', satisfactionScore: 5 });
   const { isMobile } = useResponsive();
 
-  const fetchDetail = () => {
-    if (!id) return;
-    api.get(`/work-orders/${id}`).then((res) => {
-      setWo(res.data.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchDetail(); }, [id]);
+  const { data: wo, loading, refresh: refreshWo } = useDataSource(
+    async () => {
+      if (!id) return null;
+      const res = await api.get(`/work-orders/${id}`);
+      return res.data.data;
+    },
+    {
+      id: 'WO-0001',
+      code: 'WO-2024-0001',
+      deviceId: 'DEV-001',
+      device: { name: 'CNC-01' },
+      status: 'pending',
+      priority: 'high',
+      faultType: '设备停机',
+      source: '设备报警',
+      description: '设备突然停机，无法启动',
+      rootCause: '主轴轴承损坏',
+      resolution: '更换主轴轴承',
+      slaDeadline: '2024-01-15T18:00:00Z',
+      assigneeId: 'user1',
+      handlerId: 'user2',
+      respondedAt: '2024-01-15T08:30:00Z',
+      actualStartAt: '2024-01-15T09:00:00Z',
+      reviewerId: 'user3',
+      verifiedAt: '2024-01-15T14:00:00Z',
+      completedBy: 'user2',
+      actualEndAt: '2024-01-15T16:00:00Z',
+      workLogs: [
+        { step: 1, content: '接单确认', duration: 5 },
+        { step: 2, content: '初步诊断', duration: 30 },
+        { step: 3, content: '更换轴承', duration: 120 },
+        { step: 4, content: '测试运行', duration: 20 },
+      ],
+    }
+  );
 
   const handleStatus = async (status: string) => {
     try {
       await api.put(`/work-orders/${id}/status`, { status });
       message.success(`状态已更新：${WorkOrderStatusLabels[status]}`);
-      fetchDetail();
+      refreshWo();
     } catch (err: any) {
       message.error(err.response?.data?.error || '操作失败');
     }
   };
 
+  const [diagnosis, setDiagnosis] = useState<any>(null);
   const loadDiagnosis = async () => {
     try {
       const res = await api.get(`/work-orders/${id}/ai-diagnosis`);
@@ -60,7 +85,7 @@ export default function WorkOrderDetail() {
       await api.post(`/work-orders/${id}/complete`, completeData);
       message.success('工单已完成，知识条目已自动生成');
       setCompleteModal(false);
-      fetchDetail();
+      refreshWo();
     } catch {
       message.error('提交失败');
     }
@@ -258,7 +283,9 @@ export default function WorkOrderDetail() {
       >
         {diagnosis ? (
           <>
-            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>相似案例</Divider>
+            <Divider plain style={{ fontSize: 13, color: Colors.gray500, paddingLeft: 0 }}>
+              相似案例
+            </Divider>
             <List
               dataSource={diagnosis.similarCases}
               renderItem={(item: any) => (
@@ -282,7 +309,9 @@ export default function WorkOrderDetail() {
               )}
             />
 
-            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>推荐诊断方案</Divider>
+            <Divider plain style={{ fontSize: 13, color: Colors.gray500, paddingLeft: 0 }}>
+              推荐诊断方案
+            </Divider>
             <Timeline
               items={diagnosis.recommendedDiagnosis.map((d: any) => ({
                 children: (
@@ -298,7 +327,9 @@ export default function WorkOrderDetail() {
               }))}
             />
 
-            <Divider orientation="left" style={{ fontSize: 13, color: Colors.gray500 }}>推荐备件</Divider>
+            <Divider plain style={{ fontSize: 13, color: Colors.gray500, paddingLeft: 0 }}>
+              推荐备件
+            </Divider>
             <List
               dataSource={diagnosis.recommendedParts}
               renderItem={(item: any) => (

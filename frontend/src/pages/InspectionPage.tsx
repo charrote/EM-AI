@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Select, InputNumber, Upload, message, List, Tag, Divider, Result, Spin, Empty } from 'antd';
 import { CameraOutlined, ScanOutlined, OrderedListOutlined, EyeOutlined, ReloadOutlined } from '@ant-design/icons';
@@ -6,6 +6,7 @@ import PageCard from '../components/PageCard';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useDeviceDataSource, useInspectionPlanDataSource } from '../services/dataSource';
 
 interface InspectionItem {
   id: string;
@@ -51,8 +52,24 @@ const typeDefaultItems: Record<string, InspectionItem[]> = {
 export default function InspectionPage() {
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
-  const [devices, setDevices] = useState<any[]>([]);
-  const [plans, setPlans] = useState<any[]>([]);
+
+  // ── Unified data source hooks ──────────────────────────────
+  const {
+    data: devices,
+    loading: devicesLoading,
+    refresh: refreshDevices,
+  } = useDeviceDataSource('default');
+
+  const {
+    data: plans,
+    loading: plansLoading,
+    refresh: refreshPlans,
+  } = useInspectionPlanDataSource();
+
+  // Loading state
+  const loading = devicesLoading || plansLoading;
+
+  // ── Local state ────────────────────────────────────────────
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [selectedDeviceInfo, setSelectedDeviceInfo] = useState<any>(null);
   const [items, setItems] = useState<InspectionItem[]>(presetItems);
@@ -61,26 +78,16 @@ export default function InspectionPage() {
   const [result, setResult] = useState<any>(null);
   const [step, setStep] = useState<'select' | 'inspect' | 'result'>('select');
 
-  useEffect(() => {
-    Promise.all([
-      api.get('/devices'),
-      api.get('/inspection-plans'),
-    ]).then(([devRes, planRes]) => {
-      setDevices(devRes.data.data);
-      setPlans(planRes.data.data || []);
-    });
-  }, []);
-
   // ── 设备切换时动态加载点检项目 ────────────────
   const loadInspectionItems = useCallback(async (deviceId: string) => {
     setLoadingItems(true);
-    const device = devices.find(d => d.id === deviceId);
-    setSelectedDeviceInfo(device);
+    const device = devices.find((d: any) => d.id === deviceId);
+    setSelectedDeviceInfo(device || null);
 
     try {
       // 先从 inspection-plans API 按设备类型查找
       if (device?.type) {
-        const matchedPlans = plans.filter(p => p.deviceType === device.type && p.active !== false);
+        const matchedPlans = plans.filter((p: any) => p.deviceType === device.type && p.active !== false);
         if (matchedPlans.length > 0) {
           const plan = matchedPlans[0];
           const planItems = (plan.items || []).map((item: any, i: number) => ({
@@ -100,15 +107,15 @@ export default function InspectionPage() {
         // Fallback: 按设备类型查找默认配置
         const defaults = typeDefaultItems[device.type as string];
         if (defaults) {
-          setItems(defaults.map(d => ({ ...d })));
+          setItems(defaults.map((d) => ({ ...d })));
           setLoadingItems(false);
           return;
         }
       }
       // 最终 fallback：通用预设
-      setItems(presetItems.map(p => ({ ...p })));
+      setItems(presetItems.map((p) => ({ ...p })));
     } catch {
-      setItems(presetItems.map(p => ({ ...p })));
+      setItems(presetItems.map((p) => ({ ...p })));
     }
     setLoadingItems(false);
   }, [devices, plans]);
@@ -132,8 +139,7 @@ export default function InspectionPage() {
     if (!selectedDevice) return;
     setSubmitting(true);
     try {
-      // 检查是否有未填写的项目
-      const emptyItems = items.filter(item => !item.value && item.result === 'pass');
+      const emptyItems = items.filter((item) => !item.value && item.result === 'pass');
       if (emptyItems.length > 0) {
         message.warning(`还有 ${emptyItems.length} 项未填写，请完成所有点检`);
         setSubmitting(false);

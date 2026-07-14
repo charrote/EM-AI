@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
-  Card, Button, Space, Typography, Row, Col, Tag, message, Select, Spin, Switch, Tooltip, Modal,
+  Card, Button, Space, Typography, Row, Col, Tag, message, Select, Spin, Tooltip, Modal, Switch,
 } from 'antd';
 import {
   CalendarOutlined, ReloadOutlined, LeftOutlined, RightOutlined,
@@ -10,6 +10,7 @@ import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import dayjs from 'dayjs';
+import { useCalendarDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
 
@@ -30,8 +31,6 @@ const SHIFT_LABELS: Record<string, { label: string; color: string }> = {
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 export default function WorkCalendar() {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(dayjs());
   const [initModalOpen, setInitModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -48,21 +47,12 @@ export default function WorkCalendar() {
   const daysInMonth = currentDate.daysInMonth();
   const firstDayOfWeek = dayjs(new Date(year, month - 1, 1)).day();
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get(`/calendar?year=${year}&month=${month}`);
-      setEntries(res.data.data || []);
-    } catch {
-      message.error('加载日历数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // ── Unified data source hook ───────────────────────────────
+  const {
+    data: entries,
+    loading,
+    refresh: fetchData,
+  } = useCalendarDataSource(year, month);
 
   const handlePrevMonth = () => setCurrentDate(currentDate.subtract(1, 'month'));
   const handleNextMonth = () => setCurrentDate(currentDate.add(1, 'month'));
@@ -168,7 +158,7 @@ export default function WorkCalendar() {
               <Switch
                 size="small"
                 checked={isWorkDay}
-                onClick={(checked, e) => { e.stopPropagation(); openEditModal(entry); }}
+                onChange={() => { openEditModal(entry); }}
                 style={{ transform: 'scale(0.7)' }}
               />
             )}
@@ -359,7 +349,7 @@ export default function WorkCalendar() {
             <div style={{ marginBottom: 16 }}>
               <Text style={{ fontWeight: 500, color: Colors.gray700 }}>工作日/休息日</Text>
               <div style={{ marginTop: 8 }}>
-                <Switch checked={editIsWorkDay} onChange={setEditIsWorkDay} />
+                <Switch checked={editIsWorkDay} onChange={(v) => setEditIsWorkDay(v)} />
                 <span style={{ marginLeft: 8, color: Colors.gray600 }}>
                   {editIsWorkDay ? '工作日' : '休息日'}
                 </span>

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, Button, Form, Input, Select, message, Radio, Row, Col, Descriptions, Tag, Badge, Table, Space, Typography } from 'antd';
 import { ScanOutlined, DesktopOutlined, ToolOutlined, SwapOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+import { useDeviceManageDataSource, useToolingDataSource } from '../services/dataSource';
 
 const { Text } = Typography;
 
@@ -14,15 +14,6 @@ interface Device {
   type: string;
 }
 
-interface Tooling {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  status: string;
-  deviceId: string | null;
-  device?: { id: string; code: string; name: string } | null;
-}
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   in_stock: { color: Colors.success, label: '在库' },
@@ -37,38 +28,25 @@ export default function ToolingDismount() {
   const [method, setMethod] = useState<'method1' | 'method2'>('method1');
 
   // Method 1: scan device → load toolings → select → dismount
-  const [devices, setDevices] = useState<Device[]>([]);
   const [deviceSearch, setDeviceSearch] = useState('');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [deviceToolings, setDeviceToolings] = useState<Tooling[]>([]);
+  const [deviceToolings, setDeviceToolings] = useState<any[]>([]);
   const [deviceToolingsLoading, setDeviceToolingsLoading] = useState(false);
   const [selectedDismountIds, setSelectedDismountIds] = useState<string[]>([]);
 
   // Method 2: scan tooling → dismount
   const [toolingCode, setToolingCode] = useState('');
-  const [scannedTooling, setScannedTooling] = useState<Tooling | null>(null);
+  const [scannedTooling, setScannedTooling] = useState<any | null>(null);
 
   // Common
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // ── Method 1: Device search ─────────────────────────────
-  const fetchDevices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (deviceSearch) params.keyword = deviceSearch;
-      const res = await api.get('/devices/manage', { params });
-      setDevices(res.data.data || []);
-    } catch {
-      message.error('加载设备数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [deviceSearch]);
+// ── Unified data source hooks ──────────────────────────────
+  const { data: devices, refresh: refreshDevices } = useDeviceManageDataSource(deviceSearch || undefined);
+  const { data: toolings, refresh: refreshToolings } = useToolingDataSource();
 
-  useEffect(() => { fetchDevices(); }, [fetchDevices]);
-
+  // ── Method 1: Device search ───────────────────────────────
   const handleDeviceSelect = async (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
     setSelectedDevice(device || null);
@@ -89,7 +67,7 @@ export default function ToolingDismount() {
     }
   };
 
-  const columns: ColumnsType<Tooling> = [
+  const columns: any = [
     { title: '编码', dataIndex: 'code', key: 'code', width: 140, render: (v: string) => <Text code style={{ fontSize: 12 }}>{v}</Text> },
     { title: '名称', dataIndex: 'name', key: 'name', width: 160, ellipsis: true },
     { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
@@ -102,7 +80,7 @@ export default function ToolingDismount() {
     },
     {
       title: '操作', key: 'action', width: 120,
-      render: (_: unknown, r: Tooling) => (
+      render: (_: unknown, r: any) => (
         <Button
           size="small"
           type="primary"
@@ -123,7 +101,7 @@ export default function ToolingDismount() {
     try {
       const res = await api.get('/toolings', { params: { search: toolingCode } });
       const found = (res.data.data || []).find(
-        (t: Tooling) => t.code === toolingCode || t.name.includes(toolingCode)
+        (t: any) => t.code === toolingCode || t.name.includes(toolingCode)
       );
       if (found) {
         setScannedTooling(found);
@@ -306,7 +284,7 @@ export default function ToolingDismount() {
                   type: 'checkbox',
                   selectedRowKeys: selectedDismountIds,
                   onChange: (keys) => setSelectedDismountIds(keys as string[]),
-                  getCheckboxProps: (r: Tooling) => ({ disabled: r.status !== 'in_use' }),
+                  getCheckboxProps: (r: any) => ({ disabled: r.status !== 'in_use' }),
                 }}
               />
             </Card>

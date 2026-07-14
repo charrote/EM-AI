@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Table, Tag, message,
   Modal, Input, Popconfirm, Empty, Switch, InputNumber,
@@ -10,7 +10,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { UploadProps } from 'antd';
-import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockDevices } from '../services/mockData';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 
@@ -80,19 +81,10 @@ export default function DeviceTypePage() {
   const [uploading, setUploading] = useState(false);
 
   // ── Data fetching ──
-  const fetchTypes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/devices/manage/types');
-      setTypes(res.data.data || []);
-    } catch {
-      message.error('加载设备类型失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchTypes(); }, [fetchTypes]);
+  const { data: types, loading, refresh: fetchTypes } = useApiDataSource(
+    '/api/devices/manage/types',
+    generateMockDevices(10)
+  );
 
   // ── Type CRUD handlers ──
   const openCreate = () => {

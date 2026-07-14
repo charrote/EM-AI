@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,
   message, Tag, Popconfirm, Typography, Badge, Row, Col, Tabs,
@@ -9,6 +9,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
+import { useApiDataSource } from '../services/dataSource';
+import { generateMockInspections } from '../services/mockData';
 import { Colors } from '../styles/theme';
 
 const { Text, Title } = Typography;
@@ -47,28 +49,18 @@ const DEVICE_TYPE_OPTIONS = [
 ];
 
 export default function InspectionPlans() {
-  const [data, setData] = useState<InspectionPlan[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
+  const { data, loading, refresh } = useApiDataSource(
+    '/api/inspection-plans',
+    generateMockInspections(10)
+  );
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<InspectionPlan | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('list');
   const [form] = Form.useForm();
   const [itemsStr, setItemsStr] = useState('');
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/inspection-plans');
-      setData(res.data.data || []);
-    } catch {
-      message.error('加载点检计划失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCreate = () => {
     setEditing(null);

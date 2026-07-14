@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { Card, Button, Form, Input, Select, message, Steps, Result, Row, Col, Descriptions, Badge, Tag, Table, Space, Typography } from 'antd';
 import { ScanOutlined, DesktopOutlined, ToolOutlined, CheckCircleOutlined, ArrowRightOutlined, DeleteOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+import { useDeviceManageDataSource, useToolingDataSource } from '../services/dataSource';
 
 const { Text } = Typography;
 
@@ -12,15 +12,6 @@ interface Device {
   code: string;
   name: string;
   type: string;
-}
-
-interface Tooling {
-  id: string;
-  code: string;
-  name: string;
-  type: string;
-  status: string;
-  deviceId: string | null;
 }
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
@@ -34,33 +25,20 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
 
 export default function ToolingMount() {
   const [step, setStep] = useState(0);
-  const [devices, setDevices] = useState<Device[]>([]);
   const [deviceSearch, setDeviceSearch] = useState('');
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [toolingCode, setToolingCode] = useState('');
   const [toolingSearch, setToolingSearch] = useState('');
-  const [toolingOptions, setToolingOptions] = useState<Tooling[]>([]);
   const [selectedToolingIds, setSelectedToolingIds] = useState<string[]>([]);
-  const [selectedToolings, setSelectedToolings] = useState<Tooling[]>([]);
+  const [selectedToolings, setSelectedToolings] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const fetchDevices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = {};
-      if (deviceSearch) params.keyword = deviceSearch;
-      const res = await api.get('/devices/manage', { params });
-      setDevices(res.data.data || []);
-    } catch {
-      message.error('加载设备数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [deviceSearch]);
-
-  useEffect(() => { fetchDevices(); }, [fetchDevices]);
+  // ── Unified data source hooks ──────────────────────────────
+  const { data: devices } = useDeviceManageDataSource(deviceSearch || undefined);
+  const { data: toolingsData } = useToolingDataSource();
+  const toolings = toolingsData as unknown as any[];
 
   const handleDeviceSelect = (deviceId: string) => {
     const device = devices.find(d => d.id === deviceId);
@@ -68,30 +46,12 @@ export default function ToolingMount() {
     if (device) setStep(1);
   };
 
-  const fetchToolings = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: any = { status: 'in_stock' };
-      if (toolingSearch) params.search = toolingSearch;
-      const res = await api.get('/toolings', { params });
-      const list: Tooling[] = res.data.data || [];
-      setToolingOptions(list);
-    } catch {
-      message.error('加载工治具数据失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [toolingSearch]);
-
-  useEffect(() => { fetchToolings(); }, [fetchToolings]);
-
   const handleManualToolingCode = async () => {
     if (!toolingCode) return;
     setLoading(true);
     try {
-      const res = await api.get('/toolings', { params: { search: toolingCode } });
-      const found = (res.data.data || []).find(
-        (t: Tooling) => t.code === toolingCode || t.name.includes(toolingCode)
+      const found = (toolings || []).find(
+        (t: any) => t.code === toolingCode || t.name.includes(toolingCode)
       );
       if (found) {
         if (found.status === 'in_stock') {
@@ -115,7 +75,7 @@ export default function ToolingMount() {
     }
   };
 
-  const handleSelectionChange = (keys: React.Key[], rows: Tooling[]) => {
+  const handleSelectionChange = (keys: React.Key[], rows: any[]) => {
     setSelectedToolingIds(keys as string[]);
     setSelectedToolings(rows);
   };
@@ -157,7 +117,7 @@ export default function ToolingMount() {
     setResult(null);
   };
 
-  const columns: ColumnsType<Tooling> = [
+  const columns: any = [
     { title: '编码', dataIndex: 'code', key: 'code', width: 140, render: (v: string) => <Text code>{v}</Text> },
     { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true },
     { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
@@ -167,13 +127,13 @@ export default function ToolingMount() {
     },
   ];
 
-  const selectedColumns: ColumnsType<Tooling> = [
+  const selectedColumns: any = [
     { title: '编码', dataIndex: 'code', key: 'code', width: 140, render: (v: string) => <Text code>{v}</Text> },
     { title: '名称', dataIndex: 'name', key: 'name', ellipsis: true },
     { title: '类型', dataIndex: 'type', key: 'type', width: 80, render: (v: string) => <Tag>{v}</Tag> },
     {
       title: '操作', key: 'action', width: 80,
-      render: (_: unknown, r: Tooling) => (
+      render: (_: unknown, r: any) => (
         <Button size="small" danger icon={<DeleteOutlined />} onClick={() => handleRemoveSelected(r.id)} />
       ),
     },
@@ -284,13 +244,13 @@ export default function ToolingMount() {
 
           <Table
             rowKey="id"
-            columns={columns}
-            dataSource={toolingOptions}
+            columns={columns as any}
+            dataSource={toolings as unknown as any}
             rowSelection={{
               type: 'checkbox',
               selectedRowKeys: selectedToolingIds,
               onChange: handleSelectionChange as any,
-              getCheckboxProps: (r: Tooling) => ({ disabled: r.status !== 'in_stock' }),
+              getCheckboxProps: (r: any) => ({ disabled: r.status !== 'in_stock' }),
             }}
             size="small"
             scroll={{ y: 260 }}

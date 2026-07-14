@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Tag, Button, Segmented, Space, Table, Modal, Descriptions,
@@ -9,19 +9,43 @@ import {
   RightOutlined, DownOutlined, NodeIndexOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import { useDataSource } from '../services/dataSource';
+import { useApiDataSource } from '../services/dataSource';
 import api from '../services/api';
+import { workOrderApi } from '../services/workOrders';
+import { generateMockWorkOrders } from '../services/mockData';
 import { Colors, WorkOrderStatusLabels, WorkOrderStatusColors, PriorityColors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
 import { useStore } from '../store/useStore';
 
 export default function WorkOrderList() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [allOrders, setAllOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('pending');
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
   const { knowledgeMiningEnabled, setKnowledgeMiningWorkOrder, setKnowledgeMiningModalOpen } = useStore();
+
+  const statusFilterMap: Record<string, string> = {
+    pending: 'pending',
+    accepted: 'accepted,diagnosing,repairing',
+    verifying: 'verifying',
+    completed: 'completed',
+  };
+
+  // 使用 useDataSource 钩子，自动根据 dataMode 切换数据源
+  const { data: allOrders, refresh: refreshAll } = useDataSource<any[]>(
+    async () => {
+      const res = await workOrderApi.list({ limit: 200 });
+      return res.data || [];
+    },
+    generateMockWorkOrders(30),
+    { delay: 300 }
+  );
+
+  // 使用 useApiDataSource 钩子获取当前 tab 的工单
+  const { data: orders, loading, refresh: refreshTab } = useApiDataSource(
+    `/api/work-orders?status=${statusFilterMap[tab] || tab}&limit=50`,
+    generateMockWorkOrders(10)
+  );
 
   // Detail modal state
   const [detailOpen, setDetailOpen] = useState(false);
@@ -29,20 +53,6 @@ export default function WorkOrderList() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [completeModal, setCompleteModal] = useState(false);
   const [completeData, setCompleteData] = useState({ rootCause: '', resolution: '', satisfactionScore: 5 });
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const fetchList = useCallback(() => {
-    setLoading(true);
-    const statusFilter = statusFilterMap[tab] || tab;
-    Promise.all([
-      api.get('/work-orders?limit=200'),
-      api.get(`/work-orders?status=${statusFilter}&limit=50`),
-    ]).then(([allRes, filteredRes]) => {
-      setAllOrders(allRes.data.data || []);
-      setOrders(filteredRes.data.data || []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [tab]);
 
   const fetchDetail = useCallback(async (id: string) => {
     setDetailLoading(true);
@@ -73,9 +83,10 @@ export default function WorkOrderList() {
       await api.post(`/work-orders/${detailWo.id}/complete`, completeData);
       message.success('工单已完成');
       setCompleteModal(false);
-      setCompleteData({ rootCause: '', resolution: '', satisfactionScore: 5 });
+setCompleteData({ rootCause: '', resolution: '', satisfactionScore: 5 });
       fetchDetail(detailWo.id);
-      setRefreshKey(k => k + 1);
+      refreshAll();
+      refreshTab();
     } catch {
       message.error('提交失败');
     }
@@ -84,7 +95,8 @@ export default function WorkOrderList() {
   const closeDetail = () => {
     setDetailOpen(false);
     setDetailWo(null);
-    setRefreshKey(k => k + 1);
+    refreshAll();
+    refreshTab();
   };
 
   const openDetail = (id: string) => {
@@ -196,26 +208,6 @@ export default function WorkOrderList() {
       },
     ] as ColumnsType<any> : []),
   ];
-
-  const statusFilterMap: Record<string, string> = {
-    pending: 'pending',
-    accepted: 'accepted,diagnosing,repairing',
-    verifying: 'verifying',
-    completed: 'completed',
-  };
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList, refreshKey]);
-
-  const getSlaStatus = (wo: any) => {
-    if (!wo.slaDeadline || wo.status === 'completed') return null;
-    const remaining = new Date(wo.slaDeadline).getTime() - Date.now();
-    const minutes = Math.floor(remaining / 60000);
-    if (minutes < 0) return { color: Colors.dangerLight, text: `超时 ${Math.abs(minutes)}min` };
-    if (minutes < 30) return { color: Colors.warningLight, text: `剩余 ${minutes}min` };
-    return { color: Colors.successLight, text: `${Math.floor(minutes / 60)}h${minutes % 60}min` };
-  };
 
   const counts = {
     pending: allOrders.filter(o => o.status === 'pending').length,

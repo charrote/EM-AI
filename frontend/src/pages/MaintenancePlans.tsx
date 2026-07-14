@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,
   message, Tag, Popconfirm, Typography, Badge, Row, Col, DatePicker,
@@ -10,6 +10,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
+import { useMaintenancePlanDataSource } from '../services/dataSource';
 
 const { Text, Title } = Typography;
 
@@ -58,27 +59,17 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 export default function MaintenancePlans() {
-  const [data, setData] = useState<MaintenancePlan[]>([]);
-  const [loading, setLoading] = useState(false);
+  const {
+    data: data,
+    loading,
+    refresh: fetchData,
+  } = useMaintenancePlanDataSource();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<MaintenancePlan | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [itemsStr, setItemsStr] = useState('');
   const [form] = Form.useForm();
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await api.get('/maintenance/plans');
-      setData(res.data.data || []);
-    } catch {
-      message.error('加载保养计划失败');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleCreate = () => {
     setEditing(null);
