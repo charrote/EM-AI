@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useCallback, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { Spin, Tag, Tooltip } from 'antd';

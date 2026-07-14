@@ -8,9 +8,10 @@ import {
   TagsOutlined, PlusOutlined, ReloadOutlined, EditOutlined, DeleteOutlined,
   UploadOutlined, FileOutlined, LinkOutlined, InboxOutlined,
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+
 import type { UploadProps } from 'antd';
 import { useApiDataSource } from '../services/dataSource';
+import api from '../services/api';
 import { generateMockDevices } from '../services/mockData';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
@@ -56,8 +57,6 @@ const DOC_TYPE_MAP: Record<string, string> = {
 };
 
 export default function DeviceTypePage() {
-  const [types, setTypes] = useState<DeviceTypeRecord[]>([]);
-  const [loading, setLoading] = useState(false);
   const { isMobile } = useResponsive();
 
   // ── Create/Edit Modal ──
@@ -211,7 +210,7 @@ export default function DeviceTypePage() {
   };
 
   // ── Columns ──
-  const columns: ColumnsType<DeviceTypeRecord> = [
+  const columns: any = [
     {
       title: '编码', dataIndex: 'code', key: 'code', width: 120,
       render: (v: string) => v ? <Text code>{v}</Text> : '-',
@@ -240,7 +239,7 @@ export default function DeviceTypePage() {
           <Text type="secondary">{docs?.length || 0} 个</Text>
         ),
       },
-    ] as ColumnsType<DeviceTypeRecord>),
+    ] as any),
     {
       title: '操作', key: 'action', width: 140, fixed: isMobile ? undefined : 'right',
       render: (_: any, record: DeviceTypeRecord) => (

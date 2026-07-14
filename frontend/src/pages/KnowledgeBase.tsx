@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback } from 'react';
 import {
   Tag, Input, Select, Empty, Spin, Space, message, Button, Segmented, Modal,

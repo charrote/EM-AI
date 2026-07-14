@@ -1062,6 +1062,7 @@ export default function AuraDiagnosticModal() {
                       <div key={res.id} style={{ marginBottom: idx < results.length - 1 ? 8 : 0 }}>
                         <ConfidenceBar
                           value={res.confidence}
+                          color="#1677ff"
                           label={res.reason.length > 10 ? res.reason.slice(0, 10) + '…' : res.reason}
                         />
                       </div>

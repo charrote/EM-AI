@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,

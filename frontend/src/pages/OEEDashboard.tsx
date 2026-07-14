@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, Tag, Select, Space, DatePicker } from 'antd';

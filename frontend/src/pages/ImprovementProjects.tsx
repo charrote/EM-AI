@@ -57,9 +57,9 @@ export default function ImprovementProjects() {
   const { isMobile } = useResponsive();
 
   // ── Unified data source hooks ──────────────────────────────
-  const { data: projects, loading: projectsLoading } = useImprovementDataSource();
+  const { data: projects, loading: projectsLoading, refresh: refreshProjects } = useImprovementDataSource();
 
-  const { data: opportunities, loading: oppLoading } = useImprovementOpportunityDataSource();
+  const { data: opportunities, loading: oppLoading, refresh: refreshOpportunities } = useImprovementOpportunityDataSource();
 
   // Loading state: show loading if either data source is loading
   const loading = projectsLoading || oppLoading;
@@ -85,7 +85,7 @@ export default function ImprovementProjects() {
       message.success('改善项目已创建');
       setModalOpen(false);
       form.resetFields();
-      refresh();
+      refreshProjects();
     } catch { message.error('创建失败'); }
   };
 
@@ -93,7 +93,7 @@ export default function ImprovementProjects() {
     try {
       await api.put(`/improvements/${id}`, data);
       message.success('更新成功');
-      refresh();
+      refreshProjects();
       if (selectedProject?.id === id) {
         setSelectedProject({ ...selectedProject, ...data });
       }
@@ -490,7 +490,7 @@ export default function ImprovementProjects() {
           style={{ marginBottom: 0 }}
         />
         <Space size={4}>
-          <Button icon={<ReloadOutlined />} onClick={() => { refresh(); refresh(); }} size={isMobile ? 'small' : 'middle'} />
+          <Button icon={<ReloadOutlined />} onClick={() => { refreshProjects(); refreshProjects(); }} size={isMobile ? 'small' : 'middle'} />
           <Button type="primary" icon={<PlusOutlined />} size={isMobile ? 'small' : 'middle'}
             onClick={() => { form.resetFields(); setModalOpen(true); }}
             style={{ borderRadius: 6 }}>

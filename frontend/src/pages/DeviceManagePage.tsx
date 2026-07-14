@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useApiDataSource } from '../services/dataSource';
+import api from '../services/api';
 import { generateMockDevices } from '../services/mockData';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';
@@ -60,8 +61,6 @@ const PRIORITY_OPTIONS = [
 
 // ── Component ──────────────────────────────────
 export default function DeviceManagePage() {
-  const [devices, setDevices] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);

@@ -1747,7 +1747,7 @@ export default function AuraDeviceHealth() {
         width={520}
         centered
         styles={{
-          content: { background: '#0E1230', border: '1px solid rgba(255,255,255,0.08)' },
+          root: { background: '#0E1230', border: '1px solid rgba(255,255,255,0.08)' },
           mask: { background: 'rgba(0,0,0,0.6)' },
           header: { background: '#0E1230', borderBottom: '1px solid rgba(255,255,255,0.06)' },
         }}

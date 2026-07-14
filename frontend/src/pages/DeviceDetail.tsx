@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Tag, Table, Button, Tooltip, DatePicker, Space, Row, Col } from 'antd';

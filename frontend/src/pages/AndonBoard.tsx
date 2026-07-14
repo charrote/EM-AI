@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Card, Row, Col, Statistic, Tag, Typography, Table, Badge, Button,

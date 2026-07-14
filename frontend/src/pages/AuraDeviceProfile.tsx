@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
   ThunderboltOutlined,

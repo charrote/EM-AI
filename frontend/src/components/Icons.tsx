@@ -1,10 +1,15 @@
-import type { SVGProps } from 'react';
+/// <reference types="react" />
+import React, { type SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
+function IconBase({ children, ...rest }: IconProps) {
+  return <svg {...rest}>{children}</svg>;
+}
+
 /* ─── 工厂 / 设备状态用 ─── */
 
-export function BoltIcon({ size = 16, color = 'currentColor', ...rest }: IconProps) {
+function BoltIcon({ size = 16, color = 'currentColor', ...rest }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }} {...rest}>
       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10" />
@@ -174,7 +179,7 @@ export function ArrowDownIcon({ size = 16, color = 'currentColor', ...rest }: Ic
 }
 
 /* ─── 映射：状态键 → 图标组件 ─── */
-export const STATUS_ICONS: Record<string, (props?: IconProps) => JSX.Element> = {
+export const STATUS_ICONS: Record<string, React.FC<IconProps>> = {
   running: BoltIcon,
   idle: PauseIcon,
   changeover: RefreshIcon,

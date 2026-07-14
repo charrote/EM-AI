@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback, useMemo } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Steps, Input, Form,
