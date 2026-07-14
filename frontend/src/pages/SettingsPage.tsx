@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Card, Form, Input, Select, Button, Space, Typography, message, Divider, Switch, Alert } from 'antd';
-import { SettingOutlined, SaveOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Form, Input, Select, Button, Space, Typography, message, Divider, Switch, Alert, InputNumber } from 'antd';
+import { 
+  SettingOutlined, 
+  SaveOutlined, 
+  ReloadOutlined, 
+  CloudUploadOutlined, 
+  DatabaseOutlined, 
+  BellOutlined 
+} from '@ant-design/icons';
 import PageCard from '../components/PageCard';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
@@ -15,9 +22,18 @@ const PROVIDER_OPTIONS = [
   { value: 'local', label: '本地部署' },
 ];
 
+const NOTIFICATION_OPTIONS = [
+  { value: 'email', label: '邮件通知' },
+  { value: 'dingtalk', label: '钉钉机器人' },
+  { value: 'wechat', label: '企业微信' },
+  { value: 'sms', label: '短信通知' },
+];
+
 export default function SettingsPage() {
   const [form] = Form.useForm();
   const [aiForm] = Form.useForm();
+  const [notifyForm] = Form.useForm();
+  const [backupForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { dataMode, setDataMode } = useStore();
   const [isReal, setIsReal] = useState(dataMode === 'real');
@@ -63,6 +79,18 @@ export default function SettingsPage() {
       message.success('AI 配置已保存');
     } catch (err: any) {
       message.error(err.response?.data?.error || '保存失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackup = async () => {
+    try {
+      setLoading(true);
+      // TODO: 实现备份功能
+      message.success('备份功能开发中...');
+    } catch {
+      message.error('备份失败');
     } finally {
       setLoading(false);
     }
@@ -178,9 +206,94 @@ export default function SettingsPage() {
           </Form>
         </Card>
 
-        {/* 其他设置占位 */}
-        <Card title="其他设置" size="small">
-          <Text type="secondary">更多设置项正在开发中...</Text>
+        {/* 通知设置 */}
+        <Card title="通知设置" style={{ marginBottom: 24 }} size="small">
+          <Form form={notifyForm} layout="vertical">
+            <Form.Item
+              name="notificationChannels"
+              label="通知渠道"
+              extra="选择需要开启的通知渠道"
+            >
+              <Select
+                mode="multiple"
+                placeholder="选择通知渠道"
+                options={NOTIFICATION_OPTIONS}
+                allowClear
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="email"
+              label="通知邮箱"
+              extra="接收工单、点检、保养等通知"
+            >
+              <Input placeholder="example@company.com" />
+            </Form.Item>
+
+            <Form.Item
+              name="notificationDelay"
+              label="通知延迟（秒）"
+              extra="避免短时间内重复通知"
+            >
+              <InputNumber min={0} max={3600} style={{ width: '100%' }} placeholder="60" />
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button type="primary" icon={<SaveOutlined />}>
+                保存通知设置
+              </Button>
+            </Form.Item>
+          </Form>
+        </Card>
+
+        {/* 备份与恢复 */}
+        <Card title="备份与恢复" size="small">
+          <div style={{ padding: '8px 0' }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <Text strong style={{ display: 'block' }}>手动备份</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    导出系统配置和数据
+                  </Text>
+                </div>
+                <Button 
+                  icon={<CloudUploadOutlined />}
+                  onClick={handleBackup}
+                  loading={loading}
+                >
+                  开始备份
+                </Button>
+              </div>
+              
+              <Divider style={{ margin: '12px 0' }} />
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <Text strong style={{ display: 'block' }}>数据恢复</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    从备份文件恢复数据
+                  </Text>
+                </div>
+                <Button 
+                  icon={<DatabaseOutlined />}
+                  disabled
+                  type="default"
+                >
+                  恢复数据
+                </Button>
+              </div>
+              
+              <Divider style={{ margin: '12px 0' }} />
+              
+              <Alert
+                message="自动备份"
+                description="设置自动备份计划，支持每日/每周/每月备份"
+                type="info"
+                showIcon
+              />
+            </Space>
+          </div>
         </Card>
       </PageCard>
     </div>
