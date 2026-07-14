@@ -27,6 +27,7 @@ const DeviceTypePage = lazy(() => import('./pages/DeviceTypePage'));
 const DeviceManagePage = lazy(() => import('./pages/DeviceManagePage'));
 const TeamPage = lazy(() => import('./pages/TeamPage'));
 const WorkCalendar = lazy(() => import('./pages/WorkCalendar'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const RcaAnalysis = lazy(() => import('./pages/RcaAnalysis'));
 const InspectionPlans = lazy(() => import('./pages/InspectionPlans'));
 const MaintenancePlans = lazy(() => import('./pages/MaintenancePlans'));
@@ -194,6 +195,7 @@ function App() {
             <Route path="device-manage" element={<DeviceManagePage />} />
             <Route path="teams" element={<TeamPage />} />
             <Route path="work-calendar" element={<WorkCalendar />} />
+            <Route path="settings" element={<SettingsPage />} />
           </Route>
 
           {/* 未匹配路由 → 登录页 */}

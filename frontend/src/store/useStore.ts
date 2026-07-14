@@ -74,6 +74,18 @@ interface AppState {
   // 健康评分当前设备ID
   healthScoreDeviceId: string | null;
   setHealthScoreDeviceId: (id: string | null) => void;
+  // ─── 数据模式（mock/real）───
+  dataMode: 'mock' | 'real';
+  setDataMode: (mode: 'mock' | 'real') => void;
+  // ─── Aura AI 模型配置───
+  auraAiModelProvider: string;
+  setAuraAiModelProvider: (provider: string) => void;
+  auraAiModelBaseUrl: string;
+  setAuraAiModelBaseUrl: (baseUrl: string) => void;
+  auraAiModelApiKey: string;
+  setAuraAiModelApiKey: (apiKey: string) => void;
+  auraAiModelId: string;
+  setAuraAiModelId: (modelId: string) => void;
 }
 
 const roleInfo: Record<UserRole, { name: string }> = {
@@ -185,4 +197,16 @@ export const useStore = create<AppState>((set) => ({
   // 健康评分当前设备ID
   healthScoreDeviceId: null,
   setHealthScoreDeviceId: (id) => set({ healthScoreDeviceId: id }),
+  // ─── 数据模式（mock/real）───
+  dataMode: (localStorage.getItem('dataMode') as 'mock' | 'real') || 'mock',
+  setDataMode: (mode) => { localStorage.setItem('dataMode', mode); set({ dataMode: mode }); },
+  // ─── Aura AI 模型配置───
+  auraAiModelProvider: localStorage.getItem('auraAiModelProvider') || 'openai',
+  setAuraAiModelProvider: (provider) => { localStorage.setItem('auraAiModelProvider', provider); set({ auraAiModelProvider: provider }); },
+  auraAiModelBaseUrl: localStorage.getItem('auraAiModelBaseUrl') || '',
+  setAuraAiModelBaseUrl: (baseUrl) => { localStorage.setItem('auraAiModelBaseUrl', baseUrl); set({ auraAiModelBaseUrl: baseUrl }); },
+  auraAiModelApiKey: localStorage.getItem('auraAiModelApiKey') || '',
+  setAuraAiModelApiKey: (apiKey) => { localStorage.setItem('auraAiModelApiKey', apiKey); set({ auraAiModelApiKey: apiKey }); },
+  auraAiModelId: localStorage.getItem('auraAiModelId') || 'gpt-4o',
+  setAuraAiModelId: (modelId) => { localStorage.setItem('auraAiModelId', modelId); set({ auraAiModelId: modelId }); },
 }));

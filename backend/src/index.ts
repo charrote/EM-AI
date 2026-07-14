@@ -29,6 +29,7 @@ import uploadRoutes from './routes/upload';
 import organizationRoutes from './routes/organizations';
 import teamRoutes from './routes/teams';
 import calendarRoutes from './routes/calendar';
+import settingsRoutes from './routes/settings';
 import nlrRoutes from './routes/nlr';
 import { simulator } from './services/simulator';
 
@@ -64,6 +65,9 @@ app.use('/api/nlr', nlrRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/calendar', calendarRoutes);
+
+// Settings
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

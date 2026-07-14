@@ -7,6 +7,7 @@ import {
   BarChartOutlined, BulbOutlined, BugOutlined,
   WarningOutlined, BookOutlined,
   UserOutlined, SettingOutlined, LogoutOutlined,
+  SettingsOutlined,
   RobotOutlined, NodeIndexOutlined, CalendarOutlined,
   SafetyCertificateOutlined, ExperimentOutlined,
   MonitorOutlined, BuildOutlined, SafetyOutlined,
@@ -178,7 +179,7 @@ function getAllLeafKeys(groups: ScenarioGroup[], role: Role): string[] {
 export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, auraChatOpen, setAuraChatOpen, auraChatEnabled } = useStore();
+  const { user, setRole, selectedOrganizationId, setSelectedOrganizationId, setSelectedOrgName, auraChatOpen, setAuraChatOpen, auraChatEnabled, dataMode, setDataMode } = useStore();
   const { isMobile, isTablet, isDesktop } = useResponsive();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [orgTree, setOrgTree] = useState<any[]>([]);
@@ -274,6 +275,21 @@ export default function AppLayout() {
       onClick: () => setRole(role.key),
     })),
     { type: 'divider' as const },
+    { key: 'data-mode', label: (
+        <Space>
+          <span>数据模式</span>
+          <Tag color={dataMode === 'real' ? 'green' : 'blue'} style={{ marginLeft: 8, fontSize: 10, lineHeight: '16px', padding: '0 6px' }}>
+            {dataMode === 'real' ? '真实' : '模拟'}
+          </Tag>
+        </Space>
+      ),
+      onClick: () => {
+        setDataMode(dataMode === 'real' ? 'mock' : 'real');
+        message.success(`已切换到${dataMode === 'real' ? '模拟数据' : '真实数据'}模式`);
+      },
+    },
+    { type: 'divider' as const },
+    { key: 'settings', icon: <SettingOutlined />, label: '系统设置', onClick: () => navigate('/settings') },
     { key: 'personal-settings', icon: <SettingOutlined />, label: '个人设置', onClick: () => { setSettingsOrgId(selectedOrganizationId); setSettingsOpen(true); } },
     { type: 'divider' as const },
     { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: handleLogout },
