@@ -106,6 +106,7 @@ PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath 
 | 🔧 **维修工程师** | 工单管理 → 工单详情 → AI 诊断 → 知识库 | AI 诊断、维修记录、知识沉淀 |
 | 📊 **设备主管** | OEE 看板 → 损失分析 → 改善项目 | 数据驱动决策、改善闭环 |
 | 🎯 **决策层** | 决策仪表盘 | ROI 分析、健康度总览 |
+| ⚙️ **管理员** | 系统设置 → 基础数据管理 | 数据模式切换、AI 模型配置、组织管理 |
 
 ### 3 条演示旅程
 
@@ -177,7 +178,22 @@ EM-AI/
 | **后端框架** | Express 5 + TypeScript | 类型安全，开发效率高 |
 | **ORM** | Prisma 6 | 支持多数据库，类型安全 |
 | **数据库** | SQLite（开发）→ PostgreSQL（生产） | 平滑迁移 |
+| **测试框架** | Vitest + Jest | 前后端测试覆盖 |
+| **中间件** | Helmet + CORS + Rate Limit | 安全与限流保护 |
 | **设计系统** | Design Token 体系 | 7 种状态色、暗色模式预留 |
+
+## 系统设置
+
+EM-AI 提供完整的系统设置功能：
+
+- **数据模式切换**：支持模拟数据 / 真实数据无缝切换
+- **AI 模型配置**：支持 OpenAI / Anthropic / Azure / 本地部署
+- **通知设置**：邮件 / 钉钉 / 企业微信 / 短信多渠道通知
+- **备份与恢复**：数据备份、恢复、自动备份计划
+
+## License
+
+MIT
 
 ---
 
