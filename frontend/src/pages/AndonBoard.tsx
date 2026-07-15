@@ -1,5 +1,5 @@
 // @ts-nocheck - Complex component with many dynamic data types
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   Card, Row, Col, Statistic, Tag, Typography, Table, Badge, Button,
   Space, Progress, Tooltip,
@@ -58,9 +58,12 @@ export default function AndonBoard() {
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const { isMobile, isTablet } = useResponsive();
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockAndonData = useMemo(() => generateMockAndonData(), []);
+
   const { data, loading, refresh } = useApiDataSource(
     '/api/dashboard/andon',
-    generateMockAndonData()
+    mockAndonData
   );
 
   useEffect(() => {

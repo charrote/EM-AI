@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Tag, Button, Segmented, Space, Table, Modal, Descriptions,
@@ -31,20 +31,26 @@ export default function WorkOrderList() {
     completed: 'completed',
   };
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockAllOrders = useMemo(() => generateMockWorkOrders(30), []);
+  const mockTabOrders = useMemo(() => generateMockWorkOrders(10), []);
+
+  // Memoize fetcher to prevent infinite re-render loops
+  const fetchAllOrders = useCallback(async () => {
+    const res = await workOrderApi.list({ limit: 200 });
+    return res.data?.data || [];
+  }, []);
+
   // 使用 useDataSource 钩子，自动根据 dataMode 切换数据源
   const { data: allOrders, refresh: refreshAll } = useDataSource<any[]>(
-    async () => {
-      const res = await workOrderApi.list({ limit: 200 });
-      return res.data || [];
-    },
-    generateMockWorkOrders(30),
-    { delay: 300 }
+    fetchAllOrders,
+    mockAllOrders,
   );
 
   // 使用 useApiDataSource 钩子获取当前 tab 的工单
   const { data: orders, loading, refresh: refreshTab } = useApiDataSource(
     `/api/work-orders?status=${statusFilterMap[tab] || tab}&limit=50`,
-    generateMockWorkOrders(10)
+    mockTabOrders
   );
 
   // Detail modal state

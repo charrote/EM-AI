@@ -2,7 +2,7 @@
  * 数据源管理核心
  * 根据 dataMode（mock/real）自动切换数据源
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import api from './api';
 import { generateMockDevices, generateMockWorkOrders, generateMockOEEData, generateMockLossData, generateMockTeams, generateMockToolings, generateMockOrgTree, generateMockInspections, generateMockMaintenanceRecords, generateMockImprovements, generateMockKnowledge, generateMockAndonData, generateMockRcaRecords, generateMockImprovementOpportunities, generateMockDeviceManage, generateMockMaintenancePlans, generateMockInspectionPlans, generateMockKnowledgeStats, generateMockEquipmentTypes, generateMockCalendarEntries } from './mockData';
@@ -148,182 +148,204 @@ export function useApiDataSource<T>(
 
 /**
  * 预定义的数据源钩子 - 用于常见场景
+ * 所有 mock 数据都用 useMemo 缓存引用，防止无限循环
  */
 
 // 设备列表
 export function useDeviceDataSource(scenario: string, filters?: Record<string, any>) {
+  const mockDevices = useMemo(() => generateMockDevices(20), []);
   return useApiDataSource(
     `/api/devices?scenario=${scenario}`,
-    generateMockDevices(20),
+    mockDevices,
     { params: filters }
   );
 }
 
 // 设备详情
 export function useDeviceDetailDataSource(deviceId: string) {
+  const mockDevice = useMemo(() => ({
+    id: deviceId,
+    code: `DEV-${deviceId}`,
+    name: '示例设备',
+    status: 'running',
+    oee: 85,
+    healthScore: 90,
+  }), [deviceId]);
   return useApiDataSource(
     `/api/devices/${deviceId}`,
-    {
-      id: deviceId,
-      code: `DEV-${deviceId}`,
-      name: '示例设备',
-      status: 'running',
-      oee: 85,
-      healthScore: 90,
-    }
+    mockDevice
   );
 }
 
 // 工单列表
 export function useWorkOrderDataSource(statusFilter?: string) {
+  const mockOrders = useMemo(() => generateMockWorkOrders(30), []);
   return useApiDataSource(
     `/api/work-orders?limit=200${statusFilter ? `&status=${statusFilter}` : ''}`,
-    generateMockWorkOrders(30)
+    mockOrders
   );
 }
 
 // OEE 数据
 export function useOEEDataSource() {
+  const mockOEE = useMemo(() => generateMockOEEData(), []);
   return useApiDataSource(
     '/api/dashboard/oee',
-    generateMockOEEData()
+    mockOEE
   );
 }
 
 // 损失分析数据
 export function useLossDataSource(scope: string) {
+  const mockLoss = useMemo(() => generateMockLossData(), []);
   return useApiDataSource(
     `/api/dashboard/losses?scope=${scope}`,
-    generateMockLossData()
+    mockLoss
   );
 }
 
 // 班组数据
 export function useTeamDataSource() {
+  const mockTeams = useMemo(() => generateMockTeams(8), []);
   return useApiDataSource(
     '/api/teams',
-    generateMockTeams(8)
+    mockTeams
   );
 }
 
 // 工治具数据
 export function useToolingDataSource() {
+  const mockToolings = useMemo(() => generateMockToolings(15), []);
   return useApiDataSource(
     '/api/toolings',
-    generateMockToolings(15)
+    mockToolings
   );
 }
 
 // 组织树数据
 export function useOrgTreeDataSource() {
+  const mockOrgTree = useMemo(() => generateMockOrgTree(), []);
   return useApiDataSource(
     '/api/organizations/tree',
-    generateMockOrgTree()
+    mockOrgTree
   );
 }
 
 // 点检数据
 export function useInspectionDataSource() {
+  const mockInspections = useMemo(() => generateMockInspections(20), []);
   return useApiDataSource(
     '/api/inspections',
-    generateMockInspections(20)
+    mockInspections
   );
 }
 
 // 保养数据
 export function useMaintenanceDataSource() {
+  const mockRecords = useMemo(() => generateMockMaintenanceRecords(15), []);
   return useApiDataSource(
     '/api/maintenance/records',
-    generateMockMaintenanceRecords(15)
+    mockRecords
   );
 }
 
 // 改善项目数据
 export function useImprovementDataSource() {
+  const mockImprovements = useMemo(() => generateMockImprovements(10), []);
   return useApiDataSource(
     '/api/improvements',
-    generateMockImprovements(10)
+    mockImprovements
   );
 }
 
 // 知识库数据
 export function useKnowledgeDataSource() {
+  const mockKnowledge = useMemo(() => generateMockKnowledge(15), []);
   return useApiDataSource(
     '/api/knowledge',
-    generateMockKnowledge(15)
+    mockKnowledge
   );
 }
 
 // 安灯数据
 export function useAndonDataSource() {
+  const mockAndon = useMemo(() => generateMockAndonData(), []);
   return useApiDataSource(
     '/api/dashboard/andon',
-    generateMockAndonData()
+    mockAndon
   );
 }
 
 // 根因分析数据
 export function useRcaDataSource() {
+  const mockRca = useMemo(() => generateMockRcaRecords(10), []);
   return useApiDataSource(
     '/api/rca',
-    generateMockRcaRecords(10)
+    mockRca
   );
 }
 
 // 改善机会数据
 export function useImprovementOpportunityDataSource() {
+  const mockOpp = useMemo(() => generateMockImprovementOpportunities(10), []);
   return useApiDataSource(
     '/api/improvements/opportunities',
-    generateMockImprovementOpportunities(10)
+    mockOpp
   );
 }
 
 // 设备管理列表 (用于工治具上/下机)
 export function useDeviceManageDataSource(keyword?: string) {
+  const mockDevices = useMemo(() => generateMockDeviceManage(20), []);
   const params = keyword ? `&keyword=${encodeURIComponent(keyword)}` : '';
   return useApiDataSource(
     `/api/devices/manage${params}`,
-    generateMockDeviceManage(20)
+    mockDevices
   );
 }
 
 // 保养计划数据
 export function useMaintenancePlanDataSource(active?: boolean) {
+  const mockPlans = useMemo(() => generateMockMaintenancePlans(10), []);
   const params = active ? '?active=true' : '';
   return useApiDataSource(
     `/api/maintenance/plans${params}`,
-    generateMockMaintenancePlans(10)
+    mockPlans
   );
 }
 
 // 点检计划数据
 export function useInspectionPlanDataSource() {
+  const mockPlans = useMemo(() => generateMockInspectionPlans(8), []);
   return useApiDataSource(
     '/api/inspection-plans',
-    generateMockInspectionPlans(8)
+    mockPlans
   );
 }
 
 // 知识库统计
 export function useKnowledgeStatsDataSource() {
+  const mockStats = useMemo(() => generateMockKnowledgeStats(), []);
   return useApiDataSource(
     '/api/knowledge/stats',
-    generateMockKnowledgeStats()
+    mockStats
   );
 }
 
 // 知识库设备类型树
 export function useKnowledgeEquipmentTypesDataSource() {
+  const mockTypes = useMemo(() => generateMockEquipmentTypes(), []);
   return useApiDataSource(
     '/api/knowledge/equipment-types',
-    generateMockEquipmentTypes()
+    mockTypes
   );
 }
 
 // 工作日历
 export function useCalendarDataSource(year: number, month: number) {
+  const mockEntries = useMemo(() => generateMockCalendarEntries(year, month), []);
   return useApiDataSource(
     `/api/calendar?year=${year}&month=${month}`,
-    generateMockCalendarEntries(year, month)
+    mockEntries
   );
 }

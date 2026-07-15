@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Descriptions, Tag, Button, Timeline, List, Spin, message,
@@ -23,40 +23,46 @@ export default function WorkOrderDetail() {
   const [completeData, setCompleteData] = useState({ rootCause: '', resolution: '', satisfactionScore: 5 });
   const { isMobile } = useResponsive();
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockWo = useMemo(() => ({
+    id: 'WO-0001',
+    code: 'WO-2024-0001',
+    deviceId: 'DEV-001',
+    device: { name: 'CNC-01' },
+    status: 'pending',
+    priority: 'high',
+    faultType: '设备停机',
+    source: '设备报警',
+    description: '设备突然停机，无法启动',
+    rootCause: '主轴轴承损坏',
+    resolution: '更换主轴轴承',
+    slaDeadline: '2024-01-15T18:00:00Z',
+    assigneeId: 'user1',
+    handlerId: 'user2',
+    respondedAt: '2024-01-15T08:30:00Z',
+    actualStartAt: '2024-01-15T09:00:00Z',
+    reviewerId: 'user3',
+    verifiedAt: '2024-01-15T14:00:00Z',
+    completedBy: 'user2',
+    actualEndAt: '2024-01-15T16:00:00Z',
+    workLogs: [
+      { step: 1, content: '接单确认', duration: 5 },
+      { step: 2, content: '初步诊断', duration: 30 },
+      { step: 3, content: '更换轴承', duration: 120 },
+      { step: 4, content: '测试运行', duration: 20 },
+    ],
+  }), []);
+
+  // Memoize fetcher with useCallback to prevent infinite loops
+  const fetchWo = useCallback(async () => {
+    if (!id) return null;
+    const res = await api.get(`/work-orders/${id}`);
+    return res.data.data;
+  }, [id]);
+
   const { data: wo, loading, refresh: refreshWo } = useDataSource(
-    async () => {
-      if (!id) return null;
-      const res = await api.get(`/work-orders/${id}`);
-      return res.data.data;
-    },
-    {
-      id: 'WO-0001',
-      code: 'WO-2024-0001',
-      deviceId: 'DEV-001',
-      device: { name: 'CNC-01' },
-      status: 'pending',
-      priority: 'high',
-      faultType: '设备停机',
-      source: '设备报警',
-      description: '设备突然停机，无法启动',
-      rootCause: '主轴轴承损坏',
-      resolution: '更换主轴轴承',
-      slaDeadline: '2024-01-15T18:00:00Z',
-      assigneeId: 'user1',
-      handlerId: 'user2',
-      respondedAt: '2024-01-15T08:30:00Z',
-      actualStartAt: '2024-01-15T09:00:00Z',
-      reviewerId: 'user3',
-      verifiedAt: '2024-01-15T14:00:00Z',
-      completedBy: 'user2',
-      actualEndAt: '2024-01-15T16:00:00Z',
-      workLogs: [
-        { step: 1, content: '接单确认', duration: 5 },
-        { step: 2, content: '初步诊断', duration: 30 },
-        { step: 3, content: '更换轴承', duration: 120 },
-        { step: 4, content: '测试运行', duration: 20 },
-      ],
-    }
+    fetchWo,
+    mockWo,
   );
 
   const handleStatus = async (status: string) => {

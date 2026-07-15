@@ -96,20 +96,25 @@ export default function DeviceList() {
   const navigate = useNavigate();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockDevices = useMemo(() => generateMockDevices(20), []);
+
+  // Memoize realFetcher to prevent infinite re-render loops
+  const realFetcher = useCallback(async () => {
+    const params = new URLSearchParams();
+    params.set('scenario', scenario);
+    if (filterAreas.length) filterAreas.forEach(a => params.append('area', a));
+    if (filterStatuses.length) filterStatuses.forEach(s => params.append('status', s));
+    if (filterTypes.length) filterTypes.forEach(t => params.append('type', t));
+
+    const res = await deviceApi.list(Object.fromEntries(params));
+    return res.data?.data || [];
+  }, [scenario, filterAreas, filterStatuses, filterTypes]);
+
   // 使用 useDataSource 钩子，自动根据 dataMode 切换数据源
   const { data, loading, source } = useDataSource<any[]>(
-    async () => {
-      const params = new URLSearchParams();
-      params.set('scenario', scenario);
-      if (filterAreas.length) filterAreas.forEach(a => params.append('area', a));
-      if (filterStatuses.length) filterStatuses.forEach(s => params.append('status', s));
-      if (filterTypes.length) filterTypes.forEach(t => params.append('type', t));
-
-      const res = await deviceApi.list();
-      return res.data || [];
-    },
-    generateMockDevices(20),
-    { delay: 200 } // 演示延迟，让切换效果更明显
+    realFetcher,
+    mockDevices,
   );
 
   const devices = data || [];

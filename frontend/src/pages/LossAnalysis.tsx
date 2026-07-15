@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Table, Tag, Select, Space, Typography } from 'antd';
 import * as echarts from 'echarts';
 import { SpinnerIcon } from '../components/Icons';
@@ -35,14 +35,18 @@ export default function LossAnalysis() {
     return params.toString();
   }, [scope, deviceId, product, team]);
 
+  // Memoize fetcher and mock data to prevent infinite loops
+  const fetchPareto = useCallback(async () => {
+    const res = await fetch(`/api/dashboard/pareto?${buildQuery()}`);
+    const json = await res.json();
+    return json.data || [];
+  }, [buildQuery]);
+  const mockParetoData = useMemo(() => [] as any[], []);
+
   // Use useDataSource for dynamic pareto data based on scope filters
   const { data: paretoData } = useDataSource<any[]>(
-    async () => {
-      const res = await fetch(`/api/dashboard/pareto?${buildQuery()}`);
-      const json = await res.json();
-      return json.data || [];
-    },
-    [] as any[],
+    fetchPareto,
+    mockParetoData,
     { delay: 0, onRealError: () => {} }
   );
 

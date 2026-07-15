@@ -44,30 +44,157 @@ export function generateMockWorkOrders(count: number = 30) {
   }));
 }
 
-// OEE 数据 Mock
+// OEE 数据 Mock — 完整结构，匹配 /api/dashboard/executive 后端 API 返回
 export function generateMockOEEData() {
+  const totalDevices = 48;
+  const runningCount = 35;
+  const faultCount = 3;
+  const idleCount = 7;
+  const maintenanceCount = 3;
+  const avgHealth = 76.8;
+  const excellent = 12;
+  const good = 18;
+  const fair = 11;
+  const poor = 7;
+  const woPending = 8;
+  const woCompleted = 24;
+  const woTotal = 32;
+  const latestCost = 28450;
+
+  const dailyOEETrend: { date: string; oee: number }[] = [];
+  let dayOee = 78;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(Date.now() - (29 - i) * 86400000);
+    dayOee = Math.max(50, Math.min(95, dayOee + (Math.random() - 0.5) * 3));
+    dailyOEETrend.push({ date: d.toISOString().slice(0, 10), oee: Math.round(dayOee * 10) / 10 });
+  }
+
+  const monthlyOEETrend = [
+    { month: '2026-01', oee: 72 },
+    { month: '2026-02', oee: 74 },
+    { month: '2026-03', oee: 76 },
+    { month: '2026-04', oee: 78 },
+    { month: '2026-05', oee: 80 },
+    { month: '2026-06', oee: 82 },
+  ];
+
+  // OEE 设备排行数据 (OEEDashboard 使用)
+  const deviceOEE = Array.from({ length: 10 }, (_, i) => ({
+    id: `DEV-${String(i + 1).padStart(3, '0')}`,
+    name: `设备 ${i + 1}`,
+    status: ['running', 'running', 'idle', 'fault', 'running'][i % 5],
+    oee: 85 - i * 3 + Math.floor(Math.random() * 5),
+    availability: 88 - i * 2 + Math.floor(Math.random() * 3),
+    performance: 90 - i * 2 + Math.floor(Math.random() * 3),
+    quality: 92 - i * 2 + Math.floor(Math.random() * 3),
+  }));
+
   return {
-    overallOEE: 72.5,
+    // KPIs
+    totalDevices,
+    runningCount,
+    runningRate: Math.round((runningCount / totalDevices) * 100),
+    faultCount,
+    idleCount,
+    maintenanceCount,
+    avgHealth: Math.round(avgHealth * 10) / 10,
+
+    // Work order stats
+    woPending,
+    woCompleted,
+    woTotal,
+    woCompletionRate: Math.round((woCompleted / woTotal) * 100),
+
+    // Monthly trends
+    monthlyOEETrend,
+    dailyOEETrend,
+    maintenanceCost: [
+      { month: '2026-01', cost: 35000 },
+      { month: '2026-02', cost: 32000 },
+      { month: '2026-03', cost: 30000 },
+      { month: '2026-04', cost: 29000 },
+      { month: '2026-05', cost: 28500 },
+      { month: '2026-06', cost: latestCost },
+    ],
+    woMonthlyTrend: [
+      { month: '2026-01', total: 4, completed: 3 },
+      { month: '2026-02', total: 5, completed: 4 },
+      { month: '2026-03', total: 6, completed: 5 },
+      { month: '2026-04', total: 5, completed: 4 },
+      { month: '2026-05', total: 4, completed: 4 },
+      { month: '2026-06', total: 4, completed: 2 },
+    ],
+
+    // Distributions
+    healthDistribution: [
+      { label: '优秀 (90-100)', count: excellent, percentage: Math.round(excellent / totalDevices * 100) },
+      { label: '良好 (75-89)', count: good, percentage: Math.round(good / totalDevices * 100) },
+      { label: '一般 (60-74)', count: fair, percentage: Math.round(fair / totalDevices * 100) },
+      { label: '较差 (<60)', count: poor, percentage: Math.round(poor / totalDevices * 100) },
+    ],
+    deviceStatusDistribution: [
+      { label: '运行中', key: 'running', count: runningCount },
+      { label: '待机', key: 'idle', count: idleCount },
+      { label: '故障', key: 'fault', count: faultCount },
+      { label: '保养/维修', key: 'maintenance', count: maintenanceCount },
+    ],
+    woStatusDistribution: [
+      { status: 'pending', count: 3 },
+      { status: 'accepted', count: 2 },
+      { status: 'completed', count: 24 },
+    ],
+    faultTypeDistribution: [
+      { type: '机械故障', count: 12 },
+      { type: '电气故障', count: 8 },
+      { type: '液压故障', count: 5 },
+      { type: '其他', count: 4 },
+    ],
+
+    // Tables
+    improvementROI: [
+      { project: 'SMED 换型优化', investment: 50000, saving: 180000, roi: '260%' },
+      { project: 'TPM 点检体系', investment: 30000, saving: 96000, roi: '220%' },
+      { project: '预测性维护试点', investment: 80000, saving: 240000, roi: '200%' },
+      { project: 'OEE 数据采集系统', investment: 45000, saving: 108000, roi: '140%' },
+    ],
+    topHealthyDevices: [
+      { code: 'CNC-01', name: 'CNC 立式加工中心 1', healthScore: 95 },
+      { code: 'CNC-02', name: 'CNC 立式加工中心 2', healthScore: 93 },
+      { code: 'PLC-01', name: 'PLC 控制器 1', healthScore: 92 },
+      { code: 'INJ-01', name: '注塑机 1', healthScore: 91 },
+      { code: 'INJ-02', name: '注塑机 2', healthScore: 90 },
+      { code: 'CNC-03', name: 'CNC 卧式加工中心', healthScore: 89 },
+      { code: 'SCR-01', name: '冲床 1', healthScore: 88 },
+      { code: 'WLD-01', name: '焊接机器人', healthScore: 87 },
+      { code: 'PCK-01', name: '自动包装机', healthScore: 86 },
+      { code: 'CNC-04', name: 'CNC 车床', healthScore: 85 },
+    ],
+
+    // Latest OEE for KPI display
+    currentOEE: monthlyOEETrend[monthlyOEETrend.length - 1].oee,
+    prevOEE: monthlyOEETrend.length > 1 ? monthlyOEETrend[monthlyOEETrend.length - 2].oee : monthlyOEETrend[0].oee,
+    latestCost,
+
+    // OEEDashboard 额外需要的字段
+    overallOEE: monthlyOEETrend[monthlyOEETrend.length - 1].oee,
     availability: 85.2,
     performance: 91.4,
     quality: 93.1,
-    dailyTrend: Array.from({ length: 30 }, (_, i) => ({
-      date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      oee: Math.floor(Math.random() * 20) + 65,
-      target: 85,
-    })),
+    alertCount: faultCount,
+    trend: dailyOEETrend,
+    deviceOEE,
   };
 }
 
 // 损失分析 Mock 数据
 export function generateMockLossData() {
   return [
-    { cause: '设备故障', duration: 245, percentage: 35, cumulative: 35 },
-    { cause: '换型调整', duration: 180, percentage: 25, cumulative: 60 },
-    { cause: '速度损失', duration: 120, percentage: 17, cumulative: 77 },
-    { cause: '废品返工', duration: 90, percentage: 13, cumulative: 90 },
-    { cause: '启动停机', duration: 45, percentage: 6, cumulative: 96 },
-    { cause: '其他', duration: 15, percentage: 4, cumulative: 100 },
+    { type: '设备故障', value: 245, unit: '分钟' },
+    { type: '换型调整', value: 180, unit: '分钟' },
+    { type: '速度损失', value: 120, unit: '分钟' },
+    { type: '废品返工', value: 90, unit: '分钟' },
+    { type: '启动停机', value: 45, unit: '分钟' },
+    { type: '其他', value: 15, unit: '分钟' },
   ];
 }
 
@@ -311,17 +438,24 @@ export function generateMockMaintenancePlans(count: number = 10) {
 // 点检计划 Mock 数据
 export function generateMockInspectionPlans(count: number = 8) {
   const types = ['CNC', '注塑机', '冲床', '焊接机器人'];
+  const levels = ['daily', 'weekly', 'monthly', 'quarterly'];
+  const frequencies = [1, 7, 30, 90];
   
   return Array.from({ length: count }, (_, i) => ({
     id: `IPLAN-${String(i + 1).padStart(4, '0')}`,
     deviceType: types[i % types.length],
-    name: `${types[i % types.length]}点检计划`,
-    active: i % 4 !== 0,
+    title: `${types[i % types.length]}点检计划`,
+    level: levels[i % levels.length],
+    frequency: frequencies[i % frequencies.length],
     items: [
       { name: '检查润滑油位', method: '目视', normalRange: '上/下刻度之间' },
       { name: '温度检查', method: '测温枪', normalRange: '30-60°C' },
       { name: '振动检测', method: '振动仪', normalRange: '<5.0mm/s' },
     ],
+    sopUrl: i % 3 === 0 ? `https://example.com/sop/${i + 1}` : null,
+    description: `${types[i % types.length]}日常点检流程`,
+    active: i % 4 !== 0,
+    createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
   }));
 }
 

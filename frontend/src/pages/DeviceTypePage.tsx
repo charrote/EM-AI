@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Table, Tag, message,
   Modal, Input, Popconfirm, Empty, Switch, InputNumber,
@@ -80,9 +80,11 @@ export default function DeviceTypePage() {
   const [uploading, setUploading] = useState(false);
 
   // ── Data fetching ──
+  // Memoize mock data to prevent infinite re-render loops
+  const mockTypes = useMemo(() => generateMockDevices(10), []);
   const { data: types, loading, refresh: fetchTypes } = useApiDataSource(
     '/api/devices/manage/types',
-    generateMockDevices(10)
+    mockTypes
   );
 
   // ── Type CRUD handlers ──

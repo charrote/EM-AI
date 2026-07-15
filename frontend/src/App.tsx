@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom';
 import { ConfigProvider, theme, Spin, Modal } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
@@ -53,6 +53,17 @@ function PageLoading() {
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
       <Spin size="large" />
     </div>
+  );
+}
+
+/** 为懒加载路由统一添加 Suspense + ErrorBoundary */
+function LazyRoute({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <ErrorBoundary>
+        {children}
+      </ErrorBoundary>
+    </Suspense>
   );
 }
 
@@ -118,7 +129,6 @@ function App() {
   }, []);
 
   return (
-    <ErrorBoundary>
     <ConfigProvider
       locale={zhCN}
       theme={{
@@ -149,61 +159,51 @@ function App() {
         },
       }}
     >
-      <BrowserRouter>
-        <ErrorBoundary>
-        <Suspense fallback={<PageLoading />}>
-        <Routes>
-          {/* 登录页（独立布局，无侧栏） */}
-          <Route path="/login" element={<LoginPage />} />
-
-          {/* 受保护的主应用 */}
-          <Route path="/" element={<AuthGuard><AppLayout /></AuthGuard>}>
-            {/* 首页 = 决策仪表盘 */}
-            <Route index element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
-
-            {/* ─── 故障管理 ─── */}
-            <Route path="report-fault" element={<ReportFault />} />
-            <Route path="devices" element={<DeviceList />} />
-            <Route path="devices/:id" element={<DeviceDetail />} />
-            <Route path="work-orders" element={<WorkOrderList />} />
-            <Route path="work-orders/:id" element={<WorkOrderDetail />} />
-            <Route path="rca-analysis" element={<RcaAnalysis />} />
-            <Route path="knowledge" element={<KnowledgeBase />} />
-
-            {/* ─── 预防管理 ─── */}
-            <Route path="inspections" element={<InspectionPage />} />
-            <Route path="inspection-plans" element={<InspectionPlans />} />
-            <Route path="maintenance-plans" element={<MaintenancePlans />} />
-            <Route path="maintenance-execute" element={<MaintenanceExecute />} />
-
-            {/* ─── 效率管理 ─── */}
-            <Route path="oee" element={<OEEDashboard />} />
-            <Route path="loss-analysis" element={<LossAnalysis />} />
-            <Route path="improvements" element={<ImprovementProjects />} />
-            <Route path="andon-board" element={<AndonBoard />} />
-            <Route path="executive" element={<ErrorBoundary><ExecutiveDashboard /></ErrorBoundary>} />
-
-            {/* ─── 工治具管理 ─── */}
-            <Route path="toolings" element={<ToolingList />} />
-            <Route path="tooling-maintenance" element={<ToolingMaintenance />} />
-            <Route path="tooling-mount" element={<ToolingMount />} />
-            <Route path="tooling-dismount" element={<ToolingDismount />} />
-
-            {/* ─── 基础数据 ─── */}
-            <Route path="organizations" element={<OrganizationPage />} />
-            <Route path="device-types" element={<DeviceTypePage />} />
-            <Route path="device-manage" element={<DeviceManagePage />} />
-            <Route path="teams" element={<TeamPage />} />
-            <Route path="work-calendar" element={<WorkCalendar />} />
-            <Route path="settings" element={<SettingsPage />} />
-          </Route>
-
-          {/* 未匹配路由 → 登录页 */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-        </Suspense>
-        </ErrorBoundary>
-      </BrowserRouter>
+      <RouterProvider
+        router={createBrowserRouter([
+          {
+            path: '/login',
+            element: <LazyRoute><LoginPage /></LazyRoute>,
+          },
+          {
+            path: '/',
+            element: <AuthGuard><AppLayout /></AuthGuard>,
+            children: [
+              { index: true, element: <LazyRoute><ExecutiveDashboard /></LazyRoute> },
+              { path: 'report-fault', element: <LazyRoute><ReportFault /></LazyRoute> },
+              { path: 'devices', element: <LazyRoute><DeviceList /></LazyRoute> },
+              { path: 'devices/:id', element: <LazyRoute><DeviceDetail /></LazyRoute> },
+              { path: 'work-orders', element: <LazyRoute><WorkOrderList /></LazyRoute> },
+              { path: 'work-orders/:id', element: <LazyRoute><WorkOrderDetail /></LazyRoute> },
+              { path: 'rca-analysis', element: <LazyRoute><RcaAnalysis /></LazyRoute> },
+              { path: 'knowledge', element: <LazyRoute><KnowledgeBase /></LazyRoute> },
+              { path: 'inspections', element: <LazyRoute><InspectionPage /></LazyRoute> },
+              { path: 'inspection-plans', element: <LazyRoute><InspectionPlans /></LazyRoute> },
+              { path: 'maintenance-plans', element: <LazyRoute><MaintenancePlans /></LazyRoute> },
+              { path: 'maintenance-execute', element: <LazyRoute><MaintenanceExecute /></LazyRoute> },
+              { path: 'oee', element: <LazyRoute><OEEDashboard /></LazyRoute> },
+              { path: 'loss-analysis', element: <LazyRoute><LossAnalysis /></LazyRoute> },
+              { path: 'improvements', element: <LazyRoute><ImprovementProjects /></LazyRoute> },
+              { path: 'andon-board', element: <LazyRoute><AndonBoard /></LazyRoute> },
+              { path: 'executive', element: <LazyRoute><ExecutiveDashboard /></LazyRoute> },
+              { path: 'toolings', element: <LazyRoute><ToolingList /></LazyRoute> },
+              { path: 'tooling-maintenance', element: <LazyRoute><ToolingMaintenance /></LazyRoute> },
+              { path: 'tooling-mount', element: <LazyRoute><ToolingMount /></LazyRoute> },
+              { path: 'tooling-dismount', element: <LazyRoute><ToolingDismount /></LazyRoute> },
+              { path: 'organizations', element: <LazyRoute><OrganizationPage /></LazyRoute> },
+              { path: 'device-types', element: <LazyRoute><DeviceTypePage /></LazyRoute> },
+              { path: 'device-manage', element: <LazyRoute><DeviceManagePage /></LazyRoute> },
+              { path: 'teams', element: <LazyRoute><TeamPage /></LazyRoute> },
+              { path: 'work-calendar', element: <LazyRoute><WorkCalendar /></LazyRoute> },
+              { path: 'settings', element: <LazyRoute><SettingsPage /></LazyRoute> },
+            ],
+          },
+          {
+            path: '*',
+            element: <Navigate to="/login" replace />,
+          },
+        ])}
+      />
 
       {/* ─── AURA 多元数据汇聚模态窗 ─── */}
       <ConfigProvider
@@ -447,7 +447,6 @@ function App() {
         }
       `}</style>
     </ConfigProvider>
-      </ErrorBoundary>
   );
 }
 

@@ -1,5 +1,5 @@
 // @ts-nocheck - Complex component with many dynamic data types
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Descriptions, Tag, Table, Button, Tooltip, DatePicker, Space, Row, Col } from 'antd';
 import { ArrowLeftOutlined, UserOutlined, ThunderboltOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
@@ -116,9 +116,12 @@ export default function DeviceDetail() {
   const setHealthScoreModalOpen = useStore((s) => s.setHealthScoreModalOpen);
   const setHealthScoreDeviceId = useStore((s) => s.setHealthScoreDeviceId);
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockDevice = useMemo(() => generateMockDevices(1)[0], []);
+
   const { data: device, loading } = useApiDataSource(
     `/api/devices/${id || ''}`,
-    generateMockDevices(1)[0]
+    mockDevice
   );
 
   const handleHealthScoreClick = () => {

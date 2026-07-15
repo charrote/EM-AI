@@ -1,5 +1,5 @@
 // @ts-nocheck - Dynamic data types with complex column definitions
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, InputNumber,
   message, Tag, Popconfirm, Typography, Badge, Row, Col, Tabs,
@@ -11,7 +11,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { useApiDataSource } from '../services/dataSource';
-import { generateMockInspections } from '../services/mockData';
+import { generateMockInspectionPlans } from '../services/mockData';
 import { Colors } from '../styles/theme';
 
 const { Text, Title } = Typography;
@@ -50,10 +50,13 @@ const DEVICE_TYPE_OPTIONS = [
 ];
 
 export default function InspectionPlans() {
+  // Memoize mock data to prevent infinite re-render loops
+  const mockInspections = useMemo(() => generateMockInspectionPlans(10), []);
+
   // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
   const { data, loading, refresh } = useApiDataSource(
     '/api/inspection-plans',
-    generateMockInspections(10)
+    mockInspections
   );
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -163,7 +166,7 @@ export default function InspectionPlans() {
         </Col>
         <Col>
           <Space>
-            <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
+            <Button icon={<ReloadOutlined />} onClick={refresh}>刷新</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>新建计划</Button>
           </Space>
         </Col>

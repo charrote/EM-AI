@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Table, Card, Button, Space, Typography, Badge, Tag, message,
   Row, Col, Modal, Steps, Descriptions, Result, Input, InputNumber,
@@ -48,13 +48,17 @@ const MAINTENANCE_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function MaintenanceExecute() {
+  // Memoize mock data to prevent infinite re-render loops
+  const mockRecords = useMemo(() => [] as MaintenanceRecord[], []);
+  const mockPlans = useMemo(() => [] as any[], []);
+
   const { data: records, loading: recordsLoading, refresh: refreshRecords } = useApiDataSource(
     '/maintenance/records',
-    [] as MaintenanceRecord[]
+    mockRecords
   );
   const { data: plans, loading: plansLoading, refresh: refreshPlans } = useApiDataSource(
     '/maintenance/plans?active=true',
-    [] as any[]
+    mockPlans
   );
   const [execModalOpen, setExecModalOpen] = useState(false);
   const [currentExec, setCurrentExec] = useState<any>(null);

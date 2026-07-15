@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table, Tag, Button, Space, Card, Input, Select, Row, Col, Statistic,
   Modal, Form, message, Popconfirm, Typography, Tooltip, Badge, Descriptions,
@@ -29,10 +29,13 @@ const TYPE_OPTIONS = ['模具', '夹具', '刀具', '量具', '其他'];
 const STATUS_OPTIONS = Object.entries(STATUS_CONFIG).map(([k, v]) => ({ value: k, label: v.label }));
 
 export default function ToolingList() {
+  // Memoize mock data to prevent infinite re-render loops
+  const mockToolings = useMemo(() => [] as any[], []);
+
   // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
   const { data, loading, refresh } = useApiDataSource(
     '/api/toolings',
-    [] as any[]
+    mockToolings
   );
 
   const [search, setSearch] = useState('');

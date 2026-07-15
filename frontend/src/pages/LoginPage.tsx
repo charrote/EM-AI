@@ -21,7 +21,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', values);
-      const { token, user } = res.data;
+      const { token, user } = res.data.data || {};
+      if (!token || !user) {
+        message.error('登录响应格式异常');
+        return;
+      }
       setAuth(token, user);
       message.success('登录成功，欢迎回来！');
       navigate(from, { replace: true });

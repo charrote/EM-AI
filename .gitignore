@@ -62,3 +62,6 @@ coverage/
 NUL
 *.pem
 *.cert
+
+# Root data directory (runtime settings)
+data/

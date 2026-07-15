@@ -10,7 +10,7 @@ import {
   QuestionCircleOutlined, BulbOutlined, CheckCircleOutlined,
   HistoryOutlined, ApiOutlined, BarChartOutlined,
 } from '@ant-design/icons';
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from '../components/ReactECharts';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
 import { useResponsive } from '../hooks/useResponsive';

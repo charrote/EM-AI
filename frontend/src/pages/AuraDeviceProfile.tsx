@@ -21,7 +21,7 @@ import {
   QuestionCircleOutlined,
 } from '@ant-design/icons';
 import { Tag, Select, Tooltip } from 'antd';
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from '../components/ReactECharts';
 import { useResponsive } from '../hooks/useResponsive';
 import type { EChartsOption } from 'echarts';
 

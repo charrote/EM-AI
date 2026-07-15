@@ -36,13 +36,14 @@ cd ..
 # Start both servers
 echo -e "\n${YELLOW}[4/4] 启动服务...${NC}"
 
-# Start backend in background
-cd backend && npx tsx src/index.ts &
-BACKEND_PID=$!
-cd ..
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Start frontend
-cd frontend && npm run dev &
+# Start backend in background (explicit subshell to isolate working directory)
+(cd "$SCRIPT_DIR/backend" && npx tsx src/index.ts) &
+BACKEND_PID=$!
+
+# Start frontend in background (explicit subshell to isolate working directory)
+(cd "$SCRIPT_DIR/frontend" && npm run dev) &
 FRONTEND_PID=$!
 
 echo ""

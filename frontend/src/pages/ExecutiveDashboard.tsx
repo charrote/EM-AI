@@ -1,5 +1,5 @@
 // @ts-nocheck - Complex component with many dynamic data types
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useMemo, useEffect } from 'react';
 import * as echarts from 'echarts';
 import { Spin, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
@@ -36,18 +36,25 @@ export default function ExecutiveDashboard() {
   const { isMobile } = useResponsive();
   const { selectedOrganizationId, selectedOrgName } = useStore();
 
+  // Memoize mock data to prevent infinite re-render loops
+  const mockOEEData = useMemo(() => generateMockOEEData(), []);
+
   const { data, loading } = useApiDataSource(
     '/api/dashboard/executive',
-    generateMockOEEData()
+    mockOEEData
   );
 
-  const { data: trendData } = useDataSource<any>(
-    async () => {
-      const params = selectedOrganizationId ? `?orgId=${selectedOrganizationId}` : '';
-      const res = await fetch(`/api/dashboard/oee-trend${params}`);
-      return res.json();
-    },
-    generateMockOEEData(),
+  // Memoize mock data and fetcher for trend data
+  const trendMockData = useMemo(() => generateMockOEEData(), []);
+  const fetchTrendData = useCallback(async () => {
+    const params = selectedOrganizationId ? `?orgId=${selectedOrganizationId}` : '';
+    const res = await fetch(`/api/dashboard/oee-trend${params}`);
+    return res.json();
+  }, [selectedOrganizationId]);
+
+  const { data: trendData, loading: trendLoading } = useDataSource<any>(
+    fetchTrendData,
+    trendMockData,
     { delay: 0 }
   );
 

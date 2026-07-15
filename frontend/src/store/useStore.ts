@@ -102,25 +102,37 @@ const roleInfo: Record<UserRole, { name: string }> = {
 const TOKEN_KEY = 'demo_token';
 const TOKEN_EXPIRY_KEY = 'demo_token_expiry';
 
-function getStoredAuth(): boolean {
+function getStoredAuth(): { user: User } | null {
   const token = localStorage.getItem(TOKEN_KEY);
   const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  if (token && expiry) {
+  const storedUser = localStorage.getItem('demo_user');
+  if (token && expiry && storedUser) {
     if (Date.now() < Number(expiry)) {
-      return true;
+      try {
+        const user = JSON.parse(storedUser);
+        if (user && user.role) {
+          return { user };
+        }
+      } catch { /* ignore */ }
     }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    localStorage.removeItem('demo_user');
   }
-  return false;
+  return null;
 }
 
-export const useStore = create<AppState>((set) => ({
-  user: {
+export const useStore = create<AppState>((set) => {
+  // Restore user from localStorage on first load
+  const stored = getStoredAuth();
+  const initialUser = stored?.user || {
     id: 'demo-admin',
     name: '管理员',
     role: 'admin',
-  },
+  };
+
+  return {
+  user: initialUser,
   setUser: (user) => set({ user }),
   setRole: (role) =>
     set({
@@ -131,15 +143,17 @@ export const useStore = create<AppState>((set) => ({
       },
     }),
   // 认证
-  isAuthenticated: getStoredAuth(),
+  isAuthenticated: !!stored,
   setAuth: (token, user) => {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(TOKEN_EXPIRY_KEY, String(Date.now() + 24 * 60 * 60 * 1000));
+    localStorage.setItem('demo_user', JSON.stringify(user));
     set({ isAuthenticated: true, user });
   },
   logout: () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    localStorage.removeItem('demo_user');
     set({ isAuthenticated: false });
   },
   sidebarCollapsed: false,
@@ -281,4 +295,4 @@ export const useStore = create<AppState>((set) => ({
       });
     }
   },
-}));
+}});

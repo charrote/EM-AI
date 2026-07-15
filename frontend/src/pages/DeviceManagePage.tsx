@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Card, Button, Space, Typography, Row, Col, Table, Input, Select, Tag,
   message, Modal, Form, Descriptions, Divider, Popconfirm, Badge, DatePicker,
@@ -99,9 +99,16 @@ export default function DeviceManagePage() {
   const { isMobile } = useResponsive();
 
   // ── Data fetching ──
-  const { data: devices, loading, refresh: fetchDevices } = useApiDataSource(
+  // Memoize mock data and URL to prevent infinite re-render loops
+  const mockDevices = useMemo(() => generateMockDevices(20), []);
+  const devicesUrl = useMemo(() =>
     '/api/devices/manage?page=' + page + '&pageSize=' + pageSize + (filterType ? '&type=' + filterType : '') + (filterStatus ? '&status=' + filterStatus : '') + (filterWorkshop ? '&workshopId=' + filterWorkshop : '') + (keyword ? '&keyword=' + keyword : ''),
-    generateMockDevices(20)
+    [page, pageSize, filterType, filterStatus, filterWorkshop, keyword]
+  );
+
+  const { data: devices, loading, refresh: fetchDevices } = useApiDataSource(
+    devicesUrl,
+    mockDevices
   );
 
   const fetchMeta = useCallback(async () => {

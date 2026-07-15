@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Table, Card, Button, Space, Modal, Form, Input, Select, Tag,
   message, Typography, Popconfirm, Tooltip, Row, Col,
@@ -24,10 +24,13 @@ const SHIFT_OPTIONS = [
 ];
 
 export default function TeamPage() {
+  // Memoize mock data to prevent infinite re-render loops
+  const mockTeams = useMemo(() => generateMockTeams(8), []);
+
   // 使用 useApiDataSource 钩子，自动根据 dataMode 切换数据源
   const { data: teams, loading, refresh } = useApiDataSource(
     '/api/teams',
-    generateMockTeams(8)
+    mockTeams
   );
 
   const [keyword, setKeyword] = useState('');
