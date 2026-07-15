@@ -1,28 +1,24 @@
 // @ts-nocheck - Complex component with many dynamic data types
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Button, Select, Input, Upload, Tag, message, Steps, Result,
-  Descriptions, Space, Divider, List,
+  Card, Table, Button, Space, Modal, Form, Input, Select, InputNumber,
+  message, Tag, Typography, Row, Col, Divider, Descriptions, Upload,
+  Badge, Alert, Statistic, Result,
 } from 'antd';
 import {
   ScanOutlined, CameraOutlined, SoundOutlined,
-  HistoryOutlined, BugOutlined, FormOutlined,
-  ThunderboltOutlined, ToolOutlined, ExperimentOutlined,
-  FireOutlined, CloudOutlined, QuestionCircleOutlined,
+  HistoryOutlined, FormOutlined, ThunderboltOutlined,
+  ToolOutlined, ExperimentOutlined, FireOutlined,
+  CloudOutlined, QuestionCircleOutlined, ReloadOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
-import PageCard from '../components/PageCard';
+import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { Colors, PriorityColors, PriorityLabels } from '../styles/theme';
-import { useResponsive } from '../hooks/useResponsive';
 import { useDeviceDataSource } from '../services/dataSource';
 
-interface FormState {
-  faultType?: string;
-  priority: string;
-  description: string;
-  images: string[];
-}
+const { Text, Title } = Typography;
 
 const faultTypeOptions = [
   { value: '机械', label: '机械故障', icon: <ToolOutlined /> },
@@ -42,7 +38,6 @@ const priorityOptions = [
 
 export default function ReportFault() {
   const navigate = useNavigate();
-  const { isMobile } = useResponsive();
 
   // ── Unified data source hook ───────────────────────────────
   const {
@@ -50,9 +45,11 @@ export default function ReportFault() {
     loading: devicesLoading,
     refresh: refreshDevices,
   } = useDeviceDataSource('default');
+  const loading = devicesLoading;
 
-  const [step, setStep] = useState<'scan' | 'report' | 'result'>('scan');
+  // State
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
+  const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({
     faultType: undefined as string | undefined,
     priority: 'P1' as string,
@@ -61,15 +58,64 @@ export default function ReportFault() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
-  const [recentFaults, setRecentFaults] = useState<any[]>([]);
+  const [globalRecentFaults, setGlobalRecentFaults] = useState<any[]>([]);
+  const [deviceRecentFaults, setDeviceRecentFaults] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState('');
 
-  const handleSelectDevice = (deviceId: string) => {
-    const device = devices.find(d => d.id === deviceId);
-    setSelectedDevice(device);
-    api.get(`/devices/${deviceId}/work-orders?days=30`).then((res) => {
-      setRecentFaults(res.data.data.slice(0, 5));
-    });
-    setStep('report');
+  // 设备搜索过滤（仅搜索时展示列表）
+  const filteredDevices = useMemo(() => {
+    if (!searchText) return [];
+    return devices.filter((d: any) =>
+      d.name?.toLowerCase().includes(searchText.toLowerCase()) ||
+      d.code?.toLowerCase().includes(searchText.toLowerCase()) ||
+      d.area?.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [devices, searchText]);
+
+  // 加载全局最近报修记录
+  useEffect(() => {
+    api.get('/work-orders?days=7&limit=10')
+      .then((res) => setGlobalRecentFaults(res.data.data || []))
+      .catch(() => setGlobalRecentFaults([]));
+  }, []);
+
+  const handleSelectDevice = async (deviceId: string) => {
+    // ① 优先从已加载的 devices 列表中查找（兼容 real 模式下 API 回退到 mock 数据的场景）
+    const cachedDevice = devices?.find((d: any) => d.id === deviceId);
+
+    try {
+      // ② 尝试从真实 API 获取设备详情
+      const res = await api.get(`/devices/${deviceId}`);
+      const device = res.data.data || res.data;
+      setSelectedDevice(device);
+      // 获取近 30 天故障记录
+      try {
+        const faultsRes = await api.get(`/devices/${deviceId}/work-orders?days=30`);
+        setDeviceRecentFaults(faultsRes.data.data?.slice(0, 10) || []);
+      } catch {
+        setDeviceRecentFaults([]);
+      }
+      setFormOpen(true);
+    } catch (apiErr: any) {
+      console.warn('[ReportFault] 设备详情 API 不可用，使用本地缓存数据:', apiErr.message);
+      // ③ API 不可用时，回退到本地已加载的设备数据
+      if (cachedDevice) {
+        setSelectedDevice(cachedDevice);
+        setDeviceRecentFaults([]);
+        setFormOpen(true);
+        message.warning('使用本地数据，设备详情暂不可用');
+      } else {
+        message.error('设备加载失败，请刷新设备列表后重试');
+      }
+    }
+  };
+
+  // 模拟扫码
+  const handleScan = () => {
+    setTimeout(() => {
+      const randomDevice = devices[Math.floor(Math.random() * devices.length)];
+      handleSelectDevice(randomDevice.id);
+    }, 1500);
   };
 
   const handleSubmit = async () => {
@@ -88,8 +134,12 @@ export default function ReportFault() {
         description: form.description,
       });
       setResult(res.data.data);
-      setStep('result');
+      setFormOpen(false);
+      setSearchText('');
+      setSelectedDevice(null);
+      setForm({ faultType: undefined, priority: 'P1', description: '', images: [] });
       message.success('报修工单已创建！');
+      refreshDevices();
     } catch {
       message.error('提交失败');
     }
@@ -97,241 +147,266 @@ export default function ReportFault() {
   };
 
   const handleReset = () => {
-    setStep('scan');
+    setFormOpen(false);
     setSelectedDevice(null);
+    setDeviceRecentFaults([]);
     setForm({ faultType: undefined, priority: 'P1', description: '', images: [] });
     setResult(null);
+    setSearchText('');
   };
 
-  const pageMaxWidth = isMobile ? '100%' : 640;
+  // 设备列表列
+  const deviceColumns: ColumnsType<any> = [
+    {
+      title: '设备编码', dataIndex: 'code', key: 'code', width: 120,
+      render: (v: string) => <Text strong>{v}</Text>,
+    },
+    { title: '设备名称', dataIndex: 'name', key: 'name', ellipsis: true },
+    { title: '设备类型', dataIndex: 'type', key: 'type', width: 100 },
+    { title: '所在区域', dataIndex: 'area', key: 'area', width: 100 },
+    {
+      title: '状态', dataIndex: 'status', key: 'status', width: 80,
+      render: (v: string) => <Tag>{v}</Tag>,
+    },
+    {
+      title: '操作', key: 'action', width: 100,
+      render: (_: any, r: any) => (
+        <Button size="small" type="primary" icon={<FormOutlined />} onClick={() => handleSelectDevice(r.id)}>
+          报修
+        </Button>
+      ),
+    },
+  ];
+
+  // 最近故障列
+  const recentColumns: ColumnsType<any> = [
+    {
+      title: '工单号', dataIndex: 'code', key: 'code', width: 140,
+      render: (v: string) => <Text code>{v}</Text>,
+    },
+    {
+      title: '故障类型', dataIndex: 'faultType', key: 'faultType', width: 90,
+      render: (v: string) => <Tag>{v || '-'}</Tag>,
+    },
+    {
+      title: '优先级', dataIndex: 'priority', key: 'priority', width: 80,
+      render: (v: string) => <Tag color={PriorityColors[v]}>{v}</Tag>,
+    },
+    {
+      title: '状态', dataIndex: 'status', key: 'status', width: 80,
+      render: (v: string) => <Badge color={v === 'completed' ? Colors.success : Colors.danger} text={v} />,
+    },
+    {
+      title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 160,
+      render: (v: string) => v ? new Date(v).toLocaleString() : '-',
+    },
+  ];
 
   return (
-    <div style={{ maxWidth: pageMaxWidth, margin: '0 auto' }}>
-      {step === 'scan' && (
-        <PageCard icon={<ScanOutlined />} title="扫码报修" bodyStyle={{ padding: isMobile ? 16 : 24 }}>
-          <div style={{ textAlign: 'center', padding: isMobile ? '20px 0' : '40px 0' }}>
-            <Button
-              type="primary"
-              icon={<ScanOutlined />}
-              size={isMobile ? 'middle' : 'large'}
-              style={{
-                height: isMobile ? 60 : 80,
-                width: isMobile ? 160 : 200,
-                fontSize: isMobile ? 14 : 16,
-                borderRadius: 12,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-              }}
-              onClick={() => setStep('scan')}
-            >
-              模拟扫码
-            </Button>
-            <div style={{ marginTop: 8, color: Colors.gray400, fontSize: isMobile ? 12 : 13 }}>
-              点击按钮模拟扫描设备二维码
-            </div>
-          </div>
+    <div>
+      {/* ─── 顶栏 ─── */}
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Col>
+          <Title level={4} style={{ margin: 0 }}>
+            <FormOutlined style={{ marginRight: 8, color: Colors.primary }} />
+            快捷报修
+          </Title>
+        </Col>
+        <Col>
+          <Space>
+            <Button icon={<ReloadOutlined />} onClick={refreshDevices}>刷新设备</Button>
+          </Space>
+        </Col>
+      </Row>
 
-          <Divider style={{ color: Colors.gray400, fontSize: isMobile ? 11 : 12 }}>或选择设备</Divider>
+      <Row gutter={[16, 16]}>
+        {/* ─── 设备选择 ─── */}
+        <Col span={24}>
+          <Card title="选择设备" size="small" styles={{ body: { padding: 24 } }}>
+            <Space direction="vertical" style={{ width: '100%' }} size="large">
+              {/* 扫码按钮 */}
+              <Button
+                type="primary"
+                icon={<ScanOutlined />}
+                block
+                size="large"
+                style={{ borderRadius: 8, height: 48, fontSize: 16 }}
+                onClick={handleScan}
+              >
+                扫描设备二维码
+              </Button>
 
-          <Select
-            showSearch
-            placeholder="搜索并选择设备..."
-            style={{ width: '100%', borderRadius: 6 }}
-            size={isMobile ? 'middle' : 'large'}
-            onChange={handleSelectDevice}
-            filterOption={(input, option) =>
-              (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+              <Divider plain>或搜索设备</Divider>
+
+              {/* 设备搜索 */}
+              <Input
+                placeholder="输入设备编码/名称搜索..."
+                size="large"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                allowClear
+                style={{ borderRadius: 8 }}
+              />
+
+              {/* 设备列表 */}
+              <Table
+                columns={deviceColumns}
+                dataSource={filteredDevices}
+                rowKey="id"
+                loading={loading}
+                size="small"
+                locale={{ emptyText: searchText ? '未找到匹配设备' : '请输入设备编码/名称搜索' }}
+                scroll={{ x: 800 }}
+              />
+            </Space>
+          </Card>
+        </Col>
+
+        {/* ─── 最近报修记录 ─── */}
+        <Col span={24}>
+          <Card
+            title={<Space><HistoryOutlined /> 最近报修记录</Space>}
+            size="small"
+            styles={{ body: { padding: 0 } }}
+          >
+            <Table
+              columns={recentColumns}
+              dataSource={globalRecentFaults}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              locale={{ emptyText: '暂无报修记录' }}
+              scroll={{ y: 400 }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* ─── 选中设备信息 ─── */}
+      {selectedDevice && (
+        <Card style={{ marginTop: 16 }} size="small">
+          <Alert
+            message={`已选择设备：${selectedDevice.name}`}
+            description={
+              <Descriptions column={4} size="small">
+                <Descriptions.Item label="编码">{selectedDevice.code}</Descriptions.Item>
+                <Descriptions.Item label="类型">{selectedDevice.type}</Descriptions.Item>
+                <Descriptions.Item label="区域">{selectedDevice.area}</Descriptions.Item>
+                <Descriptions.Item label="状态">
+                  <Tag>{selectedDevice.status}</Tag>
+                </Descriptions.Item>
+              </Descriptions>
             }
-            options={devices.map((d) => ({
-              value: d.id,
-              label: `${d.code} - ${d.name} [${d.area}/${d.line}]`,
-            }))}
+            type="info"
+            showIcon
+            style={{ marginBottom: 12 }}
           />
 
-          <div style={{ marginTop: isMobile ? 8 : 16 }}>
-            <Button
-              icon={<SoundOutlined />}
-              size={isMobile ? 'middle' : 'large'}
-              block
-              style={{ borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              语音报修
-            </Button>
-          </div>
-        </PageCard>
-      )}
-
-      {step === 'report' && selectedDevice && (
-        <PageCard
-          icon={<FormOutlined />}
-          title="填写报修信息"
-          bodyStyle={{ padding: isMobile ? 16 : 24 }}
-          extra={
-            <Button type="link" onClick={() => setStep('scan')} style={{ padding: 0, fontSize: isMobile ? 12 : 14 }}>
-              换设备
-            </Button>
-          }
-        >
-          {/* Device Info */}
-          <Descriptions column={1} size="small" style={{ marginBottom: isMobile ? 12 : 20 }}>
-            <Descriptions.Item label="设备" contentStyle={{ fontSize: isMobile ? 13 : 14 }}>
-              <Tag color={Colors.primary} style={{ borderRadius: 4, border: 'none', marginRight: 8, fontSize: isMobile ? 11 : 12 }}>{selectedDevice.code}</Tag>
-              {selectedDevice.name}
-            </Descriptions.Item>
-            <Descriptions.Item label="位置">{selectedDevice.area} / {selectedDevice.line}</Descriptions.Item>
-            <Descriptions.Item label="当前状态">
-              <Tag style={{ borderRadius: 4 }}>{selectedDevice.status}</Tag>
-            </Descriptions.Item>
-          </Descriptions>
-
-          {/* Fault Type */}
-          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-            <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>故障类型 *</div>
-            <Select
-              value={form.faultType}
-              onChange={(v) => setForm({ ...form, faultType: v })}
-              options={faultTypeOptions.map(opt => ({
-                value: opt.value,
-                label: (
-                  <Space size={isMobile ? 4 : 8}>
-                    {opt.icon}
-                    <span>{opt.label}</span>
-                  </Space>
-                ),
-              }))}
-              placeholder="选择故障类型"
-              style={{ width: '100%', borderRadius: 6 }}
-              size={isMobile ? 'middle' : 'large'}
-            />
-          </div>
-
-          {/* Priority */}
-          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-            <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>故障等级</div>
-            <Select
-              value={form.priority}
-              onChange={(v) => setForm({ ...form, priority: v })}
-              options={priorityOptions.map(opt => ({
-                value: opt.value,
-                label: (
-                  <Space size={isMobile ? 4 : 8}>
-                    <Tag color={opt.color} style={{ borderRadius: 4, border: 'none', margin: 0, fontSize: isMobile ? 10 : 11, lineHeight: '18px' }}>
-                      {opt.value}
-                    </Tag>
-                    <span>{opt.label}</span>
-                  </Space>
-                ),
-              }))}
-              style={{ width: '100%', borderRadius: 6 }}
-              size={isMobile ? 'middle' : 'large'}
-            />
-          </div>
-
-          {/* Description */}
-          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-            <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>故障描述</div>
-            <Input.TextArea
-              rows={isMobile ? 2 : 3}
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="请描述故障现象（支持语音输入）"
-              style={{ borderRadius: 6 }}
-            />
-          </div>
-
-          {/* Photo Upload */}
-          <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-            <div style={{ marginBottom: 4, color: Colors.gray700, fontSize: isMobile ? 13 : 13 }}>现场照片</div>
-            <Upload beforeUpload={() => false} showUploadList={{ limit: 3 }}>
-              <Button icon={<CameraOutlined />} style={{ borderRadius: 6, display: 'flex', alignItems: 'center' }}>
-                拍照上传
-              </Button>
-            </Upload>
-          </div>
-
-          {/* Recent Faults */}
-          {recentFaults.length > 0 && (
-            <div style={{ marginBottom: isMobile ? 12 : 16 }}>
-              <Divider plain style={{ fontSize: isMobile ? 11 : 12, color: Colors.gray500 }}>
-                <Space size={6}>
-                  <HistoryOutlined />
-                  <span>近 30 天故障记录</span>
-                </Space>
-              </Divider>
-              <List
+          {deviceRecentFaults.length > 0 && (
+            <>
+              <Divider style={{ margin: '12px 0' }} />
+              <Title level={5} style={{ margin: 0 }}>该设备近 30 天故障</Title>
+              <Table
+                columns={recentColumns}
+                dataSource={deviceRecentFaults}
+                rowKey="id"
+                pagination={false}
                 size="small"
-                dataSource={recentFaults}
-                renderItem={(fault: any) => (
-                  <List.Item>
-                    <Space size={isMobile ? 4 : 8}>
-                      <Tag
-                        color={PriorityColors[fault.priority] || Colors.gray400}
-                        style={{ borderRadius: 4, border: 'none', margin: 0, fontSize: isMobile ? 10 : 11 }}
-                      >
-                        {fault.priority}
-                      </Tag>
-                      <span style={{ color: Colors.gray600, fontSize: isMobile ? 12 : 13 }}>{fault.faultType}</span>
-                      <span style={{ color: Colors.gray400, fontSize: isMobile ? 11 : 12 }}>
-                        {new Date(fault.createdAt).toLocaleDateString()}
-                      </span>
-                    </Space>
-                  </List.Item>
-                )}
+                style={{ marginTop: 8 }}
               />
-            </div>
+            </>
           )}
 
-          <Space style={{ width: '100%' }} direction="vertical">
-            <Button
-              type="primary"
-              size={isMobile ? 'middle' : 'large'}
-              block
-              onClick={handleSubmit}
-              loading={submitting}
-              style={{ borderRadius: 8, height: isMobile ? 40 : 44 }}
-            >
-              提交报修
+          <div style={{ marginTop: 12, textAlign: 'right' }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+              立即报修
             </Button>
-            <Button block onClick={handleReset} style={{ borderRadius: 8 }}>取消</Button>
-          </Space>
-        </PageCard>
+          </div>
+        </Card>
       )}
 
-      {step === 'result' && result && (
-        <PageCard>
-          <Result
-            status="success"
-            title="报修成功！"
-            subTitle={`工单 ${result.code} 已创建，已推送至维修工程师`}
-            extra={[
-              <Button type="primary" key="view" onClick={() => navigate(`/work-orders/${result.id}`)} style={{ borderRadius: 6 }} size={isMobile ? 'middle' : 'middle'}>
-                查看工单
-              </Button>,
-              <Button key="new" onClick={handleReset} style={{ borderRadius: 6 }} size={isMobile ? 'middle' : 'middle'}>继续报修</Button>,
-              !isMobile && <Button key="list" onClick={() => navigate('/work-orders')} style={{ borderRadius: 6 }}>工单列表</Button>,
-            ].filter(Boolean)}
-          >
-            <Descriptions column={isMobile ? 1 : 1} size="small" bordered>
-              <Descriptions.Item label="工单号">{result.code}</Descriptions.Item>
-              <Descriptions.Item label="设备">{selectedDevice?.name}</Descriptions.Item>
-              <Descriptions.Item label="故障类型">{form.faultType}</Descriptions.Item>
-              <Descriptions.Item label="优先级">
-                <Tag
-                  color={PriorityColors[result.priority]}
-                  style={{ borderRadius: 4, border: 'none' }}
-                >
-                  {result.priority}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="SLA 截止">
-                {new Date(result.slaDeadline).toLocaleString()}
-              </Descriptions.Item>
-            </Descriptions>
-          </Result>
-        </PageCard>
-      )}
+      {/* ─── 报修表单 ─── */}
+      <Modal
+        title="快捷报修"
+        open={formOpen}
+        onCancel={() => { setFormOpen(false); setForm({ faultType: undefined, priority: 'P1', description: '', images: [] }); }}
+        onOk={() => handleSubmit()}
+        width={720}
+        destroyOnClose
+        okText="提交报修"
+        cancelText="取消"
+        confirmLoading={submitting}
+      >
+        {selectedDevice && (
+          <Alert
+            message={`设备：${selectedDevice.name}（${selectedDevice.code}）`}
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="故障类型" rules={[{ required: true, message: '请选择故障类型' }]}>
+              <Select
+                value={form.faultType}
+                onChange={(v) => setForm({ ...form, faultType: v })}
+                placeholder="选择故障类型"
+                options={faultTypeOptions.map(opt => ({
+                  value: opt.value,
+                  label: <Space>{opt.icon}{opt.label}</Space>,
+                }))}
+                style={{ width: '100%', borderRadius: 6 }}
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="故障等级" rules={[{ required: true, message: '请选择故障等级' }]}>
+              <Select
+                value={form.priority}
+                onChange={(v) => setForm({ ...form, priority: v })}
+                placeholder="选择故障等级"
+                options={priorityOptions.map(opt => ({
+                  value: opt.value,
+                  label: (
+                    <Space>
+                      <Tag color={opt.color} style={{ borderRadius: 4, border: 'none', margin: 0, fontSize: 11 }}>{opt.value}</Tag>
+                      <span>{opt.label}</span>
+                    </Space>
+                  ),
+                }))}
+                style={{ width: '100%', borderRadius: 6 }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item label="故障描述" rules={[{ required: true, message: '请输入故障描述' }]}>
+          <Input.TextArea
+            rows={4}
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="请详细描述故障现象（支持语音输入）"
+            style={{ borderRadius: 6 }}
+          />
+        </Form.Item>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item label="现场照片">
+              <Upload beforeUpload={() => false} showUploadList={{ limit: 4 }}>
+                <Button icon={<CameraOutlined />} style={{ borderRadius: 6, width: '100%' }}>拍照上传（≤4 张）</Button>
+              </Upload>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="语音报修">
+              <Button icon={<SoundOutlined />} style={{ borderRadius: 6, width: '100%' }}>语音识别输入</Button>
+            </Form.Item>
+          </Col>
+        </Row>
+      </Modal>
     </div>
   );
 }

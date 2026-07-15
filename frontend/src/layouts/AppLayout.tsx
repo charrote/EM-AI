@@ -431,23 +431,27 @@ export default function AppLayout() {
               </div>
             )}
 
-            <Tag
-              color="default"
-              style={{
-                marginRight: 0,
-                background: Colors.gray100,
-                border: `1px solid ${Colors.gray200}`,
-                borderRadius: 4,
-                color: Colors.gray600,
-                fontSize: isMobile ? 11 : 12,
-                lineHeight: isMobile ? '20px' : '22px',
-              }}
-            >
-              DEMO
-            </Tag>
-            {!isMobile && (
-              <Text type="secondary" style={{ fontSize: 13 }}>数据仅供演示</Text>
-            )}
+            {dataMode === 'mock' && (
+              <>
+                <Tag
+                  color="default"
+                  style={{
+                    marginRight: 0,
+                    background: Colors.gray100,
+                    border: `1px solid ${Colors.gray200}`,
+                    borderRadius: 4,
+                    color: Colors.gray600,
+                    fontSize: isMobile ? 11 : 12,
+                    lineHeight: isMobile ? '20px' : '22px',
+                  }}
+                >
+                  DEMO
+                </Tag>
+                {!isMobile && (
+                  <Text type="secondary" style={{ fontSize: 13 }}>数据仅供演示</Text>
+                )}
+              </>
+              )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
