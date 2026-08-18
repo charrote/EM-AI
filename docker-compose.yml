@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
     container_name: emai-frontend
     ports:
-      - "80:80"
+      - "5710:80"
     depends_on:
       backend:
         condition: service_healthy
