@@ -13,6 +13,7 @@ try {
 }
 
 import deviceRoutes from './routes/devices';
+import aiRoutes from './routes/ai';
 import workOrderRoutes from './routes/workOrders';
 import inspectionRoutes from './routes/inspections';
 import toolingRoutes from './routes/toolings';
@@ -37,7 +38,7 @@ import { securityHeaders } from './middleware/security';
 import { requestLogger } from './middleware/security';
 
 const app = express();
-const PORT = cfg.API_PORT || parseInt(process.env.PORT || '') || 5174;
+const PORT = cfg.API_PORT || parseInt(process.env.PORT || '') || 5273;
 
 // Security middleware
 app.use(securityHeaders);
@@ -81,6 +82,7 @@ app.use('/api/rca', authMiddleware, rcaRoutes);
 app.use('/api/demo', authMiddleware, demoRoutes);
 app.use('/api/upload', authMiddleware, uploadRoutes);
 app.use('/api/nlr', authMiddleware, nlrRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
 app.use('/api/organizations', authMiddleware, organizationRoutes);
 app.use('/api/teams', authMiddleware, teamRoutes);
 app.use('/api/calendar', authMiddleware, calendarRoutes);

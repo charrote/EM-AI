@@ -1,8 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { Input, Button, Spin } from 'antd';
-import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, BulbOutlined } from '@ant-design/icons';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Input, Button, Spin, Tooltip } from 'antd';
+import { SendOutlined, CloseOutlined, RobotOutlined, UserOutlined, BulbOutlined, SettingOutlined } from '@ant-design/icons';
 import { Colors } from '../styles/theme';
 import { useStore } from '../store/useStore';
+import api from '../services/api';
+import AuraSettingsModal from './AuraSettingsModal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -11,10 +13,6 @@ interface Message {
 }
 
 const SYSTEM_PROMPT = '我是友文科技Aura智能体，Aura具备感知设备现状，预测性维护的能力。制造业领域设备维护范畴以外的问答一律不提供服务。问及公司及所属，您就是友文智脑下单Aura智能体。回答客观简洁直接，不允许大长文，不允许过度渲染';
-
-const API_BASE = 'http://nat.ywapi.com:9234/v1';
-const API_KEY = 'ux-X2IQWMWLFNMRBZO2QJG8VQ314LW92EQ7';
-const MODEL = 'UANTEKDEV0';
 
 const GREETING = '您好，我是友文智脑Aura，具备感知设备现状和预测性维护的能力。请问有什么可以帮助您的？';
 
@@ -26,9 +24,23 @@ export default function AuraChat() {
   const [thinking, setThinking] = useState(false);
   const [currentThinking, setCurrentThinking] = useState('');
   const [chatHeight, setChatHeight] = useState(560);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const thinkingRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ dragging: false, startY: 0, startHeight: 560 });
+
+  // 拉取服务端模型配置（仅用于状态展示，Key 不下发到浏览器）
+  const refreshConfig = useCallback(() => {
+    api
+      .get('/settings/ai')
+      .then((res) => setHasApiKey(!!res.data.data?.hasApiKey))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    refreshConfig();
+  }, [refreshConfig]);
 
   useEffect(() => {
     if (listRef.current) {
@@ -76,14 +88,13 @@ export default function AuraChat() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/chat/completions`, {
+      const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${API_KEY}`,
+          Authorization: `Bearer ${localStorage.getItem('demo_token') || ''}`,
         },
         body: JSON.stringify({
-          model: MODEL,
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             ...updated.map((m) => ({ role: m.role, content: m.content })),
@@ -138,7 +149,10 @@ export default function AuraChat() {
       }
       setMessages((prev) => [...prev, { role: 'assistant', content: finalContent, thinking: finalThinking }]);
     } catch {
-      setMessages((prev) => [...prev, { role: 'assistant', content: '连接失败，请稍后重试。' }]);
+      const errMsg = !hasApiKey
+        ? '模型尚未配置，请点击上方齿轮图标完成 LLM 配置。'
+        : '连接失败，请稍后重试。';
+      setMessages((prev) => [...prev, { role: 'assistant', content: errMsg }]);
     } finally {
       setLoading(false);
     }
@@ -223,22 +237,43 @@ export default function AuraChat() {
               </div>
             </div>
           </div>
-          <div
-            onClick={() => setAuraChatOpen(false)}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: Colors.gray400,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray100; e.currentTarget.style.color = Colors.gray600; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = Colors.gray400; }}
-          >
-            <CloseOutlined style={{ fontSize: 14 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Tooltip title="模型配置">
+              <div
+                onClick={() => setSettingsOpen(true)}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: Colors.gray400,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray100; e.currentTarget.style.color = Colors.gray600; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = Colors.gray400; }}
+              >
+                <SettingOutlined style={{ fontSize: 14 }} />
+              </div>
+            </Tooltip>
+            <div
+              onClick={() => setAuraChatOpen(false)}
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: Colors.gray400,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = Colors.gray100; e.currentTarget.style.color = Colors.gray600; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = Colors.gray400; }}
+            >
+              <CloseOutlined style={{ fontSize: 14 }} />
+            </div>
           </div>
         </div>
 
@@ -444,6 +479,7 @@ export default function AuraChat() {
           <div style={{ width: 32, height: 3, borderRadius: 2, background: Colors.gray300 }} />
         </div>
       </div>
+      <AuraSettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} onSaved={refreshConfig} />
     </>
   );
 }

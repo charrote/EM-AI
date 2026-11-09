@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { resolveCompletionsUrl } from '../utils/llm';
 
 const router = Router();
 
-const SETTINGS_FILE = path.join(__dirname, '../../../data/settings.json');
+const SETTINGS_FILE = path.join(__dirname, '../../data/settings.json');
 
 function ensureDataDir() {
   const dir = path.dirname(SETTINGS_FILE);
@@ -99,6 +100,46 @@ router.put('/ai', (req: Request, res: Response) => {
   saveSettings(settings);
   const { apiKey: _, ...safeAi } = settings.auraAi;
   res.json({ data: safeAi });
+});
+
+// POST /api/settings/ai/test — 测试 LLM 连通性（可用本次填写的值测，未填则用已保存值）
+router.post('/ai/test', async (req: Request, res: Response) => {
+  const settings = loadSettings();
+  const saved = settings.auraAi || {};
+  const { baseUrl, apiKey, modelId } = req.body || {};
+  const cfg = {
+    baseUrl: baseUrl || saved.baseUrl || '',
+    apiKey: apiKey || saved.apiKey || '',
+    modelId: modelId || saved.modelId || '',
+  };
+  if (!cfg.baseUrl) return res.status(400).json({ ok: false, error: '请先填写 API 地址' });
+  if (!cfg.apiKey) return res.status(400).json({ ok: false, error: '请先填写 API Key' });
+
+  try {
+    const r = await fetch(resolveCompletionsUrl(cfg.baseUrl), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${cfg.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: cfg.modelId,
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 8,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!r.ok) {
+      const detail = await r.text();
+      return res.status(502).json({ ok: false, status: r.status, detail: detail.slice(0, 300) });
+    }
+    const data: any = await r.json();
+    const reply = data.choices?.[0]?.message?.content || '';
+    res.json({ ok: true, model: cfg.modelId, reply: reply.slice(0, 50) });
+  } catch (err: any) {
+    res.status(502).json({ ok: false, detail: err.message });
+  }
 });
 
 export default router;
