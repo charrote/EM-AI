@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Form, Input, Button, Typography, message, Space } from 'antd';
-import { UserOutlined, LockOutlined, ToolOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Typography, message } from 'antd';
+import { UserOutlined, LockOutlined, ToolOutlined } from '@ant-design/icons';
 import { useStore } from '../store/useStore';
 import api from '../services/api';
 import { Colors } from '../styles/theme';
@@ -120,7 +120,6 @@ export default function LoginPage() {
           layout="vertical"
           size="large"
           autoComplete="off"
-          initialValues={{ username: 'admin', password: 'admin123' }}
         >
           <Form.Item
             name="username"
@@ -168,25 +167,6 @@ export default function LoginPage() {
             </Button>
           </Form.Item>
         </Form>
-
-        {/* 默认账号提示 */}
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '12px 0 0',
-            borderTop: `1px solid ${Colors.gray100}`,
-          }}
-        >
-          <Space direction="vertical" size={2}>
-            <Text style={{ fontSize: 12, color: Colors.gray400 }}>
-              演示账号：admin / admin123
-            </Text>
-            <Text style={{ fontSize: 11, color: Colors.gray300 }}>
-              <ThunderboltOutlined style={{ marginRight: 4 }} />
-              数据仅供演示
-            </Text>
-          </Space>
-        </div>
       </div>
     </div>
   );
